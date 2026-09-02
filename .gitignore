@@ -16,5 +16,9 @@ dist/
 .env.*
 !.env.example
 
+# Tracking-loop snapshots (backend/scripts/run_tracking_loop.py) — real collected data,
+# not source; not meant to be committed.
+backend/data/
+
 # OS
 .DS_Store
