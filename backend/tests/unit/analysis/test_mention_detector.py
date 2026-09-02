@@ -35,6 +35,14 @@ def test_matches_plural_form():
     assert text[mentions[0].char_start : mentions[0].char_end] == "Rivals"
 
 
+def test_matches_alias_ending_in_punctuation():
+    exclaim_brand = EntityAlias("brand-2", "self", ("Yahoo!",))
+    text = "Yahoo! is a great company."
+    mentions = detect_mentions(text, (exclaim_brand,))
+    assert len(mentions) == 1
+    assert text[mentions[0].char_start : mentions[0].char_end] == "Yahoo!"
+
+
 def test_matches_with_adjacent_punctuation():
     mentions = detect_mentions("I love Acme, it's great.", ALIAS_TABLE)
     assert len(mentions) == 1

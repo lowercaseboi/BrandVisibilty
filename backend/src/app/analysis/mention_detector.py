@@ -14,15 +14,22 @@ scope here; MentionDetector only detects mentions of entities it's told to look 
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 
 from app.analysis.types import EntityAlias, EntityMention
 
 _POSSESSIVE_OR_PLURAL_SUFFIX = r"(?:'s|s)?"
 
 
+@lru_cache(maxsize=None)
 def _alias_pattern(alias: str) -> re.Pattern[str]:
+    # Lookaround boundaries, not \b: \b requires a word/non-word transition, which never
+    # matches when the alias itself starts or ends in a non-word character (e.g. "Yahoo!")
+    # — (?<!\w)/(?!\w) only require the adjacent character not be a word character, which
+    # is what "word boundary" actually needs to mean here. Cached per alias since the same
+    # fixed alias table is matched against every observation in a job.
     return re.compile(
-        r"\b" + re.escape(alias) + _POSSESSIVE_OR_PLURAL_SUFFIX + r"\b",
+        r"(?<!\w)" + re.escape(alias) + _POSSESSIVE_OR_PLURAL_SUFFIX + r"(?!\w)",
         re.IGNORECASE,
     )
 
