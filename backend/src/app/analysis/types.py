@@ -35,6 +35,7 @@ class Observation:
     query_id: str
     provider_id: str
     mentions: tuple[EntityMention, ...] = field(default_factory=tuple)
+    intent_type: str = ""  # e.g. "category_discovery", "local" (§3.3) — used for per-intent PRESENCE gaps
 
     def mention_of(self, entity_id: str) -> EntityMention | None:
         return next((m for m in self.mentions if m.entity_id == entity_id), None)
@@ -65,3 +66,63 @@ class AnalysisResult:
     observation_count: int
     mentioned_count: int
     participating_providers: tuple[str, ...]
+
+
+GapType = Literal["presence", "prominence", "representation", "competitive", "source"]
+
+
+@dataclass(frozen=True)
+class PromptedObservation:
+    """One prompted-subset (brand-named) observation, reduced to its deterministically
+    alias-matched attribute/category claims — the REPRESENTATION gap's input (DESIGN §5.2).
+
+    `claimed_attributes` is produced the same way EntityMention is: alias-table lookup
+    against a fixed attribute vocabulary (e.g. category descriptors), not an LLM judgment —
+    keeping gap detection deterministic per PRD §11.2.
+    """
+
+    observation_id: str
+    query_id: str
+    provider_id: str
+    intent_type: str
+    claimed_attributes: frozenset[str] = frozenset()
+
+
+@dataclass(frozen=True)
+class SourceLandscapeEntry:
+    """One dominant web/social source for the brand's category (DESIGN §1.8, §5.2 SOURCE gap).
+
+    Produced by the (not-yet-built) collection/normalization layers from YouTube + web
+    scrape + Google CSE + Brave Search results — GapDetector only consumes the aggregate.
+    """
+
+    source_id: str
+    mentions_brand: bool
+
+
+@dataclass(frozen=True)
+class Gap:
+    """A detected gap — DESIGN §5.2, ER model `Gap`. `evidence_refs` must resolve to real
+    observation/source IDs; `is_inferred` marks a claim that isn't a direct data readout
+    (kept False by every detector below since all five rules here compute directly from
+    aggregated data, not inference)."""
+
+    gap_type: GapType
+    evidence_refs: tuple[str, ...]
+    detail: dict
+    is_inferred: bool = False
+
+
+@dataclass(frozen=True)
+class DetectionConfig:
+    """Versioned detection thresholds (DESIGN §5.2, Decisions Log #5). Initial values are
+    the ones set from the first real analysis run per the decisions log; anything not yet
+    given a value there (representation disagreement) is a documented starting assumption,
+    frozen the same way once real data exists."""
+
+    presence_threshold: float = 0.10  # θ_presence
+    prominence_coverage_threshold: float = 0.20  # θ_present
+    prominence_rank_threshold: int = 4  # "mean rank >= 4"
+    competitive_co_occurrence_threshold: float = 0.30  # θ_co
+    competitive_beat_threshold: float = 0.60  # θ_beat
+    representation_disagreement_threshold: float = 0.5  # not in Decisions Log — starting assumption
