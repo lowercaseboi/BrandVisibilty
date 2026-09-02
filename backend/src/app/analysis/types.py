@@ -21,6 +21,20 @@ class EntityMention:
     entity_kind: EntityKind
     rank: int  # 1-based position among distinct entities, ordered by first mention
     is_passing_mention: bool = False  # parenthetical/incidental mention — forces the 0.1 band (§4.2)
+    char_start: int = -1  # evidence span of the earliest match; -1 when not produced by MentionDetector
+    char_end: int = -1
+
+
+@dataclass(frozen=True)
+class EntityAlias:
+    """One tracked entity's alias set — MentionDetector's input vocabulary (DESIGN §1.6).
+    `aliases` should include the canonical name and any known variants; matching handles
+    casefolding and possessive/plural suffixes on top of these, so aliases don't need to
+    enumerate those forms themselves."""
+
+    entity_id: str
+    entity_kind: EntityKind
+    aliases: tuple[str, ...]
 
 
 @dataclass(frozen=True)
