@@ -19,7 +19,7 @@ _TIMEOUT_SECONDS = 30.0
 
 
 class GeminiAdapter(LLMProvider):
-    def __init__(self, api_key: str, model: str = "gemini-2.0-flash"):
+    def __init__(self, api_key: str, model: str = "gemini-3.6-flash"):
         if not api_key:
             raise ValueError("GeminiAdapter requires a non-empty api_key")
         self._api_key = api_key

@@ -9,10 +9,19 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        # Checked in order; a repo-root .env.local (one level up from backend/, where
+        # uv run/pytest execute) takes precedence over a backend/-local .env.
+        env_file=("../.env.local", "../.env", ".env.local", ".env"),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     gemini_api_key: str | None = None
-    gemini_model: str = "gemini-2.0-flash"
+    # "gemini-2.0-flash"/"gemini-2.5-flash"/"gemini-2.5-pro" are all retired for new API
+    # keys as of this key's account (confirmed live via /v1beta/models); "gemini-3.6-flash"
+    # is the model Google's own 404 message on this key recommends as the replacement.
+    gemini_model: str = "gemini-3.6-flash"
 
 
 settings = Settings()

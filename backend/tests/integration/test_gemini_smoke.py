@@ -7,10 +7,13 @@ import pytest
 
 from app.collection.providers.gemini import GeminiAdapter
 from app.collection.types import SamplingParams
+from app.config.settings import Settings
 from app.querysets.generator import freeze, generate_draft
 from app.querysets.templates import BrandParams
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+# Falls back to Settings (which reads .env.local/.env) so this test exercises the same
+# config path real callers will use, not just an explicitly-exported shell var.
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY") or Settings().gemini_api_key
 
 PARAMS = BrandParams(
     brand="Gajanan Vada Pav",
