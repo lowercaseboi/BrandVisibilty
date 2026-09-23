@@ -80,6 +80,11 @@ class AnalysisResult:
     observation_count: int
     mentioned_count: int
     participating_providers: tuple[str, ...]
+    cluster_count: int = 0  # distinct query_ids in the observation set — §6.2's bootstrap
+    # resamples these, not individual calls; below ~10 the percentile CI is unstable to
+    # degenerate (a single-cluster set produces CI=[composite, composite]), so downstream
+    # code should refuse to treat a low-cluster-count CI as trustworthy rather than render
+    # a confident-looking interval that is really an artifact of n=1.
 
 
 GapType = Literal["presence", "prominence", "representation", "competitive", "source"]

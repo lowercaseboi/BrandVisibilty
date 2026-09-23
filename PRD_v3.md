@@ -61,7 +61,7 @@ Small businesses, freelancers, founders, and independent professionals who want 
 ### 3.3 Engineering Goals
 - Clean, explainable architecture with documented tradeoffs at every major decision point.
 - Security, maintainability, and test coverage from the start, not bolted on.
-- Realistic scope for 4 students working without a fixed calendar plan.
+- Modular enough that any single component can be built and understood in isolation, without requiring context on the rest of the system.
 - Quality bar suitable for internship-level technical evaluation.
 
 ### 3.4 Secondary Goal: Research Documentation (Optional)
@@ -117,7 +117,7 @@ Small business owner / freelancer / self-employed professional.
 
 ## 7. Constraints
 
-- Must be buildable by a team of 4 students without a dedicated, large-scale engineering organization behind it.
+- Must be buildable without a dedicated, large-scale engineering organization behind it — favors reusing mature libraries (Celery, Pydantic) over custom infrastructure wherever the design doc allows it. The layered architecture (DESIGN §1.2) is deliberately modular, so any given component (a provider adapter, the frontend, a distribution channel) can be built and understood in isolation.
 - Scoped to small businesses, freelancers, and self-employed users — not enterprise.
 - External AI/search providers impose rate limits and quotas; OpenRouter's per-model daily cap (~50 requests/model) is the binding constraint on job frequency (§8, §10.2).
 - Social platforms may restrict automated publishing or require manual approval.
@@ -309,7 +309,7 @@ Detection thresholds are versioned configuration, not hardcoded; initial values 
 - Support manual reprocessing/retry of failed jobs from the last valid checkpoint.
 - Track per-provider usage/cost, with particular attention to OpenRouter's tight per-model daily cap and the finite, non-renewing Anthropic credit.
 - Maintain audit logs for administrative actions, approval events, retries, and publishing attempts.
-- Support a ground-truth labeling workflow: sampling ~10–15% of a job's raw observations, recording independent labels from two annotators, and computing inter-annotator agreement (Cohen's kappa) — the basis for validating the deterministic detector against human judgment.
+- Support a ground-truth labeling workflow: sampling ~10–15% of a job's raw observations, labeled twice independently (see DESIGN_v1.md §7, decision 3 for the method), and computing agreement between the two passes — the basis for validating the deterministic detector against human judgment.
 
 ---
 
@@ -467,7 +467,7 @@ Summary view — full ER model and field-level detail in the companion design do
 | AC-9 | Failure handling | One provider/source failure does not invalidate the job · partial results preserved · failure visible in logs and job status |
 | AC-10 | Distribution approval gate | No external publish occurs without explicit user approval · every attempt logged regardless of outcome · Dev.to functions as the v1 channel with manual export fallback |
 | AC-11 | Cost/quota visibility | Admin view shows per-provider usage and remaining quota/credit, including OpenRouter's per-model cap and the finite, non-renewing Anthropic credit |
-| AC-12 | Detector reliability | Deterministic mention detector's output compared against human-labeled ground truth on a sampled subset · precision/recall and inter-annotator agreement (Cohen's kappa) computed and available |
+| AC-12 | Detector reliability | Deterministic mention detector's output compared against human-labeled ground truth on a sampled subset · precision/recall computed · label reliability reported as agreement between two independent labeling passes (DESIGN_v1.md §7) |
 
 ---
 
@@ -504,7 +504,7 @@ Summary view — full ER model and field-level detail in the companion design do
 - System demonstrably survives partial provider/source failure without crashing, visible in the UI.
 - Visibility score is explainable — any given score can be traced back to specific supporting observations, down to individual mention-level evidence, on request.
 - Demonstrable trend view across the three pilot brands, each showing a distinct visibility profile (weak / established-product / established-service), with confidence intervals and comparability-key grouping.
-- Architecture and scoring methodology documented with explicit tradeoffs, suitable for technical evaluation and usable as the basis for a research paper if the team chooses to pursue one.
+- Architecture and scoring methodology documented with explicit tradeoffs, suitable for technical evaluation and usable as the basis for a research paper if pursued as a follow-on.
 
 ---
 

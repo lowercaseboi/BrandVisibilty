@@ -1,0 +1,25 @@
+{
+  "brand_key": "fixture_brand",
+  "captured_at": "2026-09-02T12:00:00+00:00",
+  "error": null,
+  "intent_type": "category_discovery",
+  "is_brand_named": false,
+  "latency_ms": 500,
+  "model_id": "openai/gpt-oss-20b",
+  "model_version": "openai/gpt-oss-20b-001",
+  "provider_id": "groq",
+  "query_id": "q48f6d17804",
+  "query_set_hash": "fixturequerysethash1234567890ab",
+  "query_text": "best widget maker for households",
+  "raw_meta": {},
+  "response_text": "Bolt & Co and Acme Widgets are the two most-mentioned household widget makers.",
+  "run_id": "fixture-run",
+  "sample_index": 1,
+  "sampling_hash": "fixturesamplinghash",
+  "schema_version": 1,
+  "status": "ok",
+  "token_usage": {
+    "completion_tokens": 20,
+    "prompt_tokens": 10
+  }
+}

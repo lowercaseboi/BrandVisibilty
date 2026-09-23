@@ -1,0 +1,25 @@
+{
+  "brand_key": "fixture_brand",
+  "captured_at": "2026-09-02T12:00:00+00:00",
+  "error": null,
+  "intent_type": "local_contextual",
+  "is_brand_named": false,
+  "latency_ms": 500,
+  "model_id": "gemini-3.6-flash",
+  "model_version": "gemini-3.6-flash-001",
+  "provider_id": "gemini",
+  "query_id": "qbf710914df",
+  "query_set_hash": "fixturequerysethash1234567890ab",
+  "query_text": "widget maker in Springfield",
+  "raw_meta": {},
+  "response_text": "In Springfield, Acme Widgets has a well-known storefront downtown.",
+  "run_id": "fixture-run",
+  "sample_index": 0,
+  "sampling_hash": "fixturesamplinghash",
+  "schema_version": 1,
+  "status": "ok",
+  "token_usage": {
+    "completion_tokens": 20,
+    "prompt_tokens": 10
+  }
+}

@@ -13,7 +13,9 @@ from app.querysets.templates import BrandParams
 
 # Falls back to Settings (which reads .env.local/.env) so this test exercises the same
 # config path real callers will use, not just an explicitly-exported shell var.
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY") or Settings().gemini_api_key
+_settings = Settings()
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY") or _settings.gemini_api_key
+GEMINI_MODEL = _settings.gemini_model
 
 PARAMS = BrandParams(
     brand="Gajanan Vada Pav",
@@ -25,7 +27,7 @@ PARAMS = BrandParams(
 
 @pytest.mark.skipif(not GEMINI_API_KEY, reason="GEMINI_API_KEY not set")
 def test_gemini_expands_one_canonical_query_into_natural_phrasing():
-    adapter = GeminiAdapter(api_key=GEMINI_API_KEY)
+    adapter = GeminiAdapter(api_key=GEMINI_API_KEY, model=GEMINI_MODEL)
     result = adapter.query(
         "Rephrase this search query in a natural, conversational way a real person "
         "would type, preserving its meaning exactly. Return only the rephrased query, "
@@ -38,7 +40,7 @@ def test_gemini_expands_one_canonical_query_into_natural_phrasing():
 
 @pytest.mark.skipif(not GEMINI_API_KEY, reason="GEMINI_API_KEY not set")
 def test_generate_draft_end_to_end_with_real_gemini():
-    adapter = GeminiAdapter(api_key=GEMINI_API_KEY)
+    adapter = GeminiAdapter(api_key=GEMINI_API_KEY, model=GEMINI_MODEL)
     draft = generate_draft(PARAMS, llm_provider=adapter)
     assert len(draft.queries) == 30
     frozen = freeze(draft)

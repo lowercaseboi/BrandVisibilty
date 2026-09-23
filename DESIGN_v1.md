@@ -34,7 +34,7 @@ These are load-bearing. Each one is a defect that only becomes visible once you 
 | Frontend | React + Vite; SSE for job progress, 2s polling fallback | §13.1 requires visible per-source progress, not a spinner. |
 | Secrets | Environment + a `SecretProvider` indirection | §12 forbids credentials in frontend or logs. Indirection keeps a future move to a vault from touching adapter code. |
 
-*If the team is stronger in Node, the same pipeline shape maps cleanly to NestJS + BullMQ + Postgres. The layering below is stack-independent — nothing in it assumes Python.*
+*If Node is a stronger fit than Python, the same pipeline shape maps cleanly to NestJS + BullMQ + Postgres. The layering below is stack-independent — nothing in it assumes Python.*
 
 ### 1.2 Layers
 
@@ -551,7 +551,7 @@ Everything below was an open question through design review and is now resolved.
 |---|---|---|
 | 1 | Stack | Python/FastAPI as proposed — team's call to override if existing strength points elsewhere; nothing structural depends on this choice. |
 | 2 | Distribution channel (§11.4) | **Dev.to for v1.** Simplest publishing API, least OAuth friction — satisfies the requirement without becoming a side project. LinkedIn/X remain a stretch goal. |
-| 3 | Ground-truth labeling (§3.4) | **2 annotators, ~10–15% of a job's raw observations (~45–65 responses), Cohen's kappa for inter-annotator agreement**, disagreements adjudicated by a third team member. Validates `MentionDetector` against human judgment and produces the reliability figure the paper needs. |
+| 3 | Ground-truth labeling (§3.4) | **~10–15% of a job's raw observations (~45–65 responses), labeled twice, independently, at least a day apart.** Compute agreement between the two passes (Cohen's kappa) and log the reasoning behind any resolved disagreements so the calls stay auditable. Validates `MentionDetector` against human judgment and produces the reliability figure the paper needs. |
 | 4 | Grounded vs. ungrounded | **Tool use disabled for v1** (§3.5) — kept as a controlled variable rather than an uncontrolled confound in the score. |
 | 5 | Detection thresholds (§5.2) | Initial values: θ_presence = 0.10, θ_present = 0.20, θ_co = 0.30, θ_beat = 0.60. Starting guesses, recalibrated after the first real job's data, then frozen. |
 | 6 | Phase 1 → Phase 2 switch trigger (§6.3) | **After 3 completed validation jobs**, once per-query mention-rate variance looks stable across them — a data-driven trigger, not a calendar one. |

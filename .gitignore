@@ -16,9 +16,12 @@ dist/
 .env.*
 !.env.example
 
-# Tracking-loop snapshots (backend/scripts/run_tracking_loop.py) — real collected data,
-# not source; not meant to be committed.
-backend/data/
+# Tracking-loop working data (backend/scripts/run_tracking_loop.py). Raw per-sample
+# responses and the local usage ledger are large/regenerable and stay untracked; the
+# admitted trend-series snapshots and run audit trail under backend/data/tracking/ are
+# the one deliverable DESIGN_v1 §6.8 says can't be rebuilt later, so they ARE committed.
+backend/data/responses/
+backend/data/usage/
 
 # OS
 .DS_Store

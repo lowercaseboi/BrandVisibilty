@@ -157,6 +157,7 @@ def score(
         observation_count=total,
         mentioned_count=mentioned_count,
         participating_providers=tuple(sorted({obs.provider_id for obs in observations})),
+        cluster_count=len(query_ids),
     )
 
 

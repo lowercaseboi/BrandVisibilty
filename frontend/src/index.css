@@ -238,3 +238,135 @@ a {
   opacity: 0.6;
   font-style: italic;
 }
+
+.search-box,
+select {
+  font: inherit;
+  color: var(--text);
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.search-box {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.gap-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.gap-filters .search-box {
+  flex: 1 1 200px;
+  margin-bottom: 0;
+}
+
+.gap-filter-summary {
+  font-size: 13px;
+  opacity: 0.7;
+  margin-top: 8px;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  margin: 16px 0;
+}
+
+.tab {
+  font: inherit;
+  color: var(--text);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 8px 4px;
+  margin-right: 16px;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.tab:hover {
+  opacity: 1;
+}
+
+.tab-active {
+  color: var(--text-h);
+  border-bottom-color: var(--accent);
+  opacity: 1;
+  font-weight: 600;
+}
+
+.run-history {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.run-history-item {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.run-history-toggle {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  font: inherit;
+  color: var(--text);
+  background: var(--card-bg);
+  border: none;
+  border-radius: 6px;
+  padding: 10px 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.run-status {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+.run-status-complete {
+  background: var(--ok-bg);
+  border-color: var(--ok-border);
+}
+
+.run-status-partial {
+  background: var(--warn-bg);
+  border-color: var(--warn-border);
+}
+
+.run-history-id {
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+.run-history-date {
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+.run-history-score {
+  margin-left: auto;
+  font-weight: 600;
+}
+
+.run-history-detail {
+  padding: 4px 16px 12px;
+  font-size: 13px;
+  opacity: 0.85;
+}
