@@ -46,6 +46,13 @@ make report                                           # one line per brand
 ```
 You can also start a run from the UI (brand page → **Run analysis**) or through the API (`POST /brands/{key}/runs`).
 
+### Switching PCs / pulling a teammate's changes
+```bash
+git pull && make up      # rebuilds images with the new code; your .env.local stays local
+```
+Each PC keeps its own snapshot history in its Docker volume. To share real runs, commit nothing; instead copy
+`docker compose cp backend:/data/tracking ./tracking-export` and send the JSONL files.
+
 ### Housekeeping
 ```bash
 make logs     # follow logs
