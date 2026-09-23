@@ -2,7 +2,7 @@ import random
 
 import pytest
 
-from app.analysis.scorer import score
+from app.analysis.scorer import _percentile, score
 from app.analysis.types import EntityMention, Observation
 
 BRAND = "brand-1"
@@ -199,3 +199,17 @@ def test_composite_formula_weights_when_all_components_defined():
     # coverage = 1/2 = 0.5, prominence = 1.0 (sole option in o1), sov = 1/2 = 0.5
     expected = (0.4 * 0.5 + 0.3 * 1.0 + 0.3 * 0.5) * 100
     assert result.composite_score == pytest.approx(expected)
+
+
+def test_percentile_interpolates_linearly_between_ranks():
+    values = [0.0, 10.0, 20.0, 30.0, 40.0]
+    assert _percentile(values, 0) == 0.0
+    assert _percentile(values, 100) == 40.0
+    assert _percentile(values, 50) == 20.0
+    # rank = 0.375 * 4 = 1.5 -> halfway between 10 and 20
+    assert _percentile(values, 37.5) == pytest.approx(15.0)
+
+
+def test_percentile_degenerate_inputs():
+    assert _percentile([], 50) == 0.0
+    assert _percentile([7.0], 2.5) == 7.0
