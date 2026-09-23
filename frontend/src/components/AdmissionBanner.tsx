@@ -1,30 +1,47 @@
 import type { SnapshotAdmission } from "../api/types";
+import { humanize, pct } from "../format";
 
 // PRD §444: failed/partial/queued/running/completed states must be shown
 // clearly, not hidden behind a green checkmark.
-export function AdmissionBanner({ admission }: { admission: SnapshotAdmission }) {
-  const variant = admission.admissible ? "admission-ok" : "admission-warn";
+export function AdmissionBanner({
+  admission,
+  runStatus,
+}: {
+  admission?: Partial<SnapshotAdmission>;
+  runStatus?: string;
+}) {
+  if (!admission) return null;
+  const admissible = admission.admissible ?? false;
+  const reasons = admission.reasons ?? [];
+  const missingProviders = admission.missing_providers ?? [];
+  const missingQueries = admission.missing_query_ids ?? [];
 
   return (
-    <div className={`admission-banner ${variant}`}>
+    <div className={`alert ${admissible ? "alert-ok" : "alert-warn"} admission-banner`}>
       <div className="admission-headline">
-        <strong>{admission.status}</strong>
         <span>
-          query coverage {(admission.query_coverage * 100).toFixed(0)}% · sample
-          completeness {(admission.sample_completeness * 100).toFixed(0)}%
+          <strong>{admissible ? "✓ Admissible snapshot" : "⚠ Not admissible for trend claims"}</strong>
+          {admission.status && <span className="muted"> · {humanize(admission.status)}</span>}
+          {runStatus === "partial" && <span className="badge badge-job-partial badge-inline">partial run</span>}
+        </span>
+        <span className="small">
+          Query coverage {pct(admission.query_coverage, 0)} · Sample completeness{" "}
+          {pct(admission.sample_completeness, 0)}
+          {admission.policy_version && <span className="muted"> · policy {admission.policy_version}</span>}
         </span>
       </div>
-      {admission.reasons.length > 0 && (
+      {reasons.length > 0 && (
         <ul className="admission-reasons">
-          {admission.reasons.map((r, i) => (
+          {reasons.map((r, i) => (
             <li key={i}>{r}</li>
           ))}
         </ul>
       )}
-      {admission.missing_providers.length > 0 && (
-        <p className="admission-missing">
-          Missing providers: {admission.missing_providers.join(", ")}
-        </p>
+      {missingProviders.length > 0 && (
+        <p className="admission-missing">Missing providers: {missingProviders.join(", ")}</p>
+      )}
+      {missingQueries.length > 0 && (
+        <p className="admission-missing">Missing questions: {missingQueries.length}</p>
       )}
     </div>
   );

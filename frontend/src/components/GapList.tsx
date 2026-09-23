@@ -1,39 +1,61 @@
+import { Link } from "react-router-dom";
 import type { Gap } from "../api/types";
+import { GAP_TYPE_EXPLAINER, evidenceHref, gapNumbers, gapScope } from "../format";
 
-function scopeLabel(gap: Gap): string {
-  const scope = gap.detail.scope;
-  if (scope === "provider") return `Provider: ${gap.detail.provider_id}`;
-  if (scope === "intent") return `Intent: ${gap.detail.intent_type}`;
-  if (scope === "overall") return "Overall";
-  return String(scope ?? "—");
-}
-
-function detailCoverage(gap: Gap): number | undefined {
-  const coverage = gap.detail.coverage;
-  return typeof coverage === "number" ? coverage : undefined;
-}
-
-export function GapList({ gaps }: { gaps: Gap[] }) {
+// Gaps are found by deterministic rules (DESIGN §5.1) — no LLM involved.
+export function GapList({
+  gaps,
+  brandKey,
+  runId,
+  entities,
+  highlightedGapId,
+}: {
+  gaps: Gap[];
+  brandKey: string;
+  runId: string;
+  entities?: Record<string, string>;
+  highlightedGapId?: string | null;
+}) {
   if (gaps.length === 0) {
-    return <p className="empty">No gaps detected.</p>;
+    return <p className="empty">No gaps detected — the brand clears every rule threshold.</p>;
   }
 
   return (
-    <ul className="gap-list">
+    <div className="gap-list">
       {gaps.map((gap, i) => {
-        const coverage = detailCoverage(gap);
+        const id = gap.gap_id ?? `idx-${i}`;
+        const refs = gap.evidence_refs ?? [];
         return (
-          <li key={i} className="gap-item">
-            <span className="gap-type">{gap.gap_type}</span>
-            <span className="gap-scope">{scopeLabel(gap)}</span>
-            {coverage !== undefined && (
-              <span className="gap-coverage">{(coverage * 100).toFixed(1)}% coverage</span>
-            )}
-            <span className="gap-evidence">{gap.evidence_refs.length} evidence refs</span>
-            {gap.is_inferred && <span className="gap-inferred">inferred</span>}
-          </li>
+          <div
+            key={id}
+            id={`gap-${id}`}
+            className={`card gap-item ${highlightedGapId === id ? "is-highlighted" : ""}`}
+          >
+            <div className="gap-head">
+              <span className={`badge gap-type gap-type-${gap.gap_type}`}>{gap.gap_type}</span>
+              <span className="gap-scope">{gapScope(gap, entities)}</span>
+              {gap.is_inferred && <span className="badge badge-warn">inferred</span>}
+              <code className="gap-id">{id}</code>
+            </div>
+            {GAP_TYPE_EXPLAINER[gap.gap_type] && <p className="muted small gap-explainer">{GAP_TYPE_EXPLAINER[gap.gap_type]}</p>}
+            <div className="gap-foot">
+              <div className="gap-numbers">
+                {gapNumbers(gap).map(([label, value]) => (
+                  <span key={label} className="kv">
+                    <span className="kv-label">{label}</span>
+                    <span className="kv-value">{value}</span>
+                  </span>
+                ))}
+              </div>
+              {refs.length > 0 && (
+                <Link to={evidenceHref(brandKey, runId, refs)} className="link-evidence">
+                  View evidence ({refs.length}) →
+                </Link>
+              )}
+            </div>
+          </div>
         );
       })}
-    </ul>
+    </div>
   );
 }

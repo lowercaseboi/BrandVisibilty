@@ -1,32 +1,36 @@
-# React + TypeScript + Vite
+# Frontend — AI Visibility dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React 19 + Vite + TypeScript. No UI kit or chart library; charts are inline SVG.
 
-Currently, two official plugins are available:
+## Run (dev)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Start the backend on `:8000` first (`uvicorn app.interface.main:app`), then:
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev          # http://localhost:5173
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+The app calls `/api/*`; the Vite dev proxy forwards it to `http://localhost:8000` with `/api` stripped.
+Override the target with `API_PROXY_TARGET=http://host:port npm run dev`, or bypass the proxy by setting
+`VITE_API_BASE` (see `.env.example`).
+
+## Docker
+
+See `RUNNING.md` in the repo root.
+
+## Checks
+
+```bash
+npm run build   # type-check + production build
+npm run lint    # oxlint
+```
+
+## Routes
+
+| Path | Page |
+|------|------|
+| `/` | Brands: cards per brand + "Add brand" form |
+| `/providers` | Configured LLM providers (never shows keys) |
+| `/brands/:brandKey` | Dashboard: run analysis, metrics + CI, trend, gaps, recommendations |
+| `/brands/:brandKey/runs/:runId/evidence?refs=a,b` | Raw LLM answers with highlighted mentions |
