@@ -1,0 +1,44 @@
+import pytest
+
+from app.brands import registry
+from app.querysets.generator import generate_draft
+from app.tracking import store
+
+
+@pytest.fixture(autouse=True)
+def tmp_data_dir(tmp_path, monkeypatch):
+    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    return tmp_path
+
+
+def test_pilots_produce_about_twenty_unprompted_queries():
+    for key in ("gajanan_vada_pav", "va_mayekar_opticians", "perfume_pilot"):
+        brand = registry.get_brand(key)
+        unprompted = [q for q in generate_draft(brand.params).queries if not q.is_brand_named]
+        assert len(unprompted) == 20, key
+        assert brand.alias_table()[0].entity_id == "self"
+        assert "lenskart" in registry.get_brand("va_mayekar_opticians").competitor_ids()
+
+
+def test_create_brand_validates_and_persists(tmp_data_dir):
+    for bad, msg in [
+        ({"name": "", "category": "cafe", "cities": ["Pune"]}, "name"),
+        ({"name": "x" * 81, "category": "cafe", "cities": ["Pune"]}, "80"),
+        ({"name": "Chai Point", "category": " ", "cities": ["Pune"]}, "category"),
+        ({"name": "Chai Point", "category": "cafe", "cities": []}, "cities"),
+        ({"name": "Chai Point", "category": "cafe", "cities": ["Pune"], "competitors": [f"c{i}" for i in range(11)]}, "10"),
+    ]:
+        with pytest.raises(ValueError, match=msg):
+            registry.create_brand(bad)
+
+    brand = registry.create_brand(
+        {"name": "Chai Point", "category": "cafe", "cities": ["Pune"], "competitors": ["Chaayos", "Starbucks"]}
+    )
+    assert brand.brand_key == "chai_point" and not brand.is_pilot
+    assert brand.competitor_ids() == frozenset({"chaayos", "starbucks"})
+    assert (tmp_data_dir / "brands.json").exists()
+    assert registry.get_brand("chai_point").params.cities == ("Pune",)
+    with pytest.raises(ValueError, match="already exists"):
+        registry.create_brand({"name": "chai point", "category": "cafe", "cities": ["Pune"]})
+    with pytest.raises(KeyError):
+        registry.get_brand("nope")
