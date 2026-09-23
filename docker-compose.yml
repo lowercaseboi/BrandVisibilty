@@ -1,0 +1,35 @@
+# One command on any machine:  docker compose up --build
+#   UI:       http://localhost:8080
+#   API docs: http://localhost:8000/docs
+# Provider keys: put any of them in .env.local (copy .env.example). No keys = offline synthetic demo data.
+services:
+  backend:
+    build: ./backend
+    env_file:
+      - path: .env.local
+        required: false
+      - path: .env
+        required: false
+    environment:
+      DATA_DIR: /data
+      SEED_DEMO: ${SEED_DEMO:-1}
+    volumes:
+      - brandlens-data:/data
+    ports:
+      - "8000:8000"
+    extra_hosts:
+      # lets OLLAMA_BASE_URL=http://host.docker.internal:11434 reach a local Ollama
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  brandlens-data:
