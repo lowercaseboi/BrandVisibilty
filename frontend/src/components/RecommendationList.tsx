@@ -2,11 +2,13 @@ import { Link } from "react-router-dom";
 import type { Gap, Recommendation } from "../api/types";
 import { evidenceHref, gapScope, humanize, pct } from "../format";
 
-// delta_composite is on the 0–1 composite scale; show percentage points.
+// delta_composite is already in composite points (0-100 scale, engine.py).
 function deltaPoints(delta: number | undefined): number {
-  const v = delta ?? 0;
-  return Math.abs(v) > 1 ? v : v * 100;
+  return delta ?? 0;
 }
+
+// DESIGN §5.4 effort constants.
+const EFFORT_LABEL: Record<number, string> = { 1: "listing", 3: "content", 5: "positioning", 8: "product" };
 
 // PRD AC-7: every recommendation traces to a detected gap and its evidence.
 export function RecommendationList({
@@ -59,7 +61,7 @@ export function RecommendationList({
                 <span className="kv">
                   <span className="kv-label">Effort</span>
                   <span className="kv-value">
-                    {rec.effort ?? "—"}
+                    {rec.effort ?? "—"} {EFFORT_LABEL[rec.effort] ? `(${EFFORT_LABEL[rec.effort]})` : ""}
                   </span>
                 </span>
                 {typeof rec.confidence === "number" && (

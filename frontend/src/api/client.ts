@@ -77,6 +77,16 @@ function postJson<T>(path: string, body: unknown): Promise<T> {
 
 const b = encodeURIComponent;
 
+// The backend reports composite_score / ci_low / ci_high on a 0-100 scale (scorer.py);
+// the UI works in 0-1 fractions like the other metrics, so convert once here.
+function toFractions(s: Snapshot): Snapshot {
+  const a = s.analysis_result;
+  return {
+    ...s,
+    analysis_result: { ...a, composite_score: a.composite_score / 100, ci_low: a.ci_low / 100, ci_high: a.ci_high / 100 },
+  };
+}
+
 export function listBrands(): Promise<BrandSummary[]> {
   return getJson("/brands");
 }
@@ -89,12 +99,12 @@ export function listProviders(): Promise<ProviderInfo[]> {
   return getJson("/providers");
 }
 
-export function getLatestSnapshot(brandKey: string): Promise<Snapshot> {
-  return getJson(`/brands/${b(brandKey)}/snapshots/latest`);
+export async function getLatestSnapshot(brandKey: string): Promise<Snapshot> {
+  return toFractions(await getJson<Snapshot>(`/brands/${b(brandKey)}/snapshots/latest`));
 }
 
-export function getSnapshots(brandKey: string): Promise<Snapshot[]> {
-  return getJson(`/brands/${b(brandKey)}/snapshots`);
+export async function getSnapshots(brandKey: string): Promise<Snapshot[]> {
+  return (await getJson<Snapshot[]>(`/brands/${b(brandKey)}/snapshots`)).map(toFractions);
 }
 
 export async function getObservations(brandKey: string, runId: string): Promise<ObservationsResponse> {

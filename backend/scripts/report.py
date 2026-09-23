@@ -270,7 +270,7 @@ def show_recommendations(s: dict) -> None:
         )
         print(
             f"     priority {num(rec.get('priority'))}   Δcomposite {c(f'{delta:+.1f}', 'green' if delta > 0 else 'grey')}"
-            f"   confidence {pct(rec.get('confidence'), 0)}   effort {rec.get('effort', '?')}/5   {trace}"
+            f"   confidence {pct(rec.get('confidence'), 0)}   effort {rec.get('effort', '?')} ({ {1: 'listing', 3: 'content', 5: 'positioning', 8: 'product'}.get(rec.get('effort'), '?')})   {trace}"
             f"   {c('drafted by ' + rec.get('drafted_by', 'template'), 'grey')}"
         )
         if rec.get("reasoning"):
