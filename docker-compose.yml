@@ -2,6 +2,8 @@
 #   UI:       http://localhost:8080
 #   API docs: http://localhost:8000/docs
 # Provider keys: put any of them in .env.local (copy .env.example). No keys = offline synthetic demo data.
+name: brand-visibility
+
 services:
   backend:
     build: ./backend
