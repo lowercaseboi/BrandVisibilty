@@ -7,6 +7,8 @@ they stay unit-testable without a database.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass, field
 from typing import Literal
 
@@ -125,6 +127,24 @@ class Gap:
     evidence_refs: tuple[str, ...]
     detail: dict
     is_inferred: bool = False
+    gap_id: str = ""  # derived deterministically in __post_init__ when left empty (AC-7 traceability)
+
+    def __post_init__(self) -> None:
+        if not self.gap_id:
+            object.__setattr__(self, "gap_id", make_gap_id(self.gap_type, self.detail))
+
+
+# Detail keys that identify WHICH gap this is (its scope), as opposed to the measured
+# rates. The gap_id hashes only these, so the same gap keeps the same id across runs
+# even as its coverage/beat-rate numbers move.
+GAP_SCOPE_KEYS: tuple[str, ...] = ("scope", "provider_id", "intent_type", "competitor_id")
+
+
+def make_gap_id(gap_type: str, detail: dict) -> str:
+    """Deterministic gap id: "gap-" + sha1(gap_type + scope-identifying detail)[:10]."""
+    scope = {k: detail[k] for k in GAP_SCOPE_KEYS if k in detail}
+    digest = hashlib.sha1((gap_type + json.dumps(scope, sort_keys=True)).encode("utf-8")).hexdigest()
+    return "gap-" + digest[:10]
 
 
 @dataclass(frozen=True)
