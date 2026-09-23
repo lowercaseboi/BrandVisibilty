@@ -49,6 +49,7 @@ function BrandCard({ brand }: { brand: BrandSummary }) {
 export function BrandListPage() {
   const [reload, setReload] = useState(0);
   const state = useAsync(listBrands, [reload]);
+  const [q, setQ] = useState("");
 
   return (
     <div>
@@ -72,11 +73,23 @@ export function BrandListPage() {
         (state.data.length === 0 ? (
           <p className="empty">No brands yet — add one below.</p>
         ) : (
+          <>
+          {state.data.length > 3 && (
+            <input
+              className="search-input"
+              type="search"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Filter brands…"
+              aria-label="Filter brands"
+            />
+          )}
           <div className="brand-grid">
-            {state.data.map((b) => (
+            {state.data.filter((b) => `${b.brand} ${b.brand_key}`.toLowerCase().includes(q.trim().toLowerCase())).map((b) => (
               <BrandCard key={b.brand_key} brand={b} />
             ))}
           </div>
+          </>
         ))}
 
       <section>

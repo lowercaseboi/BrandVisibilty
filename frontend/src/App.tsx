@@ -1,4 +1,5 @@
-import { Link, NavLink, Route, Routes } from "react-router-dom";
+import { Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
+import { CommandPalette } from "./components/CommandPalette";
 import { BrandListPage } from "./pages/BrandListPage";
 import { BrandDashboardPage } from "./pages/BrandDashboardPage";
 import { ProvidersPage } from "./pages/ProvidersPage";
@@ -16,6 +17,7 @@ function NotFound() {
 }
 
 export default function App() {
+  const location = useLocation();
   return (
     <>
       <header className="app-header">
@@ -36,18 +38,25 @@ export default function App() {
               Brands
             </NavLink>
             <NavLink to="/providers">Providers</NavLink>
+            <button type="button" className="palette-trigger" onClick={() => window.dispatchEvent(new Event("open-palette"))}>
+              <span>Search</span>
+              <kbd>Ctrl K</kbd>
+            </button>
           </nav>
         </div>
       </header>
       <main className="app">
-        <Routes>
+        <div className="route-fade" key={location.pathname}>
+        <Routes location={location}>
           <Route path="/" element={<BrandListPage />} />
           <Route path="/providers" element={<ProvidersPage />} />
           <Route path="/brands/:brandKey" element={<BrandDashboardPage />} />
           <Route path="/brands/:brandKey/runs/:runId/evidence" element={<EvidencePage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </div>
       </main>
+      <CommandPalette />
       <footer className="app-footer">
         Measures how often LLMs mention a brand when asked unprompted category questions.
       </footer>

@@ -97,6 +97,7 @@ export function EvidencePage() {
   const [intent, setIntent] = useState("all");
   const [provider, setProvider] = useState("all");
   const [onlyBrand, setOnlyBrand] = useState(false);
+  const [text, setText] = useState("");
 
   const all = state.status === "ready" ? state.data.observations : [];
   const entities = state.status === "ready" ? state.data.entities : {};
@@ -108,6 +109,7 @@ export function EvidencePage() {
     (o) =>
       (intent === "all" || o.intent_type === intent) &&
       (provider === "all" || o.provider_id === provider) &&
+      (!text.trim() || `${o.query_text} ${o.response_text}`.toLowerCase().includes(text.trim().toLowerCase())) &&
       (!onlyBrand || (o.mentions ?? []).some((m) => m.entity_kind === "self")),
   );
   const mentioningCount = scoped.filter((o) => (o.mentions ?? []).some((m) => m.entity_kind === "self")).length;
@@ -165,6 +167,16 @@ export function EvidencePage() {
       </div>
 
       <div className="filters">
+        <label>
+          <span className="small">Search</span>
+          <input
+            className="search-input search-inline"
+            type="search"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Words in question or answer…"
+          />
+        </label>
         <label>
           <span>Intent</span>
           <select value={intent} onChange={(e) => setIntent(e.target.value)}>
