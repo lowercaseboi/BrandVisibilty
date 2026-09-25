@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import time
+
 import httpx
 import pytest
 
@@ -54,3 +56,43 @@ def test_permanent_error_is_not_retried():
     with pytest.raises(httpx.HTTPStatusError):
         retry.query_with_retry(provider, "p", SamplingParams(), sleep=lambda s: None)
     assert provider.calls == 1
+
+
+def test_on_wait_reports_seconds_and_reason():
+    waits: list[tuple[float, str]] = []
+    provider = _FlakyProvider([_status_error(429, {"retry-after": "40"}), _status_error(503), httpx.ReadTimeout("slow")])
+    retry.query_with_retry(provider, "p", SamplingParams(), sleep=lambda s: None, on_wait=lambda s, r: waits.append((s, r)))
+    assert [r for _, r in waits] == ["rate limited", "provider error 503", "timed out"]
+    assert 40.0 <= waits[0][0] <= 50.0
+
+
+def test_should_stop_interrupts_a_long_wait():
+    """A 60s Retry-After wait is abandoned within one slice once should_stop flips."""
+    waits: list[float] = []
+    provider = _FlakyProvider([_status_error(429, {"retry-after": "60"})])
+    started = time.monotonic()
+    stop_at = started + 0.3
+    with pytest.raises(retry.Skipped):
+        retry.query_with_retry(
+            provider, "p", SamplingParams(),
+            should_stop=lambda: time.monotonic() >= stop_at,
+            on_wait=lambda s, r: waits.append(s),
+        )
+    elapsed = time.monotonic() - started
+    assert provider.calls == 1 and len(waits) == 1 and waits[0] >= 60.0
+    assert elapsed < 0.3 + retry.WAIT_SLICE_SECONDS + 0.5
+
+
+def test_should_stop_before_the_first_attempt_skips_the_call():
+    provider = _FlakyProvider([])
+    with pytest.raises(retry.Skipped):
+        retry.query_with_retry(provider, "p", SamplingParams(), should_stop=lambda: True)
+    assert provider.calls == 0
+
+
+def test_sliced_wait_completes_when_not_stopped(monkeypatch):
+    monkeypatch.setattr(retry, "BACKOFF_BASE_SECONDS", 0.05)
+    monkeypatch.setattr(retry.random, "uniform", lambda a, b: 0.0)
+    provider = _FlakyProvider([_status_error(503)])
+    assert retry.query_with_retry(provider, "p", SamplingParams(), should_stop=lambda: False).payload == "ok"
+    assert provider.calls == 2

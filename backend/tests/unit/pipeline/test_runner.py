@@ -7,8 +7,18 @@ from dataclasses import dataclass
 
 import pytest
 
+from app.collection.retry import Skipped
 from app.collection.types import CollectionResult
 from app.tracking import store
+
+
+def _n_questions(brand_key: str) -> int:
+    """Default scored question count (derived, so template edits don't break these tests)."""
+    from app.brands.registry import get_brand
+    from app.querysets import custom
+
+    _, scored, _ = custom.build_query_set(get_brand(brand_key))
+    return len(scored)
 
 
 class _FakeProvider:
@@ -47,7 +57,8 @@ def _install_fakes(monkeypatch, rounds=None):
 
     registry.build_provider = build_provider
     retry = types.ModuleType("app.collection.retry")
-    retry.query_with_retry = lambda provider, prompt, params: provider.query(prompt, params)
+    retry.Skipped = Skipped
+    retry.query_with_retry = lambda provider, prompt, params, **kwargs: provider.query(prompt, params)
     engine = types.ModuleType("app.recommendation.engine")
     engine.recommend = lambda gaps, obs, self_id, comp_ids, *, entity_names=None, max_recommendations=10: [
         _FakeRec(f"rec-{i}", f"gap-{i}", "do something") for i, _ in enumerate(gaps)
@@ -62,6 +73,7 @@ def test_run_pipeline_partial_run_is_saved(tmp_path, monkeypatch):
     _install_fakes(monkeypatch)
     from app.pipeline.runner import run_pipeline
 
+    n = _n_questions("gajanan_vada_pav")
     progress = []
     snap = run_pipeline(
         "gajanan_vada_pav", providers="steady,flaky,broken", samples=2, on_progress=lambda m, d, t: progress.append((d, t))
@@ -69,12 +81,13 @@ def test_run_pipeline_partial_run_is_saved(tmp_path, monkeypatch):
     assert snap["status"] == "partial"
     assert snap["admission"]["missing_providers"] == ["broken"]
     assert snap["data_origin"] == "live"
-    assert snap["cluster_count"] == 20
-    assert snap["observation_count"] == 20 * 2 + 20  # steady all, flaky half, broken none
+    assert snap["cluster_count"] == n
+    assert snap["observation_count"] == n * 2 + n  # steady all, flaky half, broken none
+    assert snap["unscored_observation_count"] == 0
     assert snap["raw_observations"][0]["observation_id"] == "steady:q0-s0"
     assert snap["entities"]["ashok_vada_pav"] == "Ashok Vada Pav"
     assert 0 < snap["analysis_result"]["coverage"] < 1
-    assert progress[-1] == (120, 120)
+    assert progress[-1] == (3 * n * 2, 3 * n * 2)
     assert store.load_snapshots("gajanan_vada_pav")[0]["run_id"] == snap["run_id"]
 
 
@@ -93,16 +106,17 @@ def test_provider_failing_repeatedly_is_abandoned(tmp_path, monkeypatch):
     _install_fakes(monkeypatch)
     from app.pipeline import runner
 
+    n = _n_questions("gajanan_vada_pav")
     progress = []
     snap = runner.run_pipeline(
         "gajanan_vada_pav", providers="steady,dead", samples=1, on_progress=lambda m, d, t: progress.append((m, d, t))
     )
-    assert snap["status"] == "partial" and snap["observation_count"] == 20
+    assert snap["status"] == "partial" and snap["observation_count"] == n
     dead_failures = [m for m, _, _ in progress if m.startswith("dead · ") and "failed" in m]
     assert len(dead_failures) == runner.GIVE_UP_AFTER_CONSECUTIVE_FAILURES
     assert dead_failures[0] == "dead · question 1, answer 1 failed (timed out)"
     assert any(m == "dead skipped for the rest of this run after 3 failures in a row" for m, _, _ in progress)
-    assert max(d for _, d, _ in progress) == progress[-1][2] == 40
+    assert max(d for _, d, _ in progress) == progress[-1][2] == 2 * n
 
 
 def test_progress_messages_are_human_readable(tmp_path, monkeypatch):
@@ -110,10 +124,11 @@ def test_progress_messages_are_human_readable(tmp_path, monkeypatch):
     _install_fakes(monkeypatch)
     from app.pipeline.runner import run_pipeline
 
+    n = _n_questions("gajanan_vada_pav")
     messages = []
     snap = run_pipeline("gajanan_vada_pav", providers="steady", samples=3, on_progress=lambda m, d, t: messages.append(m))
-    assert messages[0] == "Asking Steady AI 20 questions, 3 times each (60 calls)"
-    assert messages[1].startswith("Steady AI · question 1 of 20, answer 1 of 3 · “best vada pav outlet for")
+    assert messages[0] == f"Asking Steady AI {n} questions, 3 times each ({3 * n} calls)"
+    assert messages[1].startswith(f"Steady AI · question 1 of {n}, answer 1 of 3 · “best vada pav outlet for")
     assert messages[1].endswith(" · brand mentioned")  # "best" prompts name Gajanan in the fake
     assert "Scoring answers…" in messages
     assert messages[-1] == f"Saved run {snap['run_id']} (completed)"
@@ -174,7 +189,8 @@ def test_custom_questions_brand_named_are_asked_but_not_scored(tmp_path, monkeyp
     # Metrics, cluster count and admission are over the scored q* questions only.
     assert snap["observation_count"] == 4 and snap["cluster_count"] == 2
     assert snap["status"] == "completed" and snap["admission"]["admissible"]
-    assert snap["query_set_template_version"] == "v1-custom"
+    assert snap["query_set_template_version"].endswith("-custom")
+    assert snap["unscored_observation_count"] == 2
     for gap in snap["gaps"]:
         assert not any(":p" in ref for ref in gap["evidence_refs"])
 
@@ -208,3 +224,114 @@ def test_round_none_auto_increments_for_synthetic(tmp_path, monkeypatch):
     run_pipeline("gajanan_vada_pav", providers="steady", samples=1)
     run_pipeline("gajanan_vada_pav", providers="steady", samples=1, round=7)
     assert rounds == [3, 7]
+
+
+def _latest_by_provider(payloads: list[dict]) -> dict[str, dict]:
+    return {p["provider_id"]: p for p in payloads}
+
+
+def test_skipping_one_provider_mid_run_keeps_its_answers(tmp_path, monkeypatch):
+    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    _install_fakes(monkeypatch)
+    from app.pipeline.runner import run_pipeline
+
+    n = _n_questions("gajanan_vada_pav")
+    payloads, messages = [], []
+
+    def should_skip(pid):
+        latest = _latest_by_provider(payloads).get(pid, {})
+        return pid == "second" and latest.get("succeeded", 0) >= 3
+
+    snap = run_pipeline(
+        "gajanan_vada_pav", providers="steady,second", samples=1,
+        on_progress=lambda m, d, t: messages.append((m, d, t)), should_skip=should_skip, on_provider=payloads.append,
+    )
+    assert payloads[0]["state"] == "queued" and {p["provider_id"] for p in payloads[:2]} == {"steady", "second"}
+    final = _latest_by_provider(payloads)
+    assert final["steady"] == {
+        "provider_id": "steady", "label": "Steady AI", "done": n, "total": n, "succeeded": n, "failed": 0,
+        "state": "done", "note": None,
+    }
+    assert final["second"]["state"] == "skipped" and final["second"]["succeeded"] == 3
+    assert final["second"]["done"] == final["second"]["total"] == n
+    assert ("second skipped — continuing with the answers collected so far") in [m for m, _, _ in messages]
+    assert snap["status"] == "partial" and snap["observation_count"] == n + 3
+    assert snap["admission"]["missing_providers"] == []
+    assert max(d for _, d, _ in messages) == 2 * n
+
+
+def test_skipped_provider_without_answers_is_missing(tmp_path, monkeypatch):
+    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    _install_fakes(monkeypatch)
+    from app.pipeline.runner import run_pipeline
+
+    snap = run_pipeline("gajanan_vada_pav", providers="steady,second", samples=1, should_skip=lambda pid: pid == "second")
+    assert snap["status"] == "partial"
+    assert snap["admission"]["missing_providers"] == ["second"]
+    assert {o["provider_id"] for o in snap["raw_observations"]} == {"steady"}
+
+
+def test_skip_all_scores_what_was_collected(tmp_path, monkeypatch):
+    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    _install_fakes(monkeypatch)
+    from app.pipeline.runner import run_pipeline
+
+    payloads, messages = [], []
+    snap = run_pipeline(
+        "gajanan_vada_pav", providers="steady", samples=1, on_progress=lambda m, d, t: messages.append(m),
+        should_skip=lambda pid: any(p["succeeded"] >= 5 for p in payloads), on_provider=payloads.append,
+    )
+    assert snap["observation_count"] == 5 and snap["status"] == "partial"
+    assert "Scoring answers…" in messages
+    assert store.load_snapshots("gajanan_vada_pav")[-1]["run_id"] == snap["run_id"]
+
+
+def test_skip_all_before_any_answer_fails_the_run(tmp_path, monkeypatch):
+    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    _install_fakes(monkeypatch)
+    from app.pipeline.runner import run_pipeline
+
+    with pytest.raises(RuntimeError, match="No answers were collected before the run was skipped"):
+        run_pipeline("gajanan_vada_pav", providers="steady,second", samples=1, should_skip=lambda pid: True)
+    assert store.load_snapshots("gajanan_vada_pav") == []
+
+
+def test_provider_stuck_on_rate_limit_is_auto_skipped(tmp_path, monkeypatch):
+    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    _install_fakes(monkeypatch)
+    from app.pipeline import runner
+
+    clock = [0.0]
+    monkeypatch.setattr(runner, "_now", lambda: clock[0])
+
+    def fake_retry(provider, prompt, params, *, should_stop=None, on_wait=None):
+        """Mimics the real retry: 4 attempts, a 40s rate-limit wait between them."""
+        for attempt in range(4):
+            if should_stop is not None and should_stop():
+                raise Skipped
+            try:
+                return provider.query(prompt, params)
+            except TimeoutError:
+                if attempt == 3:
+                    raise
+                on_wait(40.0, "rate limited")
+                clock[0] += 40.0
+
+    sys.modules["app.collection.retry"].query_with_retry = fake_retry
+    n = _n_questions("gajanan_vada_pav")
+    payloads, messages = [], []
+    snap = runner.run_pipeline(
+        "gajanan_vada_pav", providers="steady,dead", samples=1,
+        on_progress=lambda m, d, t: messages.append((m, d, t)), on_provider=payloads.append,
+    )
+    texts = [m for m, _, _ in messages]
+    assert f"dead rate limited — waiting 40s before retrying (question 1 of {n})" in texts
+    assert "dead auto-skipped: no answer for 2 minutes (rate limited)" in texts
+    assert not any("failures in a row" in m for m in texts)
+    waiting = [p for p in payloads if p["provider_id"] == "dead" and p["state"] == "waiting"]
+    assert waiting and waiting[0]["note"] == "waiting 40s — rate limited"
+    final = _latest_by_provider(payloads)["dead"]
+    assert final["state"] == "skipped" and final["note"] == "auto-skipped after 2 min without an answer"
+    assert final["done"] == final["total"] == n and final["succeeded"] == 0
+    assert snap["admission"]["missing_providers"] == ["dead"] and snap["status"] == "partial"
+    assert messages[-1][1] == messages[-1][2] == 2 * n

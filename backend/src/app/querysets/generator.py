@@ -68,8 +68,12 @@ def generate_draft(
     """
     sampling_params = sampling_params or SamplingParams()
     queries: list[Query] = []
+    seen: set[str] = set()  # exact-duplicate texts across templates: first one wins
     for template in ALL_TEMPLATES:
         for canonical in instantiate(template, params):
+            if canonical.text in seen:
+                continue
+            seen.add(canonical.text)
             text = canonical.text
             if llm_provider is not None:
                 text = _expand_phrasing(llm_provider, text, sampling_params)

@@ -31,6 +31,21 @@ export interface ProviderInfo {
 
 export type JobStatus = "queued" | "running" | "completed" | "partial" | "failed" | "cancelled";
 
+export type ProviderState = "queued" | "running" | "waiting" | "skipped" | "done";
+
+/** One provider's share of a running job (CONTRACT §7). */
+export interface ProviderProgress {
+  provider_id: string;
+  label: string;
+  done: number;
+  total: number;
+  succeeded: number;
+  failed: number;
+  state: ProviderState;
+  /** e.g. "waiting 40s — rate limited", "auto-skipped after 2 min without an answer" */
+  note: string | null;
+}
+
 export interface Job {
   job_id: string;
   brand_key: string;
@@ -40,6 +55,7 @@ export interface Job {
   total: number;
   run_id: string | null;
   error: string | null;
+  providers?: ProviderProgress[];
 }
 
 export interface StartRunRequest {
@@ -191,4 +207,6 @@ export interface Snapshot {
   recommendations?: Recommendation[];
   admission?: Partial<SnapshotAdmission>;
   entities?: Record<string, string>;
+  /** Brand-named answers kept as evidence only (not in observation_count). */
+  unscored_observation_count?: number;
 }

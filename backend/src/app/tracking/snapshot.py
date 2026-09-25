@@ -36,7 +36,9 @@ def comparability_key(query_set_content_hash: str, sampling_config: dict, model_
 
 
 def data_origin(providers: list[str]) -> str:
-    if providers and all(p == "synthetic" for p in providers):
+    """Any synthetic provider taints the whole run: fake answers must never be labelled
+    "live" or "replay". Otherwise all-offline (replay) -> "replay", else "live"."""
+    if any(p == "synthetic" for p in providers):
         return "synthetic"
     if providers and all(p in OFFLINE_PROVIDERS for p in providers):
         return "replay"

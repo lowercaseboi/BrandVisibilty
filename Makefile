@@ -2,7 +2,7 @@
 BRAND ?= all
 PROVIDERS ?= auto
 SAMPLES ?= 3
-ROUND ?= 1
+ROUND ?=
 ARGS ?=
 
 .PHONY: up down logs reset run report history evidence providers test dev-backend dev-frontend
@@ -22,7 +22,7 @@ reset:         ## stop and DELETE all collected snapshots (re-seeds on next `mak
 	docker compose down -v
 
 run:           ## run the pipeline: make run BRAND=gajanan_vada_pav PROVIDERS=gemini SAMPLES=3
-	docker compose exec backend python scripts/run_tracking_loop.py --brand $(BRAND) --providers $(PROVIDERS) --samples $(SAMPLES) --round $(ROUND) $(ARGS)
+	docker compose exec backend python scripts/run_tracking_loop.py --brand $(BRAND) --providers $(PROVIDERS) --samples $(SAMPLES) $(if $(ROUND),--round $(ROUND)) $(ARGS)
 
 report:        ## terminal report: make report BRAND=gajanan_vada_pav
 	docker compose exec backend python scripts/report.py $(BRAND) $(ARGS)
@@ -36,7 +36,7 @@ evidence:      ## raw LLM answers with brand/competitor mentions highlighted
 providers:     ## which model providers are configured (never shows keys)
 	curl -s localhost:8000/providers | python3 -m json.tool
 
-test:          ## backend tests (local uv)
+test:          ## backend tests (local uv); live-provider tests run only with RUN_LIVE_TESTS=1 make test
 	cd backend && uv run pytest -q
 
 dev-backend:   ## run API locally without Docker (needs uv)

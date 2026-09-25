@@ -67,8 +67,8 @@ def default_questions(brand: BrandConfig) -> list[dict[str, Any]]:
     """Template questions in generation order. Unprompted ones are enabled (they are what a
     run asks today); brand-named (prompted) ones are listed but disabled.
 
-    Repeated template texts (e.g. "<category> in Mumbai" when only one city is set) are
-    kept, so the default list and its counts match what a run actually asks."""
+    Template generation never repeats a question (TEMPLATE_SET_VERSION v2), so the
+    defaults always pass `_check_duplicates` and a customer can save them as-is."""
     return [
         {
             "text": q.text,
@@ -195,8 +195,9 @@ def _validate(items: Any) -> list[dict[str, Any]]:
 
 def _check_duplicates(items: list[dict[str, Any]]) -> None:
     """Duplicates are rejected among enabled questions (case-insensitive) and among custom
-    questions. Disabled template repeats are allowed: they are part of the default list and
-    a customer can't delete template rows, only switch them off."""
+    questions. Disabled template repeats are allowed, so lists saved before v2 (when the
+    defaults could repeat a question and the customer switched the copies off) still load
+    and re-save."""
     seen_enabled: set[str] = set()
     seen_custom: set[str] = set()
     for item in items:

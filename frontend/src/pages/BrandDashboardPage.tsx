@@ -84,6 +84,9 @@ export function BrandDashboardPage() {
 
   const snapshot = data?.latest ?? null;
   const title = data ? (data.brandName ?? brandKey) : "\u00a0";
+  // Brand-named questions are collected (and shown in Evidence) but never scored. The local
+  // intersection keeps this compiling whether or not Snapshot declares the field yet.
+  const unscoredCount = snapshot?.unscored_observation_count ?? 0;
 
   return (
     <div>
@@ -97,8 +100,9 @@ export function BrandDashboardPage() {
             <p className="run-meta">
               Latest run <code>{snapshot.run_id.slice(0, 8)}</code> · {formatDate(snapshot.collection_completed_at)} ·{" "}
               {(snapshot.providers ?? snapshot.analysis_result.per_provider_coverage.map((p) => p.provider_id)).join(", ")}{" "}
-              · {snapshot.observation_count} answers ({snapshot.mentioned_count} mention the brand) ·{" "}
-              {snapshot.cluster_count} question clusters
+              · {snapshot.observation_count} scored answers
+              {unscoredCount > 0 && ` (+${unscoredCount} brand-named, not scored)`} ({snapshot.mentioned_count} mention
+              the brand) · {snapshot.cluster_count} question clusters
             </p>
           )}
         </div>

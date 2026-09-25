@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import random
 import threading
+import time
 from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
@@ -31,20 +32,28 @@ from app.tracking import store
 from app.tracking.snapshot import OFFLINE_PROVIDERS, build_snapshot
 
 ProgressFn = Callable[[str, int, int], None]  # (message, done, total)
+ProviderFn = Callable[[dict], None]  # {provider_id, label, done, total, succeeded, failed, state, note}
+SkipFn = Callable[[str], bool]  # provider_id -> True when that provider (or everything) should be skipped
 
 _BOOTSTRAP_SEED = 42
 
 
 GIVE_UP_AFTER_CONSECUTIVE_FAILURES = 3
+# A provider that has gone this long without a successful answer while it keeps failing or
+# waiting on retries (rate limit) is skipped, so the run finishes with the other providers.
+AUTO_SKIP_AFTER_SECONDS = 120
+
+_now = time.monotonic  # module-level so tests can drive a fake clock
 
 
 class _Progress:
-    """Thread-safe call counter that forwards to the caller's on_progress."""
+    """Thread-safe call counter that forwards to the caller's on_progress / on_provider."""
 
-    def __init__(self, total: int, on_progress: ProgressFn | None):
+    def __init__(self, total: int, on_progress: ProgressFn | None, on_provider: ProviderFn | None = None):
         self.total = total
         self.done = 0
         self._fn = on_progress
+        self._provider_fn = on_provider
         self._lock = threading.Lock()
 
     def step(self, message: str, n: int = 1) -> None:
@@ -58,13 +67,24 @@ class _Progress:
             if self._fn is not None:
                 self._fn(message, self.done, self.total)
 
+    def provider(self, payload: dict) -> None:
+        with self._lock:
+            if self._provider_fn is not None:
+                self._provider_fn(dict(payload))
+
 
 def _label(provider_id: str) -> str:
-    try:
-        from app.collection.registry import provider_label
-    except ImportError:  # a stand-in registry (tests) without labels
-        return provider_id
+    # Imported at call time so a stand-in registry (tests) is picked up.
+    from app.collection.registry import provider_label
+
     return provider_label(provider_id)
+
+
+def _duration(seconds: float, *, short: bool = False) -> str:
+    if seconds >= 60 and seconds % 60 == 0:
+        minutes = int(seconds // 60)
+        return f"{minutes} min" if short else _plural(minutes, "minute")
+    return f"{seconds:.0f}s" if short else _plural(int(seconds), "second")
 
 
 def _short_error(exc: BaseException) -> str:
@@ -100,6 +120,75 @@ def _times(samples: int) -> str:
     return {1: "once each", 2: "twice each"}.get(samples, f"{samples} times each")
 
 
+class _ProviderRun:
+    """Per-provider bookkeeping: the on_provider payload plus the skip / auto-skip decision."""
+
+    def __init__(self, provider_id: str, label: str, planned: int, progress: _Progress, should_skip: SkipFn | None):
+        self.provider_id = provider_id
+        self.label = label
+        self.planned = planned
+        self.progress = progress
+        self._should_skip = should_skip
+        self.status = {
+            "provider_id": provider_id,
+            "label": label,
+            "done": 0,
+            "total": planned,
+            "succeeded": 0,
+            "failed": 0,
+            "state": "queued",
+            "note": None,
+        }
+        self.last_answer_at = _now()
+        self.last_problem: str | None = None  # latest failure / wait reason, for the auto-skip message
+
+    def report(self, **fields) -> None:
+        self.status.update(fields)
+        self.progress.provider(self.status)
+
+    def skip_requested(self) -> bool:
+        return self._should_skip is not None and bool(self._should_skip(self.provider_id))
+
+    def overdue(self) -> bool:
+        return _now() - self.last_answer_at >= AUTO_SKIP_AFTER_SECONDS
+
+    def should_stop(self) -> bool:
+        return self.skip_requested() or self.overdue()
+
+    def finish_skipped(self, message: str, note: str) -> None:
+        """Mark every remaining planned call done (so the overall bar keeps moving) and stop."""
+        remaining = self.planned - self.status["done"]
+        self.report(state="skipped", note=note, done=self.planned)
+        self.progress.step(message, n=remaining)
+
+    def stop(self) -> bool:
+        """Skip (by request, or automatically). Returns True when it was a user/skip-all request."""
+        if self.skip_requested():
+            self.finish_skipped(f"{self.label} skipped — continuing with the answers collected so far", "skipped")
+            return True
+        why = self.last_problem or "no response"
+        self.finish_skipped(
+            f"{self.label} auto-skipped: no answer for {_duration(AUTO_SKIP_AFTER_SECONDS)} ({why})",
+            f"auto-skipped after {_duration(AUTO_SKIP_AFTER_SECONDS, short=True)} without an answer",
+        )
+        return False
+
+
+class _TrackedProvider:
+    """Wraps a provider so every attempt (including retries) flips its state back to running."""
+
+    def __init__(self, provider, on_attempt: Callable[[], None]):
+        self._provider = provider
+        self._on_attempt = on_attempt
+
+    def query(self, prompt, params):
+        self._on_attempt()
+        return self._provider.query(prompt, params)
+
+    def __getattr__(self, name):
+        return getattr(self._provider, name)
+
+
 def _collect_provider(
     provider_id: str,
     *,
@@ -111,12 +200,17 @@ def _collect_provider(
     record: bool,
     sampling_params: SamplingParams,
     progress: _Progress,
+    should_skip: SkipFn | None = None,
+    skipped_on_request: set[str] | None = None,
 ) -> list[tuple[dict, Observation]]:
     """All samples for one provider, sequentially (keeps per-provider rate limits sane).
     Scored queries get ids q<i>, unscored (brand-named) ones p<i>.
-    Returns (raw-observation dict, Observation) per successful call; failures are skipped (AC-9)."""
+    Returns (raw-observation dict, Observation) per successful call; failures are skipped (AC-9).
+    Stops early — keeping what it has — when should_skip(provider_id) turns True, after
+    GIVE_UP_AFTER_CONSECUTIVE_FAILURES failed calls in a row, or after AUTO_SKIP_AFTER_SECONDS
+    without a successful answer. Providers skipped on request are added to `skipped_on_request`."""
     from app.collection.registry import build_provider
-    from app.collection.retry import query_with_retry
+    from app.collection.retry import Skipped, query_with_retry
 
     label = _label(provider_id)
     record = record and provider_id not in OFFLINE_PROVIDERS
@@ -124,18 +218,27 @@ def _collect_provider(
         from app.collection.providers.replay import record_response
 
     planned = (len(queries) + len(unscored_queries)) * samples
+    run = _ProviderRun(provider_id, label, planned, progress, should_skip)
     try:
         provider = build_provider(provider_id, brand=brand, round=round)
     except Exception as exc:  # noqa: BLE001 - one unusable provider must not kill the run
         # Registry errors are our own messages (they name the missing setting, never a key).
         reason = _truncate(str(exc), 120) if isinstance(exc, (ValueError, KeyError)) else _short_error(exc)
-        progress.step(f"{label} unavailable, skipped for this run ({reason})", n=planned)
+        run.finish_skipped(f"{label} unavailable, skipped for this run ({reason})", f"unavailable ({reason})")
         return []
+
+    def stop(records: list) -> list:
+        if run.stop() and skipped_on_request is not None:
+            skipped_on_request.add(provider_id)
+        return records
+
+    tracked = _TrackedProvider(provider, lambda: run.report(state="running", note=None))
+    run.last_answer_at = _now()
+    run.report(state="running")
 
     alias_table = brand.alias_table()
     replay_path = store.DATA_DIR / "replay" / f"{brand.brand_key}.json"
     records: list[tuple[dict, Observation]] = []
-    attempted = 0
     consecutive_failures = 0
     groups = [("q", "question", queries, True), ("p", "brand-named question", unscored_queries, False)]
     for prefix, noun, group, scored in groups:
@@ -144,22 +247,42 @@ def _collect_provider(
                 query_id = f"{prefix}{query_index}"
                 observation_id = f"{provider_id}:{query_id}-s{sample_index}"
                 where = f"{noun} {query_index + 1}"
-                attempted += 1
+                if run.should_stop():
+                    return stop(records)
+
+                position = f"{where} of {len(group)}"
+
+                def on_wait(seconds: float, reason: str, _where: str = position) -> None:
+                    run.last_problem = reason
+                    run.report(state="waiting", note=f"waiting {seconds:.0f}s — {reason}")
+                    progress.note(f"{label} {reason} — waiting {seconds:.0f}s before retrying ({_where})")
+
                 try:
-                    result = query_with_retry(provider, query.text, sampling_params)
+                    result = query_with_retry(
+                        tracked, query.text, sampling_params, should_stop=run.should_stop, on_wait=on_wait
+                    )
+                except Skipped:
+                    return stop(records)
                 except Exception as exc:  # noqa: BLE001 - one failed sample must not kill the run
                     consecutive_failures += 1
-                    progress.step(f"{label} · {where}, answer {sample_index + 1} failed ({_short_error(exc)})")
+                    run.last_problem = _short_error(exc)
+                    run.report(
+                        state="running", note=None,
+                        done=run.status["done"] + 1, failed=run.status["failed"] + 1,
+                    )
+                    progress.step(f"{label} · {where}, answer {sample_index + 1} failed ({run.last_problem})")
                     if consecutive_failures >= GIVE_UP_AFTER_CONSECUTIVE_FAILURES:
                         # Each failure has already used up its retries (minutes, on a rate limit), so a
                         # provider that keeps failing (quota gone) would otherwise stall the whole run.
-                        progress.step(
+                        run.finish_skipped(
                             f"{label} skipped for the rest of this run after {consecutive_failures} failures in a row",
-                            n=planned - attempted,
+                            f"skipped after {consecutive_failures} failures in a row",
                         )
                         return records
                     continue
                 consecutive_failures = 0
+                run.last_answer_at = _now()
+                run.last_problem = None
 
                 if record:
                     try:
@@ -188,10 +311,15 @@ def _collect_provider(
                 )
                 records.append((raw, observation))
                 self_hit = any(m.entity_id == SELF_ENTITY_ID for m in mentions)
+                run.report(
+                    state="running", note=None,
+                    done=run.status["done"] + 1, succeeded=run.status["succeeded"] + 1,
+                )
                 progress.step(
                     f"{label} · {where} of {len(group)}, answer {sample_index + 1} of {samples}"
                     f" · “{_truncate(query.text)}”{' · brand mentioned' if self_hit else ''}"
                 )
+    run.report(state="done", note=None)
     return records
 
 
@@ -208,14 +336,20 @@ def run_pipeline(
     round: int | None = None,
     record: bool = False,
     on_progress: ProgressFn | None = None,
+    should_skip: SkipFn | None = None,
+    on_provider: ProviderFn | None = None,
 ) -> dict:
     """Run one tracking snapshot for `brand_key`, persist it and return the record.
 
     `round` only affects the offline synthetic provider; None picks the next round
     automatically (existing synthetic snapshots for the brand + 1).
 
+    `should_skip(provider_id)` is polled before every call and during retry waits; when it
+    returns True that provider stops and the run continues with what was collected.
+    `on_provider(payload)` receives per-provider progress (CONTRACT §7, ProviderProgress).
+
     Raises KeyError for an unknown brand, ValueError for a bad provider spec/sample count,
-    RuntimeError only if not a single observation was collected.
+    RuntimeError only if not a single scored observation was collected.
     """
     from app.collection.registry import resolve_provider_ids
     from app.recommendation.engine import recommend
@@ -240,7 +374,13 @@ def run_pipeline(
     sampling_params = SamplingParams()
 
     total = len(provider_ids) * (len(queries) + len(unscored_queries)) * samples
-    progress = _Progress(total, on_progress)
+    progress = _Progress(total, on_progress, on_provider)
+    per_provider = len(queries) + len(unscored_queries)
+    for pid in provider_ids:
+        progress.provider({
+            "provider_id": pid, "label": _label(pid), "done": 0, "total": per_provider * samples,
+            "succeeded": 0, "failed": 0, "state": "queued", "note": None,
+        })
     extra = (
         f" + {_plural(len(unscored_queries), 'brand-named question')} (not scored)" if unscored_queries else ""
     )
@@ -251,6 +391,7 @@ def run_pipeline(
 
     # 3-4. Collect: providers in parallel, each provider's calls sequential.
     started_at = datetime.now(UTC)
+    skipped_on_request: set[str] = set()
     with ThreadPoolExecutor(max_workers=len(provider_ids)) as pool:
         futures = [
             pool.submit(
@@ -264,6 +405,8 @@ def run_pipeline(
                 record=record,
                 sampling_params=sampling_params,
                 progress=progress,
+                should_skip=should_skip,
+                skipped_on_request=skipped_on_request,
             )
             for pid in provider_ids
         ]
@@ -276,6 +419,8 @@ def run_pipeline(
     raw_observations = [raw for raw, _ in scored_pairs]
     observations = [obs for _, obs in scored_pairs]
     if not raw_observations:
+        if skipped_on_request:
+            raise RuntimeError("No answers were collected before the run was skipped")
         raise RuntimeError(
             f"No observations collected for {brand_key!r} from {', '.join(provider_ids)} — every scored call failed"
         )
@@ -313,6 +458,7 @@ def run_pipeline(
         completed_at=completed_at,
     )
     snapshot["raw_observations"] = [*snapshot["raw_observations"], *unscored_raws]
+    snapshot["unscored_observation_count"] = len(unscored_raws)
     store.append_snapshot(snapshot)
     progress.note(f"Saved run {snapshot['run_id']} ({snapshot['status']})")
     return snapshot

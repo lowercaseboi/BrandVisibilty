@@ -106,3 +106,40 @@ def test_detected_mentions_feed_directly_into_scorer_and_gap_detector():
 
     gaps = detect_gaps(observations, "brand-1", frozenset({"comp-a"}))
     assert isinstance(gaps, list)
+
+
+NOVA_SELF = EntityAlias("self", "self", ("Nova",))
+NOVA_CAFE = EntityAlias("nova_cafe", "competitor", ("Nova Cafe",))
+NOVA_TABLE = (NOVA_SELF, NOVA_CAFE)
+
+
+def test_self_alias_inside_longer_competitor_alias_is_not_credited():
+    mentions = detect_mentions("Nova Cafe is the best place.", NOVA_TABLE)
+    assert [m.entity_id for m in mentions] == ["nova_cafe"]
+    assert mentions[0].rank == 1
+
+
+def test_standalone_self_alias_still_counts_after_longer_competitor_match():
+    text = "Nova Cafe is the best place, with Nova nearby too."
+    mentions = detect_mentions(text, NOVA_TABLE)
+    by_entity = {m.entity_id: m for m in mentions}
+    assert set(by_entity) == {"nova_cafe", "self"}
+    assert by_entity["nova_cafe"].rank == 1
+    assert by_entity["self"].rank == 2
+    assert by_entity["self"].char_start == text.index("with Nova") + len("with ")
+    assert text[by_entity["self"].char_start : by_entity["self"].char_end] == "Nova"
+
+
+def test_competitor_alias_inside_longer_self_alias_is_not_credited():
+    table = (
+        EntityAlias("self", "self", ("Gajanan Vada Pav",)),
+        EntityAlias("gajanan", "competitor", ("Gajanan",)),
+    )
+    mentions = detect_mentions("Gajanan Vada Pav serves the best snacks.", table)
+    assert [m.entity_id for m in mentions] == ["self"]
+    assert mentions[0].rank == 1
+
+
+def test_longest_match_rule_is_case_insensitive():
+    mentions = detect_mentions("nova cafe is the best place.", NOVA_TABLE)
+    assert [m.entity_id for m in mentions] == ["nova_cafe"]

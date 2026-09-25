@@ -21,8 +21,8 @@ Brand config ──► Query set ──► LLM providers ──► Mention detec
 - **Bring your own model.** Supports Gemini, OpenAI, Groq, OpenRouter, Anthropic Claude, Ollama, and any
   OpenAI-compatible endpoint. With `providers=auto`, every provider that has a key is queried. With no keys at all,
   the pipeline runs on a clearly labelled **synthetic** offline provider, so the demo always works.
-- **Frozen query sets.** Templates generate around 30 queries per brand. About 20 are unprompted: category
-  discovery, problem-first, alternative-seeking, attribute-constrained, local and recommendation-seeking. About 10
+- **Frozen query sets.** Templates generate up to 30 distinct queries per brand (no repeats). Up to 20 are unprompted: category
+  discovery, problem-first, alternative-seeking, attribute-constrained, local and recommendation-seeking. Up to 10
   are prompted: identity, fit, cost and head-to-head. The query set is hashed so runs stay comparable over time.
 - **Editable questions.** Customers can see exactly what the AIs are asked, switch suggested questions off and add
   their own. Questions that name the brand are asked and shown as evidence, but are not scored.
@@ -39,8 +39,9 @@ Brand config ──► Query set ──► LLM providers ──► Mention detec
 - **Tracking history.** Every run appends a snapshot. The dashboard shows the score trend, the per-provider coverage,
   and an evidence view with the brand and competitor mentions highlighted.
 - **Robust collection.** Retries with backoff (honouring `Retry-After`) handle 429, 5xx and timeouts. A failing
-  provider marks the run `partial` instead of killing it, and a provider whose quota has run out is skipped after 3
-  failures in a row. Runs can be cancelled from the UI.
+  provider marks the run `partial` instead of killing it.
+  - A provider stuck on a rate limit is skipped automatically after 2 minutes without an answer.
+  - While a run is going you can skip one AI, finish now with the answers collected so far, or cancel.
 
 ## Quick start
 
@@ -108,8 +109,9 @@ make test        # = cd backend && uv run pytest -q
 cd frontend && npm run build && npm run lint
 ```
 
-`tests/integration/test_gemini_smoke.py` calls the real Gemini API when `GEMINI_API_KEY` is set and is skipped
-otherwise. It can fail on Google-side 429/503 errors that have nothing to do with the code.
+`tests/integration/test_gemini_smoke.py` calls the real Gemini API. It is skipped unless you opt in with
+`RUN_LIVE_TESTS=1 make test` and have `GEMINI_API_KEY` set. It can fail on Google-side 429/503 errors that have
+nothing to do with the code.
 
 ## MVP status
 
@@ -125,3 +127,6 @@ Provider keys live only in `.env.local`, which is gitignored, or in real environ
 request headers, never in URLs. They are never logged or returned by the API, and the Providers page and
 `make providers` show only whether a provider is configured. To contribute, copy `.env.example`. Never commit a
 filled-in env file.
+
+The API has **no authentication**. Anyone who can reach port 8000 can create brands, start runs and edit questions.
+That is fine on localhost or a trusted network for the demo. Do not expose it publicly without adding auth.

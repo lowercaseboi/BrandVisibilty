@@ -90,10 +90,14 @@ def brand_keys_with_data() -> set[str]
 
 ```python
 ProgressFn = Callable[[str, int, int], None]   # (message, done, total)
+ProviderFn = Callable[[dict], None]            # ProviderProgress payload (§7)
+SkipFn = Callable[[str], bool]                 # provider_id -> True to stop calling that provider
 
 def run_pipeline(brand_key: str, *, providers: str = "auto", samples: int = 3,
-                 round: int = 1, record: bool = False,
-                 on_progress: ProgressFn | None = None) -> dict
+                 round: int | None = None, record: bool = False,
+                 on_progress: ProgressFn | None = None,
+                 should_skip: SkipFn | None = None,
+                 on_provider: ProviderFn | None = None) -> dict
 ```
 
 Pipeline steps:
@@ -109,6 +113,24 @@ calls are skipped: each failure has already used up its retries, so an exhausted
 `admission.missing_providers`. `record=True` writes live responses to the replay cache at
 `DATA_DIR/replay/<brand_key>.json`.
 
+**Skipping.** `query_with_retry(..., should_stop=, on_wait=)` (`app/collection/retry.py`) waits in ≤0.5 s slices
+and raises `Skipped` as soon as `should_stop()` is true, so a provider can be abandoned in the middle of a
+Retry-After wait; `on_wait(seconds, reason)` is called before each wait (`reason` is `rate limited`,
+`provider error 503` or `timed out`). The runner polls `should_skip(provider_id)` before every call and during
+every wait. A provider stops early, keeping the answers it already has, when:
+
+- `should_skip` returns true (user pressed **Skip**, or **Finish now** which skips every provider): message
+  `Groq skipped — continuing with the answers collected so far`;
+- it has gone `AUTO_SKIP_AFTER_SECONDS = 120` without a successful answer (measured from its last success or its
+  start) while failing or waiting: `Groq auto-skipped: no answer for 2 minutes (rate limited)`;
+- 3 consecutive calls failed (rule above).
+
+A skipped provider's remaining planned calls count as done, so `done` still reaches `total`. If it produced no
+answers it lands in `admission.missing_providers` and the run is `partial`. If nothing scored was collected and a
+provider was skipped on request, the run raises `RuntimeError("No answers were collected before the run was
+skipped")` (the job fails). Waits are announced as `Groq rate limited — waiting 40s before retrying (question 4 of 20)`.
+`on_provider` receives the ProviderProgress payload (§7) whenever a provider's state or counts change.
+
 ## 5. Snapshot record — the JSONL line, the API response and the frontend `Snapshot` type
 
 ```jsonc
@@ -121,7 +143,7 @@ calls are skipped: each failure has already used up its retries, so an exhausted
   "collection_started_at": "iso", "collection_completed_at": "iso", "collection_span_days": 0,
   "query_set_content_hash": "...", "query_set_template_version": "v1",
   "sampling_config": {"temperature": null, "system_prompt": null, "samples_per_query": 3},
-  "observation_count": 60, "mentioned_count": 12, "cluster_count": 20,
+  "observation_count": 51, "unscored_observation_count": 0, "mentioned_count": 12, "cluster_count": 17,
   "analysis_result": {"coverage", "prominence", "share_of_voice", "composite_score", "ci_low", "ci_high",
                       "per_provider_coverage": [{"provider_id","coverage","observation_count","mentioned_count"}]},
   "gaps": [{"gap_id": "gap-<sha1[:10]>", "gap_type", "evidence_refs": [...], "detail": {...}, "is_inferred": false}],
@@ -136,6 +158,10 @@ calls are skipped: each failure has already used up its retries, so an exhausted
 ```
 
 `observation_id` is `"<provider_id>:q<idx>-s<sample>"`, and `query_id` is `"q<idx>"`.
+
+Records written by the pipeline also carry `"unscored_observation_count": <int>` — the number of `scored: false`
+raw observations appended after the scored ones (0 when none; absent in older records). `observation_count`
+counts scored observations only.
 
 Each raw observation also carries `"scored": bool`, which is `true` when absent in legacy records. Brand-named
 questions from a customised question set (§8) are asked and stored for Evidence with `scored: false`, `query_id`
@@ -174,13 +200,21 @@ def recommend(gaps: list[Gap], observations: list[Observation], self_entity_id: 
 | GET    | `/jobs/{job_id}`                                  | `Job`                                            |
 | GET    | `/jobs?brand_key=`                                | `Job[]` submitted since server start, optionally filtered by brand |
 | POST   | `/jobs/{job_id}/cancel`                           | `Job`; 404 if unknown, 409 if already finished   |
+| POST   | `/jobs/{job_id}/skip`                             | body `{provider_id: str | null}` → `Job`. A provider id stops calling that provider; `null` skips every remaining call and goes straight to scoring what was collected. 404 unknown job; 409 unless running (cancel a queued job instead); 422 if the job doesn't use that provider |
 
-`Job` = `{job_id, brand_key, status: "queued"|"running"|"completed"|"partial"|"failed"|"cancelled", message, done, total, run_id|null, error|null}`.
+`Job` = `{job_id, brand_key, status: "queued"|"running"|"completed"|"partial"|"failed"|"cancelled", message, done, total, run_id|null, error|null, providers: ProviderProgress[]}`.
+
+`ProviderProgress` = `{provider_id, label, done, total, succeeded, failed, state: "queued"|"running"|"waiting"|"skipped"|"done", note: str|null}`,
+one per provider in the order the run uses them (empty until the run starts). `note` is a short human string,
+e.g. `waiting 40s — rate limited`, `auto-skipped after 2 min without an answer`, `skipped after 3 failures in a row`.
+A skipped provider's `done` equals its `total`.
 
 Jobs run in a background thread, one at a time, and are held in memory. That's an MVP stand-in for Celery.
 
 Cancelling a queued job drops it. Cancelling a running job is cooperative: the run stops at the next provider call
-during collection and saves nothing. Once collection has finished, a late cancel is ignored and the run completes.
+during collection (interrupting a retry wait) and saves nothing. Once collection has finished, a late cancel is
+ignored and the run completes. Skip requests (§4) are cooperative in the same way. A job's cancel/skip requests are
+discarded when it finishes, and only the 100 most recent finished jobs are kept.
 The frontend's Run panel re-attaches to a brand's active job via `GET /jobs?brand_key=`.
 
 `GET /brands/{key}/runs` is a hidden alias of `/brands/{key}/snapshots` that the frontend client still uses.
@@ -215,5 +249,5 @@ Customers can review and edit the questions the LLMs are asked (DESIGN §3, mand
 {"brand_key": "gajanan_vada_pav", "customized": false,
  "questions": [{"id": 0, "text": "best vada pav outlet for students", "intent_type": "category_discovery",
                 "source": "template" | "custom", "enabled": true, "names_brand": false, "scored": true}],
- "scored_count": 20, "unscored_count": 0}
+ "scored_count": 17, "unscored_count": 0}
 ```

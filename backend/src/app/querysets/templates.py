@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-TEMPLATE_SET_VERSION = "v1"
+TEMPLATE_SET_VERSION = "v2"  # v2: no cycling, no duplicate texts
 
 
 @dataclass(frozen=True)
@@ -77,9 +77,12 @@ class CanonicalQuery:
 
 def instantiate(template: IntentTemplate, params: BrandParams) -> list[CanonicalQuery]:
     """Bind a template to a brand's params, producing up to `template.weight` canonical
-    queries — one per distinct value in the template's iterated param list (cycled if the
-    list is shorter than `weight`), or a single fixed-form query when the template has no
-    iterated param.
+    queries — one per *distinct* value in the template's iterated param list, or a single
+    fixed-form query when the template has no iterated param.
+
+    Values are never cycled to fill `weight`: asking the same question twice would
+    double-count one cluster of answers and make the confidence interval look tighter
+    than it is. Repeated values (and values that render to the same text) are skipped.
     """
     field_kwargs = {"brand": params.brand, "category": params.category}
 
@@ -97,13 +100,15 @@ def instantiate(template: IntentTemplate, params: BrandParams) -> list[Canonical
         text = template.template.format(**field_kwargs)
         return [CanonicalQuery(text, template.intent_type, template.is_brand_named)]
 
-    if not values:
-        return []
-
-    queries = []
-    for i in range(template.weight):
-        value = values[i % len(values)]
+    queries: list[CanonicalQuery] = []
+    seen: set[str] = set()
+    for value in values:
+        if len(queries) >= template.weight:
+            break
         text = template.template.format(**field_kwargs, **{key: value})
+        if text in seen:
+            continue
+        seen.add(text)
         queries.append(CanonicalQuery(text, template.intent_type, template.is_brand_named))
     return queries
 

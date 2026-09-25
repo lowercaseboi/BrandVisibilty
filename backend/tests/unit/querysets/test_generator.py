@@ -37,7 +37,9 @@ class StubLLMProvider:
 
 def test_generate_draft_without_llm_uses_canonical_text():
     draft = generate_draft(PARAMS)
-    assert len(draft.queries) == 30  # 20 unprompted + 10 prompted (§3.4 sizing)
+    # One value per param list: no cycling, so each template yields one query (the three
+    # attribute variants aside) -> 3 + 5 unprompted, 8 prompted.
+    assert len(draft.queries) == 16
     assert any(q.text == "best perfume brand for young professionals" for q in draft.queries)
 
 
@@ -52,7 +54,7 @@ def test_generate_draft_splits_unprompted_and_prompted_correctly():
     draft = generate_draft(PARAMS)
     unprompted = [q for q in draft.queries if not q.is_brand_named]
     prompted = [q for q in draft.queries if q.is_brand_named]
-    assert len(unprompted) == 20
+    assert len(unprompted) == 8
     assert all(PARAMS.brand not in q.text for q in unprompted)
     assert all(PARAMS.brand in q.text for q in prompted)
 
@@ -77,5 +79,26 @@ def test_freeze_hash_changes_when_brand_params_change():
 def test_freeze_records_template_set_version_and_timestamp():
     draft = generate_draft(PARAMS)
     frozen = freeze(draft)
-    assert frozen.template_set_version == "v1"
+    assert frozen.template_set_version == "v2"
     assert frozen.frozen_at is not None
+
+
+def test_generate_draft_drops_duplicate_texts_across_templates(monkeypatch):
+    from app.querysets import generator
+    from app.querysets.templates import IntentTemplate
+
+    templates = (
+        IntentTemplate("local_contextual", "{category} in {city}", False, 3, "cities"),
+        IntentTemplate("custom_dup", "{category} in Mumbai", False, 1, None),
+        IntentTemplate("identity", "what is {brand}", True, 1, None),
+    )
+    monkeypatch.setattr(generator, "ALL_TEMPLATES", templates)
+    draft = generate_draft(PARAMS)
+    assert [(q.text, q.intent_type) for q in draft.queries] == [
+        ("perfume brand in Mumbai", "local_contextual"),
+        ("what is Acme Perfume", "identity"),
+    ]
+
+
+def test_generate_draft_uses_template_set_v2():
+    assert generate_draft(PARAMS).template_set_version == "v2"

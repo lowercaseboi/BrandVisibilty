@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import importlib
 import sys
+import threading
 import time
 import types
 from dataclasses import dataclass
@@ -144,10 +145,27 @@ def client(monkeypatch: pytest.MonkeyPatch):
 
     runner = types.ModuleType("app.pipeline.runner")
     runner.calls = []
+    runner.gated = False  # when True, the fake waits (up to 5s) for a skip before scoring
+    runner.started = threading.Event()
+    runner.skipped = None
 
-    def run_pipeline(brand_key, *, providers="auto", samples=3, round=None, record=False, on_progress=None):
+    def run_pipeline(
+        brand_key, *, providers="auto", samples=3, round=None, record=False, on_progress=None,
+        should_skip=None, on_provider=None,
+    ):
         runner.calls.append({"providers": providers, "samples": samples, "round": round})
         on_progress("querying", 1, 2)
+        if runner.gated:
+            status = {"provider_id": "synthetic", "label": "Synthetic", "done": 1, "total": 2,
+                      "succeeded": 1, "failed": 0, "state": "running", "note": None}
+            on_provider(status)
+            runner.started.set()
+            for _ in range(250):
+                if should_skip("synthetic"):
+                    break
+                time.sleep(0.02)
+            runner.skipped = should_skip("synthetic")
+            on_provider({**status, "done": 2, "state": "skipped", "note": "skipped"})
         on_progress("scoring", 2, 2)
         return {"run_id": "run-job", "status": "completed"}
 
@@ -231,6 +249,45 @@ def test_run_job_lifecycle(client: TestClient) -> None:
     assert client.get("/jobs/unknown").status_code == 404
     assert client.post("/jobs/unknown/cancel").status_code == 404
     assert client.post(f"/jobs/{job_id}/cancel").status_code == 409
+    assert job["providers"] == []
+
+
+def _wait_finished(client: TestClient, job_id: str) -> dict:
+    for _ in range(250):
+        job = client.get(f"/jobs/{job_id}").json()
+        if job["status"] not in ("queued", "running"):
+            return job
+        time.sleep(0.02)
+    raise AssertionError("job did not finish")
+
+
+@pytest.mark.parametrize("provider_id", ["synthetic", None])
+def test_skip_job(client: TestClient, provider_id) -> None:
+    from app.interface import main
+
+    main.fake_runner.gated = True
+    first = client.post("/brands/gajanan_vada_pav/runs", json={"providers": "synthetic"}).json()
+    assert main.fake_runner.started.wait(5)
+    queued = client.post("/brands/gajanan_vada_pav/runs", json={"providers": "synthetic"}).json()
+
+    assert client.post("/jobs/unknown/skip", json={"provider_id": None}).status_code == 404
+    res = client.post(f"/jobs/{queued['job_id']}/skip", json={"provider_id": None})
+    assert res.status_code == 409 and "cancel" in res.json()["detail"]
+    assert client.post(f"/jobs/{queued['job_id']}/cancel").json()["status"] == "cancelled"
+
+    running = client.get(f"/jobs/{first['job_id']}").json()
+    assert running["providers"] == [{"provider_id": "synthetic", "label": "Synthetic", "done": 1, "total": 2,
+                                     "succeeded": 1, "failed": 0, "state": "running", "note": None}]
+    assert client.post(f"/jobs/{first['job_id']}/skip", json={"provider_id": "groq"}).status_code == 422
+
+    res = client.post(f"/jobs/{first['job_id']}/skip", json={"provider_id": provider_id})
+    assert res.status_code == 200
+    assert res.json()["message"] == ("Skipping Synthetic…" if provider_id else
+                                     "Finishing now with the answers collected so far…")
+    job = _wait_finished(client, first["job_id"])
+    assert main.fake_runner.skipped is True
+    assert job["status"] == "completed" and job["providers"][0]["state"] == "skipped"
+    assert client.post(f"/jobs/{first['job_id']}/skip", json={"provider_id": None}).status_code == 409
 
 
 def test_run_without_round_lets_the_pipeline_pick_it(client: TestClient) -> None:
@@ -268,9 +325,13 @@ def test_questions_get_put_delete(real_client: TestClient) -> None:
     assert real_client.put("/brands/nope/questions", json={"questions": [{"text": "hello there"}]}).status_code == 404
     assert real_client.delete("/brands/nope/questions").status_code == 404
 
+    from app.brands.registry import get_brand
+    from app.querysets import custom
+
+    default_count = len(custom.build_query_set(get_brand("gajanan_vada_pav"))[1])
     body = real_client.get(url).json()
     assert body["brand_key"] == "gajanan_vada_pav" and body["customized"] is False
-    assert body["scored_count"] == 20 and body["unscored_count"] == 0
+    assert body["scored_count"] == default_count and body["unscored_count"] == 0
     assert set(body["questions"][0]) == {"id", "text", "intent_type", "source", "enabled", "names_brand", "scored"}
 
     res = real_client.put(url, json={"questions": [
@@ -294,4 +355,4 @@ def test_questions_get_put_delete(real_client: TestClient) -> None:
     assert real_client.get(url).json() == saved  # a rejected save changes nothing
 
     reset = real_client.delete(url).json()
-    assert reset["customized"] is False and reset["scored_count"] == 20
+    assert reset["customized"] is False and reset["scored_count"] == default_count

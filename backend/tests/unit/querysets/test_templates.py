@@ -36,13 +36,31 @@ def test_every_prompted_query_names_the_brand():
             assert PARAMS.brand in cq.text
 
 
-def test_category_discovery_cycles_through_audiences():
+def test_category_discovery_uses_each_audience_once():
     template = next(t for t in UNPROMPTED_TEMPLATES if t.intent_type == "category_discovery")
     queries = instantiate(template, PARAMS)
-    assert len(queries) == template.weight == 4
-    texts = {q.text for q in queries}
-    assert "best perfume brand for young professionals" in texts
-    assert "best perfume brand for gift buyers" in texts
+    assert [q.text for q in queries] == [
+        "best perfume brand for young professionals",
+        "best perfume brand for gift buyers",
+    ]
+
+
+def test_instantiate_does_not_cycle_a_short_value_list():
+    template = next(t for t in UNPROMPTED_TEMPLATES if t.intent_type == "local_contextual")
+    assert template.weight == 3
+    assert [q.text for q in instantiate(template, PARAMS)] == ["perfume brand in Mumbai"]
+
+
+def test_instantiate_caps_at_weight():
+    params = BrandParams(brand="X", category="tool", cities=("A", "B", "C", "D", "E"))
+    template = next(t for t in UNPROMPTED_TEMPLATES if t.intent_type == "local_contextual")
+    assert [q.text for q in instantiate(template, params)] == ["tool in A", "tool in B", "tool in C"]
+
+
+def test_instantiate_skips_repeated_values():
+    params = BrandParams(brand="X", category="tool", cities=("Pune", "Pune", "Goa", "Pune", "Nashik"))
+    template = next(t for t in UNPROMPTED_TEMPLATES if t.intent_type == "local_contextual")
+    assert [q.text for q in instantiate(template, params)] == ["tool in Pune", "tool in Goa", "tool in Nashik"]
 
 
 def test_attribute_constrained_uses_extra_values_not_a_brand_param():

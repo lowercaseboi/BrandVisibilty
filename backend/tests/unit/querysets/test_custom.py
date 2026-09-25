@@ -22,8 +22,9 @@ def test_defaults_when_no_file(brand):
     qs = custom.get_questions(brand)
     assert qs["brand_key"] == "gajanan_vada_pav" and qs["customized"] is False
     assert [q["id"] for q in qs["questions"]] == list(range(len(qs["questions"])))
-    # Today's run asks the 20 unprompted template questions; prompted ones are listed, disabled.
-    assert qs["scored_count"] == 20 and qs["unscored_count"] == 0
+    # A run asks the unprompted template questions (17 for this pilot: one city, so no
+    # repeated "<category> in Mumbai"); prompted ones are listed, disabled.
+    assert qs["scored_count"] == 17 and qs["unscored_count"] == 0
     prompted = [q for q in qs["questions"] if q["intent_type"] == "identity"]
     assert prompted and all(not q["enabled"] and q["names_brand"] and not q["scored"] for q in prompted)
     assert all(q["source"] == "template" for q in qs["questions"])
@@ -107,17 +108,39 @@ def test_saving_the_defaults_deletes_the_file(brand):
     assert custom.build_query_set(brand)[0].content_hash == freeze(generate_draft(brand.params)).content_hash
 
 
-def test_disabled_template_repeats_are_allowed(brand):
-    # e.g. "vada pav outlet in Mumbai" x3 when the brand has one city: keep the first copy only.
-    seen: set[str] = set()
-    items = []
-    for q in custom.default_questions(brand):
-        item = dict(q)
-        if item["enabled"]:
-            item["enabled"] = item["text"] not in seen
-            seen.add(item["text"])
-        items.append(item)
-    assert sum(i["enabled"] for i in items) < 20
+PILOTS = ("gajanan_vada_pav", "va_mayekar_opticians", "perfume_pilot")
+
+
+@pytest.mark.parametrize("brand_key", PILOTS)
+def test_defaults_have_no_enabled_duplicates(tmp_path, monkeypatch, brand_key):
+    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    questions = custom.get_questions(get_brand(brand_key))["questions"]
+    enabled = [q["text"].casefold() for q in questions if q["enabled"]]
+    assert enabled and len(enabled) == len(set(enabled))
+    everything = [q["text"].casefold() for q in questions]
+    assert len(everything) == len(set(everything))
+
+
+@pytest.mark.parametrize("brand_key", PILOTS)
+def test_defaults_plus_one_custom_question_saves(tmp_path, monkeypatch, brand_key):
+    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    brand = get_brand(brand_key)
+    defaults = custom.get_questions(brand)
+    items = [{k: q[k] for k in ("text", "intent_type", "source", "enabled")} for q in defaults["questions"]]
+    items.append({"text": "a question nobody would generate from a template", "source": "custom"})
     saved = custom.save_questions(brand, items)
-    assert saved["customized"] is True
-    assert saved["scored_count"] == len(seen)
+    assert saved["customized"] is True and _file(brand).exists()
+    assert saved["scored_count"] == defaults["scored_count"] + 1
+
+
+def test_old_saved_file_with_disabled_repeats_still_loads(brand):
+    # Pre-v2 defaults repeated "<category> in <city>"; customers switched the copies off.
+    text = "vada pav outlet in Mumbai"
+    items = [
+        {"text": text, "intent_type": "local_contextual", "source": "template", "enabled": True},
+        {"text": text, "intent_type": "local_contextual", "source": "template", "enabled": False},
+        {"text": text, "intent_type": "local_contextual", "source": "template", "enabled": False},
+    ]
+    saved = custom.save_questions(brand, items)
+    assert saved["scored_count"] == 1
+    assert custom.get_questions(brand) == saved

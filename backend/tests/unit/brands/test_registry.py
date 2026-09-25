@@ -11,11 +11,13 @@ def tmp_data_dir(tmp_path, monkeypatch):
     return tmp_path
 
 
-def test_pilots_produce_about_twenty_unprompted_queries():
+def test_pilots_produce_about_twenty_distinct_unprompted_queries():
     for key in ("gajanan_vada_pav", "va_mayekar_opticians", "perfume_pilot"):
         brand = registry.get_brand(key)
-        unprompted = [q for q in generate_draft(brand.params).queries if not q.is_brand_named]
-        assert len(unprompted) == 20, key
+        unprompted = [q.text for q in generate_draft(brand.params).queries if not q.is_brand_named]
+        # Up to 20 slots (§3.3); repeats are dropped, so pilots land at 17-18 distinct questions.
+        assert 15 <= len(unprompted) <= 20, key
+        assert len(set(unprompted)) == len(unprompted), key
         assert brand.alias_table()[0].entity_id == "self"
         assert "lenskart" in registry.get_brand("va_mayekar_opticians").competitor_ids()
 

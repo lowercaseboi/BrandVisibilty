@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 from app.analysis.types import AnalysisResult, ProviderBreakdown
 from app.tracking import store
-from app.tracking.snapshot import build_snapshot
+from app.tracking.snapshot import build_snapshot, data_origin
 
 CONTRACT_KEYS = {
     "brand_key", "brand", "run_id", "status", "data_origin", "providers", "comparability_key",
@@ -39,7 +39,7 @@ def test_build_snapshot_contract_keys_and_admission():
     assert set(snap) == CONTRACT_KEYS
     assert set(snap["admission"]) == ADMISSION_KEYS
     assert snap["status"] == "partial"  # gemini produced nothing
-    assert snap["data_origin"] == "live"
+    assert snap["data_origin"] == "synthetic"  # any synthetic provider taints the run
     assert snap["admission"]["missing_providers"] == ["gemini"]
     assert snap["admission"]["query_coverage"] == 1.0
     assert snap["admission"]["sample_completeness"] == 0.5
@@ -61,3 +61,25 @@ def test_store_round_trip_skips_corrupt_lines(tmp_path, monkeypatch):
     assert store.get_snapshot("demo", second["run_id"])["brand"] == "Demo"
     assert store.get_snapshot("demo", "missing") is None
     assert store.brand_keys_with_data() == {"demo"}
+
+
+def test_data_origin_synthetic_taints_and_offline_is_replay():
+    assert data_origin(["synthetic", "replay"]) == "synthetic"
+    assert data_origin(["synthetic", "groq"]) == "synthetic"  # fake answers are never "live"
+    assert data_origin(["synthetic"]) == "synthetic"
+    assert data_origin(["replay"]) == "replay"
+    assert data_origin(["groq"]) == "live"
+    assert data_origin(["replay", "groq"]) == "live"
+
+
+def test_normalize_snapshot_defaults_unscored_observation_count():
+    from app.interface.snapshots import normalize_snapshot
+
+    legacy = normalize_snapshot({"brand_key": "demo", "raw_observations": [{"query_id": "q0"}]})
+    assert legacy["unscored_observation_count"] == 0
+    mixed = normalize_snapshot(
+        {"run_id": "r", "raw_observations": [{"scored": True}, {"scored": False}, {"scored": False}]}
+    )
+    assert mixed["unscored_observation_count"] == 2
+    stored = normalize_snapshot({"run_id": "r", "unscored_observation_count": 5, "raw_observations": []})
+    assert stored["unscored_observation_count"] == 5

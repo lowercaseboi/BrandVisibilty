@@ -63,9 +63,15 @@ make report                                           # one line per brand
 You can also start a run from the UI (brand page → **Run analysis**, with a **Cancel** button while it runs) or through
 the API (`POST /brands/{key}/runs`, then `GET /jobs/{id}` or `POST /jobs/{id}/cancel`). A cancelled run saves nothing.
 
+While a run is going, the Run panel shows one row per AI with its own progress and state (running, **waiting 40s —
+rate limited**, skipped, done). If one AI is stuck on a rate limit, press **Skip** on its row: the run finishes with the
+other AIs and is saved as `partial`. **Finish now with answers so far** skips every AI and scores what was already
+collected. An AI with no successful answer for 2 minutes is skipped automatically. API: `POST /jobs/{id}/skip` with
+`{"provider_id": "groq"}` or `{"provider_id": null}`.
+
 ### How a run works (and what "0/60" means)
 A run asks each selected AI every **scored question** a few times, then scores the answers.
-The counter in the Run panel counts API calls: **questions × answers per question × providers**. With 20 questions,
+The counter in the Run panel counts API calls: **questions × answers per question × providers**. With 20 questions (the pilots have 17–18),
 Standard depth (3) and one provider, that is 60 calls.
 
 - **Depth: Quick (1), Standard (3) or Thorough (5).** An LLM gives a slightly different answer each time it is asked.

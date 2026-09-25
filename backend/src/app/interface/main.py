@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.brands import registry as brands_registry
 from app.collection import registry as provider_registry
-from app.interface.jobs import JobManager
+from app.interface.jobs import JobManager, JobNotRunning, UnknownProvider
 from app.interface.schemas import (
     BrandSummary,
     CreateBrandRequest,
@@ -20,6 +20,7 @@ from app.interface.schemas import (
     QuestionSet,
     RunRequest,
     SaveQuestionsRequest,
+    SkipRequest,
 )
 from app.interface.snapshots import normalize_snapshot
 from app.tracking import store
@@ -265,6 +266,25 @@ def cancel_job(job_id: str) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail=f"Unknown job '{job_id}'")
     if job["status"] in ("completed", "partial", "failed"):
         raise HTTPException(status_code=409, detail=f"Job already finished ({job['status']})")
+    return job
+
+
+@app.post("/jobs/{job_id}/skip", tags=["runs"], response_model=Job)
+def skip_job(job_id: str, body: SkipRequest | None = None) -> dict[str, Any]:
+    """Stop waiting on one AI provider (`provider_id`), or on all of them (`null`), and finish the
+    run with the answers collected so far. A provider stuck on a rate limit is interrupted
+    mid-wait. 409 unless the job is running (cancel a queued job instead); 422 if the job
+    doesn't use that provider."""
+    body = body or SkipRequest()
+    try:
+        job = jobs.skip(job_id, body.provider_id)
+    except JobNotRunning as exc:
+        hint = " — cancel it instead" if str(exc) == "queued" else ""
+        raise HTTPException(status_code=409, detail=f"Job is not running ({exc}){hint}") from exc
+    except UnknownProvider as exc:
+        raise HTTPException(status_code=422, detail=f"This run does not use provider '{exc}'") from exc
+    if job is None:
+        raise HTTPException(status_code=404, detail=f"Unknown job '{job_id}'")
     return job
 
 

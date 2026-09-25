@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { cancelJob, getJob, getQuestions, listJobs, listProviders, startRun } from "../api/client";
-import type { Job, ProviderInfo } from "../api/types";
+import { cancelJob, getJob, getQuestions, listJobs, listProviders, skipJob, startRun } from "../api/client";
+import type { Job, ProviderInfo, ProviderProgress } from "../api/types";
 import { useAsync } from "../api/useAsync";
 
 const TERMINAL = new Set(["completed", "partial", "failed", "cancelled"]);
+const SKIPPABLE = new Set(["queued", "running", "waiting"]);
+const SKIP_ALL = "__all__";
 
 const DEPTHS = [
   { samples: 1, label: "Quick", hint: "1 answer per question" },
@@ -37,6 +39,8 @@ export function RunPanel({ brandKey, onComplete }: { brandKey: string; onComplet
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  // Provider ids (or SKIP_ALL) with a skip request in flight, to disable their buttons.
+  const [skipping, setSkipping] = useState<Set<string>>(new Set());
 
   // Re-attach to this brand's unfinished job after navigating away and back, so the
   // panel shows it (and blocks a duplicate run) instead of offering a fresh "Run".
@@ -87,6 +91,7 @@ export function RunPanel({ brandKey, onComplete }: { brandKey: string; onComplet
   async function run() {
     setStarting(true);
     setError(null);
+    setSkipping(new Set());
     try {
       // No round: the backend picks the next synthetic round itself.
       const started = await startRun(brandKey, { providers: provider, samples });
@@ -110,6 +115,26 @@ export function RunPanel({ brandKey, onComplete }: { brandKey: string; onComplet
       setCancelling(false);
     }
   }
+
+  async function skip(providerId: string | null) {
+    if (!job) return;
+    const key = providerId ?? SKIP_ALL;
+    setSkipping((prev) => new Set(prev).add(key));
+    setError(null);
+    try {
+      setJob(await skipJob(job.job_id, providerId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to skip.");
+      setSkipping((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    }
+  }
+
+  const jobProviders: ProviderProgress[] = job?.providers ?? [];
+  const skippingAll = skipping.has(SKIP_ALL);
 
   const progress = job && job.total > 0 ? Math.min(1, job.done / job.total) : 0;
 
@@ -182,6 +207,16 @@ export function RunPanel({ brandKey, onComplete }: { brandKey: string; onComplet
         <button className="btn btn-primary" onClick={run} disabled={running || starting}>
           {running ? "Running…" : starting ? "Starting…" : "Run analysis"}
         </button>
+        {running && job?.status === "running" && (
+          <button
+            className="btn btn-secondary"
+            onClick={() => skip(null)}
+            disabled={skippingAll || cancelling}
+            title="Stop asking every AI and score the answers collected so far"
+          >
+            {skippingAll ? "Finishing…" : "Finish now with answers so far"}
+          </button>
+        )}
         {running && (
           <button className="btn btn-secondary" onClick={cancel} disabled={cancelling}>
             {cancelling ? "Cancelling…" : "Cancel"}
@@ -239,6 +274,47 @@ export function RunPanel({ brandKey, onComplete }: { brandKey: string; onComplet
             <div className="progress" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100}>
               <div className="progress-bar" style={{ width: `${progress * 100}%` }} />
             </div>
+          )}
+          {job.status === "running" && jobProviders.length > 0 && (
+            <>
+              <ul className="provider-progress">
+                {jobProviders.map((p) => {
+                  const frac = p.total > 0 ? Math.min(1, p.done / p.total) : 0;
+                  const canSkip = SKIPPABLE.has(p.state) && !skippingAll;
+                  return (
+                    <li key={p.provider_id} className={`provider-row provider-${p.state}`}>
+                      <span className="provider-row-label">{p.label || p.provider_id}</span>
+                      <div className="progress progress-mini" aria-hidden="true">
+                        <div className="progress-bar" style={{ width: `${frac * 100}%` }} />
+                      </div>
+                      <span className="muted small job-count provider-row-count">
+                        {p.done}/{p.total}
+                        {p.failed > 0 && ` · ${p.failed} failed`}
+                      </span>
+                      <span className={`badge provider-row-badge badge-provider-${p.state}`}>{p.state}</span>
+                      <span className="muted small provider-row-note">{p.note ?? ""}</span>
+                      {canSkip ? (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-small provider-row-action"
+                          onClick={() => skip(p.provider_id)}
+                          disabled={skipping.has(p.provider_id)}
+                          title={`Stop asking ${p.label || p.provider_id}; the run finishes with the others`}
+                        >
+                          {skipping.has(p.provider_id) ? "Skipping…" : "Skip"}
+                        </button>
+                      ) : (
+                        <span className="provider-row-action" />
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="muted small">
+                Stuck on a rate limit? Skip that AI — the run finishes with the others. Providers with no answer for
+                2 minutes are skipped automatically.
+              </p>
+            </>
           )}
           {job.status === "partial" && (
             <p className="small">Run finished with some provider/sample failures — results are marked partial.</p>

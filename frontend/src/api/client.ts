@@ -147,6 +147,11 @@ export function cancelJob(jobId: string): Promise<Job> {
   return postJson(`/jobs/${b(jobId)}/cancel`, {});
 }
 
+/** Skip one provider's remaining calls, or (null) every remaining call and score what was collected. */
+export function skipJob(jobId: string, providerId: string | null): Promise<Job> {
+  return postJson(`/jobs/${b(jobId)}/skip`, { provider_id: providerId });
+}
+
 export function getQuestions(brandKey: string): Promise<QuestionSet> {
   return getJson(`/brands/${b(brandKey)}/questions`);
 }

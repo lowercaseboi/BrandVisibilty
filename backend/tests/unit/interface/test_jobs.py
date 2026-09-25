@@ -72,3 +72,74 @@ def test_cancel_after_collection_lets_run_finish():
 
 def test_cancel_unknown_job():
     assert JobManager(lambda: None).cancel("nope") is None
+
+
+def test_skip_requests_reach_the_pipeline_and_are_cleared():
+    import pytest
+
+    from app.interface import jobs as jobs_module
+
+    started, seen = threading.Event(), {}
+
+    def run(brand_key, *, on_progress, should_skip, on_provider, **kwargs):
+        for pid in ("gemini", "groq"):
+            on_provider({"provider_id": pid, "label": pid.title(), "done": 0, "total": 2, "succeeded": 0,
+                         "failed": 0, "state": "running", "note": None})
+        started.set()
+        for _ in range(250):
+            if should_skip("groq"):
+                break
+            time.sleep(0.02)
+        seen.update(groq=should_skip("groq"), gemini=should_skip("gemini"))
+        on_provider({"provider_id": "groq", "label": "Groq", "done": 2, "total": 2, "succeeded": 0,
+                     "failed": 0, "state": "skipped", "note": "skipped"})
+        return {"run_id": "r", "status": "partial"}
+
+    manager = JobManager(lambda: run)
+    job = manager.submit("a", providers="auto", samples=1)
+    assert started.wait(5)
+    with pytest.raises(jobs_module.UnknownProvider):
+        manager.skip(job["job_id"], "openai")
+    assert manager.skip(job["job_id"], "groq")["message"] == "Skipping Groq…"
+    final = _wait(manager, job["job_id"], {"partial", "failed"})
+    assert final["status"] == "partial" and seen == {"groq": True, "gemini": False}
+    assert [p["provider_id"] for p in final["providers"]] == ["gemini", "groq"]
+    assert final["providers"][1]["state"] == "skipped"
+    assert manager.skip("nope", None) is None
+    with pytest.raises(jobs_module.JobNotRunning):
+        manager.skip(job["job_id"], None)
+    assert not manager._skip_providers and not manager._skip_all and not manager._cancel_requested
+
+
+def test_finished_jobs_are_pruned(monkeypatch):
+    from app.interface import jobs as jobs_module
+
+    monkeypatch.setattr(jobs_module, "MAX_FINISHED_JOBS", 2)
+    manager = JobManager(lambda: (lambda brand_key, **kw: {"run_id": brand_key, "status": "completed"}))
+    ids = [manager.submit(k, providers="auto", samples=1)["job_id"] for k in "abcd"]
+    _wait(manager, ids[-1], {"completed"})
+    assert [j["brand_key"] for j in manager.list()] == ["c", "d"]
+    assert manager.get(ids[0]) is None
+
+
+def test_cancel_interrupts_a_provider_waiting_on_a_rate_limit():
+    started = threading.Event()
+
+    def run(brand_key, *, on_progress, should_skip, on_provider, **kwargs):
+        on_progress("Groq rate limited — waiting 60s before retrying (question 1 of 5)", 0, 10)
+        started.set()
+        for _ in range(250):  # the retry wait polls should_stop in slices
+            if should_skip("groq"):
+                break
+            time.sleep(0.02)
+        on_provider({"provider_id": "groq", "label": "Groq", "done": 10, "total": 10, "succeeded": 0,
+                     "failed": 0, "state": "skipped", "note": "skipped"})
+        on_progress("Groq skipped", 10, 10)
+        return {"run_id": "r", "status": "completed"}
+
+    manager = JobManager(lambda: run)
+    job = manager.submit("a", providers="auto", samples=1)
+    assert started.wait(5)
+    manager.cancel(job["job_id"])
+    final = _wait(manager, job["job_id"], {"cancelled", "completed", "failed"})
+    assert final["status"] == "cancelled" and final["run_id"] is None

@@ -64,20 +64,38 @@ def detect_mentions(text: str, alias_table: tuple[EntityAlias, ...]) -> tuple[En
     position. One `EntityMention` per entity — matching what Scorer/GapDetector already
     assume via `Observation.mention_of` — even if an entity has multiple aliases or
     multiple occurrences.
-    """
-    earliest: dict[str, tuple[int, int]] = {}
-    kind_of: dict[str, str] = {}
 
+    Overlapping aliases of different entities follow the longest-match rule: a match whose
+    span lies inside a strictly longer match of a *different* entity is dropped, so a brand
+    aliased "Nova" is not credited for "Nova Cafe" when "Nova Cafe" is a tracked competitor.
+    Overlaps within one entity are harmless (it still yields one mention).
+    """
+    # (start, end, entity_id, entity_kind), in alias-table order so ties stay deterministic.
+    matches: list[tuple[int, int, str, str]] = []
     for entry in alias_table:
         for alias in entry.aliases:
             if not alias:
                 continue
             for match in _alias_pattern(alias).finditer(text):
-                start, end = match.start(), match.end()
-                current = earliest.get(entry.entity_id)
-                if current is None or start < current[0]:
-                    earliest[entry.entity_id] = (start, end)
-                    kind_of[entry.entity_id] = entry.entity_kind
+                matches.append((match.start(), match.end(), entry.entity_id, entry.entity_kind))
+
+    def _shadowed(m: tuple[int, int, str, str]) -> bool:
+        start, end, entity_id, _ = m
+        return any(
+            o_id != entity_id and o_start <= start and end <= o_end and (o_end - o_start) > (end - start)
+            for o_start, o_end, o_id, _ in matches
+        )
+
+    earliest: dict[str, tuple[int, int]] = {}
+    kind_of: dict[str, str] = {}
+    for m in matches:
+        if _shadowed(m):
+            continue
+        start, end, entity_id, entity_kind = m
+        current = earliest.get(entity_id)
+        if current is None or start < current[0]:
+            earliest[entity_id] = (start, end)
+            kind_of[entity_id] = entity_kind
 
     ordered = sorted(earliest.items(), key=lambda item: item[1][0])
 

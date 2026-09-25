@@ -10,7 +10,6 @@ straight to adapters — they never appear in `ProviderInfo`, logs or error mess
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
@@ -29,8 +28,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-
-_BACKEND_DIR = Path(__file__).resolve().parents[3]
 
 LIVE_PROVIDER_IDS: tuple[str, ...] = ("gemini", "openai", "groq", "openrouter", "anthropic", "ollama", "custom")
 OFFLINE_PROVIDER_IDS: tuple[str, ...] = ("synthetic", "replay")
@@ -64,7 +61,12 @@ class ProviderInfo:
 
 
 def data_dir() -> Path:
-    return Path(os.environ.get("DATA_DIR", _BACKEND_DIR / "data"))
+    """The one data root, shared with the tracking store (so the replay recorder, which writes
+    under `store.DATA_DIR`, and the replay reader always agree — including when tests
+    monkeypatch it). Imported here, not at module level, to avoid an import cycle."""
+    from app.tracking import store
+
+    return store.DATA_DIR
 
 
 def replay_cache_path(brand_key: str) -> Path:

@@ -752,6 +752,110 @@ input::placeholder {
   transition: width 0.4s ease;
 }
 
+.progress-mini {
+  margin-top: 0;
+  height: 6px;
+}
+
+.provider-progress {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.provider-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 140px) minmax(60px, 1fr) auto auto minmax(0, 1.4fr) auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.provider-row-label {
+  font-weight: 600;
+  color: var(--text-h);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.provider-row-note {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.provider-skipped .progress-bar {
+  background: var(--muted);
+}
+
+.btn-small {
+  font-size: 12.5px;
+  padding: 4px 10px;
+}
+
+.badge-provider-queued,
+.badge-provider-skipped {
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.badge-provider-running {
+  background: var(--info-bg);
+  border-color: var(--info-border);
+  color: var(--info);
+}
+
+.badge-provider-waiting {
+  background: var(--warn-bg);
+  border-color: var(--warn-border);
+  color: var(--warn);
+}
+
+.badge-provider-done {
+  background: var(--ok-bg);
+  border-color: var(--ok-border);
+  color: var(--ok);
+}
+
+@media (max-width: 640px) {
+  .provider-row {
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    grid-template-areas:
+      "label count badge action"
+      "bar bar bar bar"
+      "note note note note";
+    row-gap: 4px;
+  }
+
+  .provider-row-label {
+    grid-area: label;
+  }
+
+  .provider-row .progress-mini {
+    grid-area: bar;
+  }
+
+  .provider-row-count {
+    grid-area: count;
+  }
+
+  .provider-row-badge {
+    grid-area: badge;
+  }
+
+  .provider-row-note {
+    grid-area: note;
+  }
+
+  .provider-row-action {
+    grid-area: action;
+  }
+}
+
 .run-depth {
   display: flex;
   flex-direction: column;

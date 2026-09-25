@@ -125,6 +125,23 @@ def test_replay_roundtrip(tmp_path):
         replay.query("other", SamplingParams())
 
 
+def test_replay_recorder_and_reader_share_one_data_dir(tmp_path, monkeypatch):
+    # The runner records to store.DATA_DIR/replay/<brand>.json; the registry's replay provider
+    # must read from exactly there, even when DATA_DIR is redirected (review finding #6).
+    from app.tracking import store
+
+    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    brand = _Brand()
+    recorded_path = store.DATA_DIR / "replay" / f"{brand.brand_key}.json"
+    assert registry.data_dir() == tmp_path
+    assert registry.replay_cache_path(brand.brand_key) == recorded_path
+
+    result = SyntheticProvider(None).query("vada pav in Mumbai", SamplingParams())
+    record_response(recorded_path, "vada pav in Mumbai", result)
+    replay = registry.build_provider("replay", brand=brand)
+    assert replay.query("vada pav in Mumbai", SamplingParams()).payload == result.payload
+
+
 def test_provider_label():
     assert registry.provider_label("groq") == "Groq"
     assert registry.provider_label("gemini") == "Google Gemini"

@@ -91,5 +91,3 @@ class Settings(BaseSettings):
 
 
 OLLAMA_DEFAULT_BASE_URL = "http://localhost:11434"
-
-settings = Settings()

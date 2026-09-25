@@ -102,6 +102,26 @@ class QuestionSet(BaseModel):
     unscored_count: int = Field(description="Enabled questions that name the brand: asked, but not scored")
 
 
+ProviderState = Literal["queued", "running", "waiting", "skipped", "done"]
+
+
+class ProviderProgress(BaseModel):
+    """One provider's share of a running job (CONTRACT §7)."""
+
+    provider_id: str = Field(examples=["groq"])
+    label: str = Field(examples=["Groq"])
+    done: int = Field(description="Planned calls finished for this provider (skipped calls count as done)")
+    total: int = Field(description="Planned calls for this provider")
+    succeeded: int
+    failed: int
+    state: ProviderState
+    note: str | None = Field(
+        default=None,
+        description="Short human status, e.g. 'waiting 40s — rate limited' or "
+        "'auto-skipped after 2 min without an answer'",
+    )
+
+
 class Job(BaseModel):
     job_id: str
     brand_key: str
@@ -111,6 +131,15 @@ class Job(BaseModel):
     total: int
     run_id: str | None = None
     error: str | None = None
+    providers: list[ProviderProgress] = Field(default_factory=list)
+
+
+class SkipRequest(BaseModel):
+    provider_id: str | None = Field(
+        default=None,
+        description="Provider to stop calling; null = skip every remaining call and score what was collected",
+        examples=["groq", None],
+    )
 
 
 class HealthResponse(BaseModel):

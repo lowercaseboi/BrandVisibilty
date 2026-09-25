@@ -69,6 +69,8 @@ def normalize_snapshot(record: dict[str, Any], *, include_raw: bool = False) -> 
 
     raw = list(snap.get("raw_observations") or [])
     snap.setdefault("observation_count", len(raw))
+    # Brand-named questions are collected but not scored; legacy records hold none.
+    snap.setdefault("unscored_observation_count", sum(1 for o in raw if o.get("scored") is False))
     snap.setdefault("mentioned_count", 0)
     snap.setdefault("cluster_count", len({o.get("query_id") or o.get("query_text") for o in raw}) if raw else 0)
 
