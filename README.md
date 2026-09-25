@@ -18,6 +18,15 @@ Brand config ──► Query set ──► LLM providers ──► Mention detec
 
 ## What it does
 
+- **Made for shop owners, not analysts.** The dashboard answers three questions in plain words:
+  - *How visible am I?* A score out of 100 with a rating word and an honest range.
+  - *Who does AI recommend instead?* How often each competitor is named, next to you.
+  - *What should I do next?* The top 3 suggestions, each with concrete steps (Google Business Profile, Justdial,
+    reviews, Instagram…).
+  - It also shows one real AI answer with the names highlighted.
+  - The rigour is one switch away: **Show the numbers behind this** reveals the confidence interval, admission
+    checks, gap IDs and the priority maths.
+- **English, हिंदी and मराठी**, with light and dark themes. Shop names can be written in any script.
 - **Bring your own model.** Supports Gemini, OpenAI, Groq, OpenRouter, Anthropic Claude, Ollama, and any
   OpenAI-compatible endpoint. With `providers=auto`, every provider that has a key is queried. With no keys at all,
   the pipeline runs on a clearly labelled **synthetic** offline provider, so the demo always works.

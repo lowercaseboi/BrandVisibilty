@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getQuestions, listBrands, resetQuestions, saveQuestions } from "../api/client";
 import type { QuestionInput, QuestionSet, QuestionSource } from "../api/types";
-import { intentLabel } from "../format";
+import { useIntentLabel } from "../format";
+import { T, useFormat, useT } from "../i18n";
+import { Details } from "../settings/details";
 
 // Unprompted intents a customer can file a new question under (templates.py), plus "custom".
 const ADDABLE_INTENTS = [
@@ -54,14 +56,22 @@ function namesBrand(r: Row): boolean | null {
   return r.serverText !== null && r.text === r.serverText ? r.names_brand : null;
 }
 
+const errMessage = (err: unknown) => (err instanceof Error ? err.message : String(err));
+
+type Notice = "savedCustom" | "savedDefault" | "resetDone";
+type ErrorState = { kind: "duplicate" } | { kind: "save" | "reset"; message: string };
+
 export function QuestionsPage() {
+  const t = useT();
+  const fmt = useFormat();
+  const intentLabel = useIntentLabel();
   const { brandKey = "" } = useParams<{ brandKey: string }>();
   const [server, setServer] = useState<QuestionSet | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
   const [brandName, setBrandName] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorState | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
   const [busy, setBusy] = useState<"save" | "reset" | null>(null);
   const [newText, setNewText] = useState("");
   const [newIntent, setNewIntent] = useState("custom");
@@ -76,7 +86,7 @@ export function QuestionsPage() {
         setLoadError(null);
       })
       .catch((err: unknown) => {
-        if (!cancelled) setLoadError(err instanceof Error ? err.message : "Failed to load questions.");
+        if (!cancelled) setLoadError(errMessage(err));
       });
     listBrands()
       .then((brands) => {
@@ -132,7 +142,7 @@ export function QuestionsPage() {
     const text = newText.trim().replace(/\s+/g, " ");
     if (!text) return;
     if (rows.some((r) => r.text.trim().toLowerCase() === text.toLowerCase())) {
-      setError("That question is already in the list.");
+      setError({ kind: "duplicate" });
       return;
     }
     setRows((rs) => [
@@ -152,20 +162,16 @@ export function QuestionsPage() {
       const set = await saveQuestions(brandKey, toInputs(rows));
       setServer(set);
       setRows(toRows(set));
-      setNotice(
-        set.customized
-          ? "Saved. The next run will use these questions."
-          : "Saved. This matches the suggested questions, so runs stay comparable with earlier ones.",
-      );
+      setNotice(set.customized ? "savedCustom" : "savedDefault");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save questions.");
+      setError({ kind: "save", message: errMessage(err) });
     } finally {
       setBusy(null);
     }
   }
 
   async function reset() {
-    if (!window.confirm("Reset to the suggested questions? Your own questions and edits will be removed.")) return;
+    if (!window.confirm(t("pages.q.resetConfirm"))) return;
     setBusy("reset");
     setError(null);
     setNotice(null);
@@ -173,80 +179,91 @@ export function QuestionsPage() {
       const set = await resetQuestions(brandKey);
       setServer(set);
       setRows(toRows(set));
-      setNotice("Reset to the suggested questions.");
+      setNotice("resetDone");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to reset questions.");
+      setError({ kind: "reset", message: errMessage(err) });
     } finally {
       setBusy(null);
     }
   }
 
   const dashboardHref = `/brands/${encodeURIComponent(brandKey)}`;
+  const n = (x: number) => fmt.number(x);
 
   return (
     <div className="questions-page">
       <p className="crumbs">
-        <Link to={dashboardHref}>← Back to {brandName ?? "dashboard"}</Link>
+        <Link to={dashboardHref}>
+          {brandName ? t("pages.q.back", { shop: brandName }) : t("pages.q.backGeneric")}
+        </Link>
       </p>
       <div className="page-head">
         <div>
-          <h1>What the AI models are asked</h1>
-          <p className="lede">
-            These are the questions a real customer would type into an AI assistant when looking for
-            {brandName ? ` something like ${brandName}` : " a business like yours"}. Each run asks every enabled
-            question and checks whether the answer mentions you. Questions that name your brand are still asked
-            and shown in Evidence, but they don't count toward scores, since a mention is guaranteed.
-          </p>
+          <h1>{t("pages.q.title")}</h1>
+          <p className="lede">{t("pages.q.lede")}</p>
+          <p className="lede pg-lede-2">{t("pages.q.namedNote")}</p>
         </div>
       </div>
 
-      {loadError && <div className="alert alert-error">{loadError}</div>}
-      {!server && !loadError && <p className="status">Loading questions…</p>}
+      {loadError && (
+        <div className="alert alert-error" role="alert">
+          <p>{t("pages.q.loadError")}</p>
+          <Details>
+            <p className="small">{loadError}</p>
+          </Details>
+        </div>
+      )}
+      {!server && !loadError && <p className="status">{t("pages.q.loading")}</p>}
 
       {server && (
         <>
           <div className="card q-summary">
             <div className="kv">
-              <span className="kv-label">Asked</span>
-              <span className="kv-value">{enabled.length}</span>
+              <span className="kv-label">{t("pages.q.asked")}</span>
+              <span className="kv-value">{n(enabled.length)}</span>
             </div>
             <div className="kv">
-              <span className="kv-label">Scored</span>
-              <span className="kv-value">{scored}</span>
+              <span className="kv-label">{t("pages.q.counted")}</span>
+              <span className="kv-value">{n(scored)}</span>
             </div>
             <div className="kv">
-              <span className="kv-label">Not scored</span>
-              <span className="kv-value">{unscored}</span>
+              <span className="kv-label">{t("pages.q.notCounted")}</span>
+              <span className="kv-value">{n(unscored)}</span>
             </div>
             <div className="kv">
-              <span className="kv-label">Turned off</span>
-              <span className="kv-value">{rows.length - enabled.length}</span>
+              <span className="kv-label">{t("pages.q.off")}</span>
+              <span className="kv-value">{n(rows.length - enabled.length)}</span>
             </div>
             <div className="q-summary-state">
               {dirty ? (
-                <span className="badge badge-job-partial">Unsaved changes</span>
+                <span className="badge badge-job-partial">{t("pages.q.unsaved")}</span>
               ) : server.customized ? (
-                <span className="badge badge-accent">Customised</span>
+                <span className="badge badge-accent">{t("pages.q.customized")}</span>
               ) : (
-                <span className="badge badge-muted">Suggested questions</span>
+                <span className="badge badge-muted">{t("pages.q.suggested")}</span>
               )}
-              {unchecked > 0 && (
-                <span className="muted small">
-                  {unchecked} new or edited question{unchecked === 1 ? "" : "s"} will be checked for your brand
-                  name on save.
-                </span>
-              )}
+              {unchecked > 0 && <span className="muted small">{t.n("pages.q.unchecked", unchecked)}</span>}
             </div>
+            <Details>
+              <div className="pg-tech small muted">
+                <code>{brandKey}</code>
+                {server.content_hash && <code title="content_hash">{server.content_hash.slice(0, 12)}</code>}
+              </div>
+            </Details>
           </div>
 
-          <div className="alert alert-info small">
-            Changing the questions starts a new baseline — the trend chart won't compare runs across this change.
-          </div>
+          <div className="alert alert-info small">{t("pages.q.baseline")}</div>
 
           {groups.map(([intent, list]) => (
             <section key={intent} className="q-group">
               <h2>
-                {intentLabel(intent)} <span className="count">{list.filter((r) => r.enabled).length}/{list.length}</span>
+                {intentLabel(intent)}{" "}
+                <span className="count">
+                  {t("pages.q.groupCount", { on: n(list.filter((r) => r.enabled).length), total: n(list.length) })}
+                </span>
+                <Details>
+                  <code className="pg-code-muted">{intent}</code>
+                </Details>
               </h2>
               <div className="card card-flush">
                 <ul className="q-list">
@@ -254,12 +271,12 @@ export function QuestionsPage() {
                     const nb = namesBrand(r);
                     return (
                       <li key={r.key} className={`q-row${r.enabled ? "" : " is-off"}`}>
-                        <label className="switch" title={r.enabled ? "Asked in runs" : "Not asked"}>
+                        <label className="switch" title={r.enabled ? t("pages.q.askedTitle") : t("pages.q.notAskedTitle")}>
                           <input
                             type="checkbox"
                             checked={r.enabled}
                             onChange={(e) => update(r.key, { enabled: e.target.checked })}
-                            aria-label={`Ask "${r.text}"`}
+                            aria-label={t("pages.q.toggleLabel", { text: r.text })}
                           />
                           <span className="switch-track" aria-hidden="true" />
                         </label>
@@ -270,15 +287,15 @@ export function QuestionsPage() {
                               value={r.text}
                               maxLength={200}
                               onChange={(e) => update(r.key, { text: e.target.value })}
-                              aria-label="Question text"
+                              aria-label={t("pages.q.textLabel")}
                             />
                           ) : (
                             <span>{r.text}</span>
                           )}
                           <span className="q-badges">
-                            {nb === true && <span className="badge badge-job-partial">Not scored — mentions your brand</span>}
-                            {nb === null && <span className="badge badge-muted">Unsaved</span>}
-                            {r.source === "custom" && <span className="badge">Yours</span>}
+                            {nb === true && <span className="badge badge-job-partial">{t("pages.q.badgeNamed")}</span>}
+                            {nb === null && <span className="badge badge-muted">{t("pages.q.badgeUnsaved")}</span>}
+                            {r.source === "custom" && <span className="badge">{t("pages.q.badgeYours")}</span>}
                           </span>
                         </div>
                         {r.source === "custom" && (
@@ -286,9 +303,9 @@ export function QuestionsPage() {
                             type="button"
                             className="btn btn-link q-delete"
                             onClick={() => remove(r.key)}
-                            aria-label={`Delete "${r.text}"`}
+                            aria-label={t("pages.q.deleteLabel", { text: r.text })}
                           >
-                            Delete
+                            {t("common.delete")}
                           </button>
                         )}
                       </li>
@@ -300,46 +317,68 @@ export function QuestionsPage() {
           ))}
 
           <section>
-            <h2>Add a question</h2>
-            <p className="section-note">
-              Write it the way a customer would, without your brand name, so it counts toward your scores.
-            </p>
+            <h2 id="q-add-title">{t("pages.q.addTitle")}</h2>
+            <p className="section-note">{t("pages.q.addNote")}</p>
             <form
               className="card q-add"
+              aria-labelledby="q-add-title"
               onSubmit={(e) => {
                 e.preventDefault();
                 add();
               }}
             >
-              <input
-                value={newText}
-                maxLength={200}
-                onChange={(e) => setNewText(e.target.value)}
-                placeholder="e.g. best vada pav near Dadar station"
-                aria-label="New question"
-              />
-              <select value={newIntent} onChange={(e) => setNewIntent(e.target.value)} aria-label="Question type">
-                {ADDABLE_INTENTS.map((i) => (
-                  <option key={i} value={i}>
-                    {intentLabel(i)}
-                  </option>
-                ))}
-              </select>
+              <label className="pg-q-field">
+                <span className="pg-field-label">{t("pages.q.newLabel")}</span>
+                <input
+                  value={newText}
+                  maxLength={200}
+                  onChange={(e) => {
+                    setNewText(e.target.value);
+                    if (error?.kind === "duplicate") setError(null);
+                  }}
+                  placeholder={t("pages.q.newPlaceholder")}
+                  aria-invalid={error?.kind === "duplicate" ? true : undefined}
+                  aria-describedby={error?.kind === "duplicate" ? "q-add-error" : undefined}
+                />
+              </label>
+              <label className="pg-q-type">
+                <span className="pg-field-label">{t("pages.q.typeLabel")}</span>
+                <select value={newIntent} onChange={(e) => setNewIntent(e.target.value)}>
+                  {ADDABLE_INTENTS.map((i) => (
+                    <option key={i} value={i}>
+                      {intentLabel(i)}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <button type="submit" className="btn btn-secondary" disabled={!newText.trim()}>
-                Add
+                {t("common.add")}
               </button>
+              {error?.kind === "duplicate" && (
+                <span id="q-add-error" className="field-error pg-q-error">
+                  {t("pages.q.duplicate")}
+                </span>
+              )}
             </form>
           </section>
 
-          {error && <div className="alert alert-error">{error}</div>}
-          {notice && <div className="alert alert-ok">{notice}</div>}
+          {error && error.kind !== "duplicate" && (
+            <div className="alert alert-error" role="alert">
+              <T k={error.kind === "save" ? "pages.q.saveError" : "pages.q.resetError"} vars={{ message: error.message }} />
+            </div>
+          )}
+          {notice && (
+            <div className="alert alert-ok" role="status">
+              {t(`pages.q.${notice}`)}
+            </div>
+          )}
 
           <div className="q-actions">
             <button type="button" className="btn btn-secondary" onClick={reset} disabled={busy !== null}>
-              {busy === "reset" ? "Resetting…" : "Reset to suggested questions"}
+              {busy === "reset" ? t("pages.q.resetting") : t("pages.q.reset")}
             </button>
             <button type="button" className="btn btn-primary" onClick={save} disabled={!dirty || busy !== null}>
-              {busy === "save" ? "Saving…" : "Save questions"}
+              {busy === "save" ? t("common.saving") : t("pages.q.save")}
             </button>
           </div>
         </>

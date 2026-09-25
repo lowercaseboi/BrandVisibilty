@@ -18,6 +18,12 @@ class BrandSummary(BaseModel):
     brand: str = Field(description="Display name", examples=["Gajanan Vada Pav"])
     has_data: bool = Field(description="True when at least one snapshot is stored for this brand")
     is_pilot: bool = Field(description="True for the three built-in pilot brands")
+    question_count: int | None = Field(
+        default=None,
+        description="Scored questions the next run would ask (same as the question set's scored_count); "
+        "null for a brand that only has stored snapshots and no setup",
+        examples=[20],
+    )
 
 
 class CreateBrandRequest(BaseModel):
@@ -33,7 +39,9 @@ class CreateBrandRequest(BaseModel):
                     "audiences": ["office workers", "college students"],
                     "competitors": ["Gajanan Vada Pav", "Aaram Vada Pav"],
                     "aliases": ["Ashok VP"],
-                    "jobs_to_be_done": ["quick breakfast"],
+                    "jobs_to_be_done": ["get a quick breakfast near the station"],
+                    "use_cases": ["office party catering"],
+                    "tasks": ["cater vada pav for a birthday party"],
                 }
             ]
         }
@@ -45,7 +53,19 @@ class CreateBrandRequest(BaseModel):
     audiences: list[str] = Field(default_factory=list)
     competitors: list[str] = Field(default_factory=list)
     aliases: list[str] = Field(default_factory=list)
-    jobs_to_be_done: list[str] = Field(default_factory=list)
+    jobs_to_be_done: list[str] = Field(
+        default_factory=list,
+        description="What customers come to the brand for, e.g. 'get a quick breakfast near the station' "
+        "(max 10). Each one adds questions, so a brand with none gets a thin question set.",
+    )
+    use_cases: list[str] = Field(
+        default_factory=list,
+        description="Occasions the product is bought for, e.g. 'office party catering' (max 10)",
+    )
+    tasks: list[str] = Field(
+        default_factory=list,
+        description="Jobs a customer might hire the brand to do, e.g. 'cater vada pav for a birthday party' (max 10)",
+    )
 
 
 class RunRequest(BaseModel):
@@ -100,6 +120,10 @@ class QuestionSet(BaseModel):
     questions: list[Question]
     scored_count: int = Field(description="Enabled questions that count toward scores")
     unscored_count: int = Field(description="Enabled questions that name the brand: asked, but not scored")
+    content_hash: str = Field(
+        description="Content hash of the query set the next run would use. Equals that run's snapshot "
+        "query_set_content_hash; differs from the latest snapshot's when the questions changed since"
+    )
 
 
 ProviderState = Literal["queued", "running", "waiting", "skipped", "done"]
@@ -119,6 +143,15 @@ class ProviderProgress(BaseModel):
         default=None,
         description="Short human status, e.g. 'waiting 40s — rate limited' or "
         "'auto-skipped after 2 min without an answer'",
+    )
+    wait_seconds: int | None = Field(
+        default=None,
+        description="While state is 'waiting': the current retry wait in whole seconds (rounded up); "
+        "otherwise null",
+        examples=[40, None],
+    )
+    skip_reason: Literal["user", "auto", "failures", "unavailable"] | None = Field(
+        default=None, description='Why the provider was skipped (state == "skipped"), else null'
     )
 
 

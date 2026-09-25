@@ -250,9 +250,9 @@ def test_skipping_one_provider_mid_run_keeps_its_answers(tmp_path, monkeypatch):
     final = _latest_by_provider(payloads)
     assert final["steady"] == {
         "provider_id": "steady", "label": "Steady AI", "done": n, "total": n, "succeeded": n, "failed": 0,
-        "state": "done", "note": None,
+        "state": "done", "note": None, "wait_seconds": None, "skip_reason": None,
     }
-    assert final["second"]["state"] == "skipped" and final["second"]["succeeded"] == 3
+    assert final["second"]["state"] == "skipped" and final["second"]["skip_reason"] == "user" and final["second"]["succeeded"] == 3
     assert final["second"]["done"] == final["second"]["total"] == n
     assert ("second skipped — continuing with the answers collected so far") in [m for m, _, _ in messages]
     assert snap["status"] == "partial" and snap["observation_count"] == n + 3
@@ -329,9 +329,61 @@ def test_provider_stuck_on_rate_limit_is_auto_skipped(tmp_path, monkeypatch):
     assert "dead auto-skipped: no answer for 2 minutes (rate limited)" in texts
     assert not any("failures in a row" in m for m in texts)
     waiting = [p for p in payloads if p["provider_id"] == "dead" and p["state"] == "waiting"]
-    assert waiting and waiting[0]["note"] == "waiting 40s — rate limited"
+    assert waiting and waiting[0]["note"] == "waiting 40s — rate limited" and waiting[0]["wait_seconds"] == 40
     final = _latest_by_provider(payloads)["dead"]
-    assert final["state"] == "skipped" and final["note"] == "auto-skipped after 2 min without an answer"
+    assert final["state"] == "skipped" and final["skip_reason"] == "auto" and final["note"] == "auto-skipped after 2 min without an answer"
     assert final["done"] == final["total"] == n and final["succeeded"] == 0
     assert snap["admission"]["missing_providers"] == ["dead"] and snap["status"] == "partial"
     assert messages[-1][1] == messages[-1][2] == 2 * n
+
+
+def test_waiting_payload_carries_rounded_up_wait_seconds(tmp_path, monkeypatch):
+    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    _install_fakes(monkeypatch)
+    from app.pipeline import runner
+
+    waited = []
+
+    def fake_retry(provider, prompt, params, *, should_stop=None, on_wait=None):
+        if not waited:  # one short wait before the very first answer
+            waited.append(True)
+            on_wait(12.2, "rate limited")
+        return provider.query(prompt, params)
+
+    sys.modules["app.collection.retry"].query_with_retry = fake_retry
+    payloads = []
+    runner.run_pipeline("gajanan_vada_pav", providers="steady", samples=1, on_provider=payloads.append)
+    assert payloads[0]["state"] == "queued" and payloads[0]["wait_seconds"] is None
+    waiting = [p for p in payloads if p["state"] == "waiting"]
+    assert [p["wait_seconds"] for p in waiting] == [13]
+    assert waiting[0]["note"] == "waiting 12s — rate limited"
+    assert all(p["wait_seconds"] is None for p in payloads if p["state"] != "waiting")
+    assert payloads[-1]["state"] == "done"
+
+
+def test_snapshot_mention_summary_counts_scored_answers_only(tmp_path, monkeypatch):
+    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    _install_fakes(monkeypatch)
+    from app.brands.registry import get_brand
+    from app.pipeline.runner import run_pipeline
+    from app.querysets import custom
+
+    _, scored, _ = custom.build_query_set(get_brand("gajanan_vada_pav"))
+    n = len(scored)
+    best = sum(1 for q in scored if "best" in q.text)  # the fake names Ashok then Gajanan for these
+    snap = run_pipeline("gajanan_vada_pav", providers="steady", samples=2)
+    summary = snap["mention_summary"]
+    assert summary["total_answers"] == 2 * n == snap["observation_count"]
+    assert set(summary["entities"]) == set(get_brand("gajanan_vada_pav").entity_names())
+    assert summary["entities"]["ashok_vada_pav"] == {"answers_mentioning": 2 * best, "answers_ranked_first": 2 * best}
+    assert summary["entities"]["self"] == {"answers_mentioning": 2 * best, "answers_ranked_first": 0}
+    assert summary["entities"]["jumbo_king"] == {
+        "answers_mentioning": 2 * (n - best), "answers_ranked_first": 2 * (n - best),
+    }
+    assert summary["entities"]["goli_vada_pav"] == {"answers_mentioning": 0, "answers_ranked_first": 0}
+
+    # Brand-named (unscored) answers are asked but not counted.
+    _save_custom_questions()
+    custom_snap = run_pipeline("gajanan_vada_pav", providers="steady", samples=1)
+    assert custom_snap["unscored_observation_count"] == 1
+    assert custom_snap["mention_summary"]["total_answers"] == 2

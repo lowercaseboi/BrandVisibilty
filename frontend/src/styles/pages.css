@@ -1,0 +1,276 @@
+/* Styles for the other pages — owned by agent P.
+   Your shops, Add your shop, Questions, AI answers, Connected AIs. Prefix: .pg- */
+
+/* ---------- shared ---------- */
+
+.pg-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+/* Translated labels can be long: let buttons wrap instead of overflowing on phones. */
+.pg-actions .btn,
+.q-actions .btn,
+.pg-empty .btn,
+.pg-form .form-actions .btn {
+  white-space: normal;
+  text-align: center;
+}
+
+.pg-tech {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.pg-code-muted {
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.pg-lede-2 {
+  margin-top: var(--space-2);
+  font-size: var(--fs-sm);
+}
+
+/* ---------- Your shops ---------- */
+
+.brand-card h3 {
+  overflow-wrap: anywhere;
+}
+
+.pg-score {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px var(--space-2);
+}
+
+.pg-score-value {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--text-h);
+}
+
+.pg-score-max {
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  margin-right: var(--space-1);
+}
+
+.pg-rating {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-h);
+}
+
+.pg-rating-rarely {
+  background: var(--err-bg);
+  border-color: var(--err-border);
+  color: var(--err);
+}
+
+.pg-rating-sometimes {
+  background: var(--warn-bg);
+  border-color: var(--warn-border);
+  color: var(--warn);
+}
+
+.pg-rating-often,
+.pg-rating-top {
+  background: var(--ok-bg);
+  border-color: var(--ok-border);
+  color: var(--ok);
+}
+
+.pg-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.pg-thin {
+  margin: var(--space-3) 0 0;
+  padding-top: var(--space-2);
+  border-top: 1px dashed var(--border);
+  font-size: var(--fs-sm);
+  color: var(--warn);
+}
+
+.pg-empty h2 {
+  margin-top: 0;
+}
+
+.pg-empty .btn {
+  margin-top: var(--space-3);
+}
+
+.pg-add-section {
+  scroll-margin-top: 80px;
+}
+
+/* ---------- Add your shop ---------- */
+
+.pg-form .section-note {
+  margin-bottom: var(--space-4);
+}
+
+.pg-form .field > label {
+  display: block;
+}
+
+.pg-form .field input,
+.q-add input,
+.q-add select {
+  font-weight: 400;
+}
+
+.pg-optional {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.pg-form input[aria-invalid="true"],
+.q-add input[aria-invalid="true"] {
+  border-color: var(--err);
+}
+
+.pg-form input[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 3px var(--err-bg);
+}
+
+.pg-done {
+  border-color: var(--ok-border);
+}
+
+.pg-done:focus {
+  outline: none;
+}
+
+.pg-done:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.pg-done-title {
+  font-size: var(--fs-lg);
+  color: var(--text-h);
+  margin: 0;
+}
+
+/* ---------- Questions ---------- */
+
+.q-add {
+  align-items: flex-end;
+}
+
+.q-add .pg-q-field,
+.q-add .pg-q-type {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.q-add .pg-q-field {
+  flex: 1 1 280px;
+}
+
+.q-add .pg-q-type {
+  flex: 0 1 260px;
+}
+
+.q-add .pg-q-type select {
+  width: 100%;
+}
+
+.pg-field-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.pg-q-error {
+  flex-basis: 100%;
+}
+
+/* ---------- AI answers ---------- */
+
+.pg-filters select {
+  max-width: 100%;
+}
+
+.legend-card .hl {
+  font-size: var(--fs-sm);
+}
+
+/* ---------- Connected AIs ---------- */
+
+.pg-ai-grid {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+  gap: var(--space-3);
+}
+
+.pg-ai-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.pg-ai-model {
+  margin: var(--space-1) 0 0;
+  overflow-wrap: anywhere;
+}
+
+.pg-ai-help {
+  margin: var(--space-2) 0 0;
+  color: var(--text);
+}
+
+.pg-tech-notes {
+  margin: var(--space-3) 0 0;
+  padding-left: 18px;
+}
+
+.pg-tech-notes li + li {
+  margin-top: var(--space-1);
+}
+
+@media (max-width: 640px) {
+  .q-add .pg-q-type {
+    flex: 1 1 100%;
+  }
+
+  .q-add .btn {
+    flex: 1 1 auto;
+  }
+
+  .filters-count {
+    margin-left: 0;
+  }
+
+  .pg-filters > label:not(.toggle) {
+    flex: 1 1 100%;
+  }
+}

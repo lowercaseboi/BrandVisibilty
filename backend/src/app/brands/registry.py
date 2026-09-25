@@ -7,6 +7,7 @@ query-set generation with the alias table MentionDetector needs.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from dataclasses import dataclass
@@ -51,6 +52,10 @@ class BrandConfig:
 
 def slugify(text: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "_", text.casefold()).strip("_")
+    if not slug and any(ch.isalnum() for ch in text):
+        # Names written only in Devanagari (or any non-Latin script) still need a stable,
+        # URL- and filename-safe key: derive one from the name itself.
+        slug = "u" + hashlib.sha1(" ".join(text.casefold().split()).encode("utf-8")).hexdigest()[:10]
     return slug
 
 

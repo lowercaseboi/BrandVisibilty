@@ -70,7 +70,14 @@ def create_brand(spec: dict) -> BrandConfig   # validates (AC-1), persists, retu
 ```
 
 Create-brand spec (also the `POST /brands` body):
-`{name, category, cities: [..], audiences: [..], competitors: [..names..], aliases: [..optional..], jobs_to_be_done: [..optional..]}`.
+`{name, category, cities: [..], audiences: [..], competitors: [..names..], aliases: [..optional..], jobs_to_be_done: [..optional..], use_cases: [..optional..], tasks: [..optional..]}`.
+Each list holds at most 10 entries (competitors: 10) of at most 120 characters.
+
+How the lists turn into **scored** questions (templates §3.3, each capped, no repeats): `audiences` (up to 4),
+`jobs_to_be_done` (up to 4), `competitors` (up to 3), `cities` (up to 3), `tasks` (up to 3), plus 3 fixed attribute
+questions. An empty `audiences`/`jobs_to_be_done`/`tasks` falls back to one generic entry. So name + category + one
+city gives 7 scored questions; 2 audiences + 3 jobs + 2 competitors + 2 cities gives 13. `use_cases` only feed the
+brand-named "is X good for …" questions, which are listed (disabled) but never scored.
 
 The pilots are `gajanan_vada_pav`, `va_mayekar_opticians` and `perfume_pilot`. The perfume brand's real name isn't in the
 docs yet, so it uses the placeholder display name "Local Perfume Brand".
@@ -144,6 +151,9 @@ skipped")` (the job fails). Waits are announced as `Groq rate limited — waitin
   "query_set_content_hash": "...", "query_set_template_version": "v1",
   "sampling_config": {"temperature": null, "system_prompt": null, "samples_per_query": 3},
   "observation_count": 51, "unscored_observation_count": 0, "mentioned_count": 12, "cluster_count": 17,
+  "mention_summary": {"total_answers": 51,
+                      "entities": {"self": {"answers_mentioning": 12, "answers_ranked_first": 4},
+                                   "<competitor_id>": {"answers_mentioning": 30, "answers_ranked_first": 19}}},
   "analysis_result": {"coverage", "prominence", "share_of_voice", "composite_score", "ci_low", "ci_high",
                       "per_provider_coverage": [{"provider_id","coverage","observation_count","mentioned_count"}]},
   "gaps": [{"gap_id": "gap-<sha1[:10]>", "gap_type", "evidence_refs": [...], "detail": {...}, "is_inferred": false}],
@@ -158,6 +168,13 @@ skipped")` (the job fails). Waits are announced as `Groq rate limited — waitin
 ```
 
 `observation_id` is `"<provider_id>:q<idx>-s<sample>"`, and `query_id` is `"q<idx>"`.
+
+`mention_summary` (`app/analysis/summary.py`, pure) counts answers per tracked entity over the **scored** raw
+observations only (PRD §10.1), so `total_answers == observation_count`. `entities` has exactly one entry per key of
+`entities` ("self" + every competitor, zeros included); "discovered" entities are never listed. An answer counts once
+per entity however often it names it; `answers_ranked_first` counts answers where that entity has `rank == 1` (named
+before every other tracked entity). Older records without the field get it computed on read from their stored raw
+observations (`scored != false`) and `entities` map.
 
 Records written by the pipeline also carry `"unscored_observation_count": <int>` — the number of `scored: false`
 raw observations appended after the scored ones (0 when none; absent in older records). `observation_count`
@@ -188,7 +205,7 @@ def recommend(gaps: list[Gap], observations: list[Observation], self_entity_id: 
 |--------|---------------------------------------------------|--------------------------------------------------|
 | GET    | `/health`                                         | `{"status":"ok"}`                                |
 | GET    | `/providers`                                      | `ProviderInfo[]` (never keys)                    |
-| GET    | `/brands`                                         | `[{brand_key, brand, has_data, is_pilot}]`       |
+| GET    | `/brands`                                         | `BrandSummary[]` = `[{brand_key, brand, has_data, is_pilot, question_count: int|null}]` |
 | POST   | `/brands`                                         | create brand (spec above) → 201 BrandSummary; 422 on invalid |
 | GET    | `/brands/{key}/snapshots/latest`                  | Snapshot without `raw_observations`; 404 if none |
 | GET    | `/brands/{key}/snapshots`                         | Snapshot[] oldest first, without `raw_observations` |
@@ -204,9 +221,18 @@ def recommend(gaps: list[Gap], observations: list[Observation], self_entity_id: 
 
 `Job` = `{job_id, brand_key, status: "queued"|"running"|"completed"|"partial"|"failed"|"cancelled", message, done, total, run_id|null, error|null, providers: ProviderProgress[]}`.
 
-`ProviderProgress` = `{provider_id, label, done, total, succeeded, failed, state: "queued"|"running"|"waiting"|"skipped"|"done", note: str|null}`,
-one per provider in the order the run uses them (empty until the run starts). `note` is a short human string,
+`BrandSummary.question_count` is the number of scored questions the next run would ask (the brand's `QuestionSet`
+`scored_count`, §8); `null` for a brand that only has stored snapshots and no setup. `POST /brands` returns it too.
+
+`ProviderProgress` = `{provider_id, label, done, total, succeeded, failed, state: "queued"|"running"|"waiting"|"skipped"|"done", note: str|null, wait_seconds: int|null, skip_reason: "user"|"auto"|"failures"|"unavailable"|null}`,
+one per provider in the order the run uses them (empty until the run starts). `note` is a short English string,
 e.g. `waiting 40s — rate limited`, `auto-skipped after 2 min without an answer`, `skipped after 3 failures in a row`.
+`skip_reason` says why a provider ended as `skipped`: the user skipped it (or pressed Finish now), it was
+auto-skipped after 2 minutes without an answer, it failed 3 calls in a row, or it could not be built. It is `null`
+otherwise. The UI words this itself; `note` is the English fallback.
+
+`wait_seconds` is the current retry wait in whole seconds (rounded up) while `state == "waiting"`, and `null` in every
+other state — use it (not `note`) to show a translated "waiting 40s".
 A skipped provider's `done` equals its `total`.
 
 Jobs run in a background thread, one at a time, and are held in memory. That's an MVP stand-in for Celery.
@@ -249,5 +275,10 @@ Customers can review and edit the questions the LLMs are asked (DESIGN §3, mand
 {"brand_key": "gajanan_vada_pav", "customized": false,
  "questions": [{"id": 0, "text": "best vada pav outlet for students", "intent_type": "category_discovery",
                 "source": "template" | "custom", "enabled": true, "names_brand": false, "scored": true}],
- "scored_count": 17, "unscored_count": 0}
+ "scored_count": 17, "unscored_count": 0,
+ "content_hash": "<sha256>"}
 ```
+
+`content_hash` is the hash of the query set `build_query_set(brand)` returns right now, i.e. the
+`query_set_content_hash` the next run's snapshot will carry. When it differs from the latest snapshot's
+`query_set_content_hash`, the questions changed since that check. GET, PUT and DELETE all return it (after the change).

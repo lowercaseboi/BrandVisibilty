@@ -44,3 +44,14 @@ def test_create_brand_validates_and_persists(tmp_data_dir):
         registry.create_brand({"name": "chai point", "category": "cafe", "cities": ["Pune"]})
     with pytest.raises(KeyError):
         registry.get_brand("nope")
+
+
+def test_devanagari_only_names_get_a_stable_ascii_key(tmp_data_dir):
+    brand = registry.create_brand(
+        {"name": "शर्मा किराणा", "category": "किराणा दुकान", "cities": ["मुंबई"], "competitors": ["पटेल स्टोअर्स"]}
+    )
+    assert brand.brand_key.isascii() and brand.brand_key.startswith("u")
+    assert registry.get_brand(brand.brand_key).name == "शर्मा किराणा"
+    assert registry.slugify("शर्मा किराणा") == registry.slugify("  शर्मा   किराणा ")
+    assert registry.slugify("Sharma Kirana") == "sharma_kirana"
+    assert registry.slugify("!!!") == ""

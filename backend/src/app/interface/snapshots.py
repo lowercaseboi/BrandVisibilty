@@ -12,6 +12,8 @@ import json
 import re
 from typing import Any
 
+from app.analysis.summary import mention_summary
+
 _LEGACY_OBS_ID = re.compile(r"^(?:(?P<provider>[^:]+):)?(?P<query>[qp]\d+)-s\d+$")
 
 
@@ -102,6 +104,11 @@ def normalize_snapshot(record: dict[str, Any], *, include_raw: bool = False) -> 
     entities = dict(snap.get("entities") or {})
     entities.setdefault("self", snap["brand"])
     snap["entities"] = entities
+
+    if not isinstance(snap.get("mention_summary"), dict):
+        # Older records: recount from the stored answers (scored ones only, PRD §10.1).
+        scored = [o for o in raw if isinstance(o, dict) and o.get("scored") is not False]
+        snap["mention_summary"] = mention_summary(scored, entities)
 
     if include_raw:
         default_provider = snap["providers"][0] if snap["providers"] else "unknown"

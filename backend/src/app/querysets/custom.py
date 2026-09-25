@@ -153,11 +153,15 @@ def _annotate(items: list[dict[str, Any]], brand: BrandConfig, *, customized: bo
 
 
 def get_questions(brand: BrandConfig) -> dict[str, Any]:
-    """The saved question list (or the defaults), annotated for the editor."""
+    """The saved question list (or the defaults), annotated for the editor, plus the
+    content_hash of the query set the next run would use (`build_query_set`)."""
     saved = _load_saved(brand)
     if saved is None:
-        return _annotate(default_questions(brand), brand, customized=False)
-    return _annotate(saved, brand, customized=True)
+        result = _annotate(default_questions(brand), brand, customized=False)
+    else:
+        result = _annotate(saved, brand, customized=True)
+    result["content_hash"] = build_query_set(brand)[0].content_hash
+    return result
 
 
 def _validate(items: Any) -> list[dict[str, Any]]:
@@ -235,7 +239,7 @@ def save_questions(brand: BrandConfig, items: Any) -> dict[str, Any]:
     payload = {"questions": clean, "updated_at": datetime.now(UTC).isoformat()}
     tmp.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
     tmp.replace(path)
-    return _annotate(clean, brand, customized=True)
+    return get_questions(brand)
 
 
 def reset_questions(brand: BrandConfig) -> dict[str, Any]:

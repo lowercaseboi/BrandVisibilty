@@ -1,0 +1,191 @@
+/* Design tokens. `:root` is the light theme; `[data-theme="dark"]` is dark;
+   `[data-theme="system"]` follows the OS. ThemeProvider (src/settings/theme.tsx)
+   and the inline script in index.html set data-theme on <html>.
+   Every text/background pair below was checked for WCAG AA (>= 4.5:1). */
+
+:root {
+  color-scheme: light;
+
+  /* surfaces */
+  --bg: #ffffff;
+  --surface: #ffffff; /* cards */
+  --surface-2: #f9fafb; /* panels, table heads, subtle fills (gray-50) */
+  --surface-3: #f3f4f6; /* tracks, hover fills (gray-100) */
+  --border: #e5e7eb; /* gray-200 */
+  --border-strong: #d1d5db; /* gray-300, hover borders, inputs */
+
+  /* text */
+  --text: #374151; /* body (gray-700) */
+  --text-h: #111827; /* headings, values (gray-900) */
+  --muted: #5f6673; /* secondary text; >= 5:1 on every surface */
+
+  /* accent (vermillion) — use sparingly: primary buttons, focus, "you" in charts */
+  --accent: #d03e15;
+  --accent-hover: #b83a12;
+  --accent-soft: #fdeee8;
+  --accent-text: #b83a12; /* links, accent text on bg/surfaces */
+  --on-accent: #ffffff;
+  --focus: #d03e15;
+
+  /* status */
+  --ok: #047857;
+  --ok-bg: #ecfdf5;
+  --ok-border: #a7f3d0;
+  --ok-dot: #16a34a;
+  --warn: #92400e;
+  --warn-bg: #fffbeb;
+  --warn-border: #fcd34d;
+  --err: #b91c1c;
+  --err-bg: #fef2f2;
+  --err-border: #fecaca;
+  --info: #1d4ed8;
+  --info-bg: #eff6ff;
+  --info-border: #bfdbfe;
+  --synthetic-bg: #fef9c3;
+  --synthetic-border: #facc15;
+  --synthetic-text: #713f12;
+  --synthetic-stripe: rgb(250 204 21 / 0.18);
+
+  /* mention highlights (evidence) */
+  --hl-self: #bbf7d0;
+  --hl-self-line: #15803d;
+  --hl-comp: #fed7aa;
+  --hl-comp-line: #c2410c;
+  --hl-disc: #e9d5ff;
+  --hl-disc-line: #7e22ce;
+
+  /* charts */
+  --chart-self: var(--accent); /* "you" */
+  --chart-other: #9ca3af; /* competitors */
+  --chart-line: #111827;
+  --chart-band: rgb(208 62 21 / 0.16);
+  --chart-grid: #e5e7eb;
+
+  /* type */
+  --sans: "Source Sans 3", "Noto Sans Devanagari", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Consolas, monospace;
+  --fs-xs: 12px;
+  --fs-sm: 13.5px;
+  --fs-md: 15.5px;
+  --fs-lg: 18px;
+  --fs-xl: 22px;
+  --fs-2xl: 28px;
+  --fs-hero: 44px;
+
+  /* spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* shape */
+  --radius: 8px;
+  --radius-sm: 6px;
+  --radius-pill: 999px;
+  --shadow-pop: 0 10px 30px -10px rgb(17 24 39 / 0.25), 0 2px 6px rgb(17 24 39 / 0.06); /* menus, palette only */
+
+  /* layout */
+  --maxw: 1080px;
+  --gutter: 20px;
+  --dur: 0.15s;
+}
+
+/* Dark: Hugging Face-style near-black. Keep this block and the one below identical. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b0f19;
+  --surface: #101623;
+  --surface-2: #161e2e;
+  --surface-3: #1f2937;
+  --border: #1f2937;
+  --border-strong: #374151;
+  --text: #d1d5db;
+  --text-h: #f9fafb;
+  --muted: #9ca3af;
+  --accent: #ff6a3d;
+  --accent-hover: #ff8a63;
+  --accent-soft: rgb(255 106 61 / 0.14);
+  --accent-text: #ff8a63;
+  --on-accent: #0b0f19;
+  --focus: #ff8a63;
+  --ok: #6ee7b7;
+  --ok-bg: #052e1f;
+  --ok-border: #14532d;
+  --ok-dot: #22c55e;
+  --warn: #fcd34d;
+  --warn-bg: #2d2305;
+  --warn-border: #713f12;
+  --err: #fca5a5;
+  --err-bg: #2c0b0b;
+  --err-border: #7f1d1d;
+  --info: #93c5fd;
+  --info-bg: #0b1a33;
+  --info-border: #1e3a8a;
+  --synthetic-bg: #3a3005;
+  --synthetic-border: #a16207;
+  --synthetic-text: #fde68a;
+  --synthetic-stripe: rgb(250 204 21 / 0.08);
+  --hl-self: rgb(34 197 94 / 0.28);
+  --hl-self-line: #4ade80;
+  --hl-comp: rgb(249 115 22 / 0.28);
+  --hl-comp-line: #fb923c;
+  --hl-disc: rgb(168 85 247 / 0.3);
+  --hl-disc-line: #c084fc;
+  --chart-other: #6b7280;
+  --chart-line: #f9fafb;
+  --chart-band: rgb(255 106 61 / 0.2);
+  --chart-grid: #1f2937;
+  --shadow-pop: 0 16px 40px -12px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.04);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] {
+    color-scheme: dark;
+    --bg: #0b0f19;
+    --surface: #101623;
+    --surface-2: #161e2e;
+    --surface-3: #1f2937;
+    --border: #1f2937;
+    --border-strong: #374151;
+    --text: #d1d5db;
+    --text-h: #f9fafb;
+    --muted: #9ca3af;
+    --accent: #ff6a3d;
+    --accent-hover: #ff8a63;
+    --accent-soft: rgb(255 106 61 / 0.14);
+    --accent-text: #ff8a63;
+    --on-accent: #0b0f19;
+    --focus: #ff8a63;
+    --ok: #6ee7b7;
+    --ok-bg: #052e1f;
+    --ok-border: #14532d;
+    --ok-dot: #22c55e;
+    --warn: #fcd34d;
+    --warn-bg: #2d2305;
+    --warn-border: #713f12;
+    --err: #fca5a5;
+    --err-bg: #2c0b0b;
+    --err-border: #7f1d1d;
+    --info: #93c5fd;
+    --info-bg: #0b1a33;
+    --info-border: #1e3a8a;
+    --synthetic-bg: #3a3005;
+    --synthetic-border: #a16207;
+    --synthetic-text: #fde68a;
+    --synthetic-stripe: rgb(250 204 21 / 0.08);
+    --hl-self: rgb(34 197 94 / 0.28);
+    --hl-self-line: #4ade80;
+    --hl-comp: rgb(249 115 22 / 0.28);
+    --hl-comp-line: #fb923c;
+    --hl-disc: rgb(168 85 247 / 0.3);
+    --hl-disc-line: #c084fc;
+    --chart-other: #6b7280;
+    --chart-line: #f9fafb;
+    --chart-band: rgb(255 106 61 / 0.2);
+    --chart-grid: #1f2937;
+    --shadow-pop: 0 16px 40px -12px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.04);
+  }
+}

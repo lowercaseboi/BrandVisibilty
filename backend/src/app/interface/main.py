@@ -101,6 +101,7 @@ def _brand_summary(cfg: Any, data_keys: set[str]) -> BrandSummary:
         brand=cfg.params.brand,
         has_data=cfg.brand_key in data_keys,
         is_pilot=bool(cfg.is_pilot),
+        question_count=_question_sets().get_questions(cfg)["scored_count"],
     )
 
 

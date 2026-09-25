@@ -7,6 +7,8 @@ export interface BrandSummary {
   brand: string;
   has_data: boolean;
   is_pilot?: boolean;
+  /** Scored questions the next run would ask; null when the brand has data but no setup. */
+  question_count?: number | null;
 }
 
 export interface CreateBrandRequest {
@@ -17,6 +19,9 @@ export interface CreateBrandRequest {
   competitors: string[];
   aliases?: string[];
   jobs_to_be_done?: string[];
+  /** Only feed brand-named (unscored) questions. */
+  use_cases?: string[];
+  tasks?: string[];
 }
 
 export type ProviderKind = "live" | "offline";
@@ -44,6 +49,10 @@ export interface ProviderProgress {
   state: ProviderState;
   /** e.g. "waiting 40s — rate limited", "auto-skipped after 2 min without an answer" */
   note: string | null;
+  /** Current retry wait in whole seconds while state === "waiting", else null. */
+  wait_seconds?: number | null;
+  /** Why the AI was skipped (state === "skipped"). */
+  skip_reason?: "user" | "auto" | "failures" | "unavailable" | null;
 }
 
 export interface Job {
@@ -85,6 +94,8 @@ export interface QuestionSet {
   questions: Question[];
   scored_count: number;
   unscored_count: number;
+  /** Hash of the set the next run would use; compare with Snapshot.query_set_content_hash. */
+  content_hash?: string;
 }
 
 export interface QuestionInput {
@@ -209,4 +220,11 @@ export interface Snapshot {
   entities?: Record<string, string>;
   /** Brand-named answers kept as evidence only (not in observation_count). */
   unscored_observation_count?: number;
+  /** Scored answers only; keys are exactly the `entities` keys ("self" + competitors). */
+  mention_summary?: MentionSummary;
+}
+
+export interface MentionSummary {
+  total_answers: number;
+  entities: Record<string, { answers_mentioning: number; answers_ranked_first: number }>;
 }

@@ -32,6 +32,16 @@ npm run lint    # oxlint
 |------|------|
 | `/` | Brands: cards per brand + "Add brand" form |
 | `/providers` | Configured LLM providers (never shows keys) |
-| `/brands/:brandKey` | Dashboard: run analysis (with progress + cancel), metrics + CI, trend, gaps, recommendations |
+| `/brands/:brandKey` | Dashboard: score, next steps, who AI recommends, a real answer, trend, Check now; numbers behind a switch |
 | `/brands/:brandKey/questions` | View / edit the questions the AIs are asked (toggle, add, reset) |
-| `/brands/:brandKey/runs/:runId/evidence?refs=a,b` | Raw LLM answers with highlighted mentions |
+| `/brands/:brandKey/runs/:runId/evidence?refs=a,b` | "AI answers": what each AI said, with names highlighted |
+
+## Languages and themes
+
+UI text lives in `src/i18n/{en,hi,mr}/{common,dashboard,pages}.ts`. The Hindi and Marathi files are typed strictly
+against the English ones, so a missing translation fails `npm run build`. Use `t()`, `t.n()` for plurals and `<T>` for
+`**bold**`. Write whole sentences with `{placeholders}`, never glue translated fragments together.
+
+The Hindi and Marathi translations were machine-drafted. `src/i18n/GLOSSARY.hi.md` and `GLOSSARY.mr.md` list the
+chosen terms and the strings most in need of a native speaker's review. Theme (light/dark/system), language and the
+"Show the numbers behind this" switch are stored in the browser's localStorage.

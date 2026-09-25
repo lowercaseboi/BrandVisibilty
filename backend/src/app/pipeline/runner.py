@@ -10,6 +10,7 @@ no Celery. The analysis steps it calls stay pure (CLAUDE.md); all I/O lives here
 
 from __future__ import annotations
 
+import math
 import random
 import threading
 import time
@@ -23,6 +24,7 @@ import httpx
 from app.analysis.gap_detector import detect_gaps
 from app.analysis.mention_detector import detect_mentions
 from app.analysis.scorer import score
+from app.analysis.summary import mention_summary
 from app.analysis.types import Observation
 from app.brands.registry import SELF_ENTITY_ID, BrandConfig, get_brand
 from app.collection.types import SamplingParams
@@ -32,7 +34,7 @@ from app.tracking import store
 from app.tracking.snapshot import OFFLINE_PROVIDERS, build_snapshot
 
 ProgressFn = Callable[[str, int, int], None]  # (message, done, total)
-ProviderFn = Callable[[dict], None]  # {provider_id, label, done, total, succeeded, failed, state, note}
+ProviderFn = Callable[[dict], None]  # {provider_id, label, done, total, succeeded, failed, state, note, wait_seconds}
 SkipFn = Callable[[str], bool]  # provider_id -> True when that provider (or everything) should be skipped
 
 _BOOTSTRAP_SEED = 42
@@ -138,12 +140,16 @@ class _ProviderRun:
             "failed": 0,
             "state": "queued",
             "note": None,
+            "wait_seconds": None,
+            "skip_reason": None,
         }
         self.last_answer_at = _now()
         self.last_problem: str | None = None  # latest failure / wait reason, for the auto-skip message
 
     def report(self, **fields) -> None:
         self.status.update(fields)
+        if self.status["state"] != "waiting":
+            self.status["wait_seconds"] = None  # only meaningful while waiting on a retry
         self.progress.provider(self.status)
 
     def skip_requested(self) -> bool:
@@ -155,21 +161,23 @@ class _ProviderRun:
     def should_stop(self) -> bool:
         return self.skip_requested() or self.overdue()
 
-    def finish_skipped(self, message: str, note: str) -> None:
-        """Mark every remaining planned call done (so the overall bar keeps moving) and stop."""
+    def finish_skipped(self, message: str, note: str, reason: str) -> None:
+        """Mark every remaining planned call done (so the overall bar keeps moving) and stop.
+        `reason` is structured for the UI: "user", "auto", "failures" or "unavailable"."""
         remaining = self.planned - self.status["done"]
-        self.report(state="skipped", note=note, done=self.planned)
+        self.report(state="skipped", note=note, done=self.planned, skip_reason=reason)
         self.progress.step(message, n=remaining)
 
     def stop(self) -> bool:
         """Skip (by request, or automatically). Returns True when it was a user/skip-all request."""
         if self.skip_requested():
-            self.finish_skipped(f"{self.label} skipped — continuing with the answers collected so far", "skipped")
+            self.finish_skipped(f"{self.label} skipped — continuing with the answers collected so far", "skipped", "user")
             return True
         why = self.last_problem or "no response"
         self.finish_skipped(
             f"{self.label} auto-skipped: no answer for {_duration(AUTO_SKIP_AFTER_SECONDS)} ({why})",
             f"auto-skipped after {_duration(AUTO_SKIP_AFTER_SECONDS, short=True)} without an answer",
+            "auto",
         )
         return False
 
@@ -224,7 +232,7 @@ def _collect_provider(
     except Exception as exc:  # noqa: BLE001 - one unusable provider must not kill the run
         # Registry errors are our own messages (they name the missing setting, never a key).
         reason = _truncate(str(exc), 120) if isinstance(exc, (ValueError, KeyError)) else _short_error(exc)
-        run.finish_skipped(f"{label} unavailable, skipped for this run ({reason})", f"unavailable ({reason})")
+        run.finish_skipped(f"{label} unavailable, skipped for this run ({reason})", f"unavailable ({reason})", "unavailable")
         return []
 
     def stop(records: list) -> list:
@@ -254,7 +262,10 @@ def _collect_provider(
 
                 def on_wait(seconds: float, reason: str, _where: str = position) -> None:
                     run.last_problem = reason
-                    run.report(state="waiting", note=f"waiting {seconds:.0f}s — {reason}")
+                    run.report(
+                        state="waiting", note=f"waiting {seconds:.0f}s — {reason}",
+                        wait_seconds=max(0, math.ceil(seconds)),
+                    )
                     progress.note(f"{label} {reason} — waiting {seconds:.0f}s before retrying ({_where})")
 
                 try:
@@ -277,6 +288,7 @@ def _collect_provider(
                         run.finish_skipped(
                             f"{label} skipped for the rest of this run after {consecutive_failures} failures in a row",
                             f"skipped after {consecutive_failures} failures in a row",
+                            "failures",
                         )
                         return records
                     continue
@@ -379,7 +391,8 @@ def run_pipeline(
     for pid in provider_ids:
         progress.provider({
             "provider_id": pid, "label": _label(pid), "done": 0, "total": per_provider * samples,
-            "succeeded": 0, "failed": 0, "state": "queued", "note": None,
+            "succeeded": 0, "failed": 0, "state": "queued", "note": None, "wait_seconds": None,
+            "skip_reason": None,
         })
     extra = (
         f" + {_plural(len(unscored_queries), 'brand-named question')} (not scored)" if unscored_queries else ""
@@ -459,6 +472,8 @@ def run_pipeline(
     )
     snapshot["raw_observations"] = [*snapshot["raw_observations"], *unscored_raws]
     snapshot["unscored_observation_count"] = len(unscored_raws)
+    # Who the AI named, per tracked entity — scored (unprompted) answers only (PRD §10.1).
+    snapshot["mention_summary"] = mention_summary(observations, brand.entity_names())
     store.append_snapshot(snapshot)
     progress.note(f"Saved run {snapshot['run_id']} ({snapshot['status']})")
     return snapshot

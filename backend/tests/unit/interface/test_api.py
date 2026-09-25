@@ -157,7 +157,8 @@ def client(monkeypatch: pytest.MonkeyPatch):
         on_progress("querying", 1, 2)
         if runner.gated:
             status = {"provider_id": "synthetic", "label": "Synthetic", "done": 1, "total": 2,
-                      "succeeded": 1, "failed": 0, "state": "running", "note": None}
+                      "succeeded": 1, "failed": 0, "state": "waiting", "note": "waiting 40s — rate limited",
+                      "wait_seconds": 40}
             on_provider(status)
             runner.started.set()
             for _ in range(250):
@@ -165,16 +166,20 @@ def client(monkeypatch: pytest.MonkeyPatch):
                     break
                 time.sleep(0.02)
             runner.skipped = should_skip("synthetic")
-            on_provider({**status, "done": 2, "state": "skipped", "note": "skipped"})
+            on_provider({**status, "done": 2, "state": "skipped", "note": "skipped", "wait_seconds": None})
         on_progress("scoring", 2, 2)
         return {"run_id": "run-job", "status": "completed"}
 
     runner.run_pipeline = run_pipeline
 
+    custom = types.ModuleType("app.querysets.custom")
+    custom.get_questions = lambda brand: {"scored_count": 20}
+
     _install(monkeypatch, "app.tracking.store", store)
     _install(monkeypatch, "app.brands.registry", registry)
     _install(monkeypatch, "app.collection.registry", providers)
     _install(monkeypatch, "app.pipeline.runner", runner)
+    _install(monkeypatch, "app.querysets.custom", custom)
 
     sys.modules.pop("app.interface.main", None)
     main = importlib.import_module("app.interface.main")
@@ -195,9 +200,12 @@ def test_brands_includes_registry_and_data_only_brands(client: TestClient) -> No
     by_key = {b["brand_key"]: b for b in client.get("/brands").json()}
     assert by_key["gajanan_vada_pav"] == {
         "brand_key": "gajanan_vada_pav", "brand": "Gajanan Vada Pav", "has_data": True, "is_pilot": True,
+        "question_count": 20,
     }
     assert by_key["va_mayekar_opticians"]["has_data"] is False
-    assert by_key["old_brand"] == {"brand_key": "old_brand", "brand": "Old Brand", "has_data": True, "is_pilot": False}
+    assert by_key["old_brand"] == {
+        "brand_key": "old_brand", "brand": "Old Brand", "has_data": True, "is_pilot": False, "question_count": None,
+    }
 
     res = client.post("/brands", json={"name": "Ashok", "category": "vada pav", "competitors": []})
     assert res.status_code == 422 and "competitor" in res.json()["detail"]
@@ -277,7 +285,8 @@ def test_skip_job(client: TestClient, provider_id) -> None:
 
     running = client.get(f"/jobs/{first['job_id']}").json()
     assert running["providers"] == [{"provider_id": "synthetic", "label": "Synthetic", "done": 1, "total": 2,
-                                     "succeeded": 1, "failed": 0, "state": "running", "note": None}]
+                                     "succeeded": 1, "failed": 0, "state": "waiting",
+                                     "note": "waiting 40s — rate limited", "wait_seconds": 40, "skip_reason": None}]
     assert client.post(f"/jobs/{first['job_id']}/skip", json={"provider_id": "groq"}).status_code == 422
 
     res = client.post(f"/jobs/{first['job_id']}/skip", json={"provider_id": provider_id})
@@ -287,6 +296,7 @@ def test_skip_job(client: TestClient, provider_id) -> None:
     job = _wait_finished(client, first["job_id"])
     assert main.fake_runner.skipped is True
     assert job["status"] == "completed" and job["providers"][0]["state"] == "skipped"
+    assert job["providers"][0]["wait_seconds"] is None
     assert client.post(f"/jobs/{first['job_id']}/skip", json={"provider_id": None}).status_code == 409
 
 
@@ -356,3 +366,110 @@ def test_questions_get_put_delete(real_client: TestClient) -> None:
 
     reset = real_client.delete(url).json()
     assert reset["customized"] is False and reset["scored_count"] == default_count
+
+
+def test_question_set_content_hash_tracks_the_next_run(real_client: TestClient) -> None:
+    from app.pipeline.runner import run_pipeline
+
+    url = "/brands/gajanan_vada_pav/questions"
+    snap = run_pipeline("gajanan_vada_pav", providers="synthetic", samples=1)
+    latest = real_client.get("/brands/gajanan_vada_pav/snapshots/latest").json()
+    assert latest["query_set_content_hash"] == snap["query_set_content_hash"]
+    default_hash = real_client.get(url).json()["content_hash"]
+    assert default_hash == latest["query_set_content_hash"]
+
+    saved = real_client.put(url, json={"questions": [
+        {"text": "best vada pav near Dadar station"},
+        {"text": "is Gajanan Vada Pav good for breakfast"},
+    ]}).json()
+    assert saved["content_hash"] != latest["query_set_content_hash"]
+    assert real_client.get(url).json()["content_hash"] == saved["content_hash"]
+    custom_run = run_pipeline("gajanan_vada_pav", providers="synthetic", samples=1)
+    assert custom_run["query_set_content_hash"] == saved["content_hash"]
+
+    reset = real_client.delete(url).json()
+    assert reset["content_hash"] == default_hash == latest["query_set_content_hash"]
+
+
+def test_latest_snapshot_has_mention_summary(real_client: TestClient) -> None:
+    from app.pipeline.runner import run_pipeline
+
+    run_pipeline("gajanan_vada_pav", providers="synthetic", samples=1)
+    body = real_client.get("/brands/gajanan_vada_pav/snapshots/latest").json()
+    summary = body["mention_summary"]
+    assert summary["total_answers"] == body["observation_count"]
+    assert set(summary["entities"]) == set(body["entities"])
+    assert set(summary["entities"]["self"]) == {"answers_mentioning", "answers_ranked_first"}
+
+
+def test_created_brand_details_add_questions(real_client: TestClient) -> None:
+    from app.brands.registry import get_brand
+    from app.querysets import custom
+
+    thin = real_client.post("/brands", json={"name": "Thin Shop", "category": "vada pav stall", "cities": ["Pune"]})
+    assert thin.status_code == 201
+    rich = real_client.post("/brands", json={
+        "name": "Rich Shop",
+        "category": "vada pav stall",
+        "cities": ["Pune", "Mumbai"],
+        "audiences": ["office workers", "college students"],
+        "competitors": ["Gajanan Vada Pav", "Aaram Vada Pav"],
+        "jobs_to_be_done": [
+            "get a quick breakfast near the station", "find a cheap filling snack", "order snacks for a party",
+        ],
+        "use_cases": ["office party catering", "a late-night snack"],
+    })
+    assert rich.status_code == 201
+    tasks = real_client.post("/brands", json={
+        "name": "Task Shop", "category": "vada pav stall", "cities": ["Pune"],
+        "tasks": ["cater vada pav for a birthday party", "run a snack counter at a wedding"],
+    })
+    assert tasks.status_code == 201
+    assert get_brand("rich_shop").params.use_cases == ("office party catering", "a late-night snack")
+    assert get_brand("task_shop").params.tasks == (
+        "cater vada pav for a birthday party", "run a snack counter at a wedding",
+    )
+
+    thin_qs = custom.get_questions(get_brand("thin_shop"))
+    rich_qs = custom.get_questions(get_brand("rich_shop"))
+    thin_count, rich_count = thin_qs["scored_count"], rich_qs["scored_count"]
+    # thin: 1 default audience + 1 default job + 3 attribute + 1 city + 1 default task = 7
+    # rich: 2 audiences + 3 jobs + 2 competitors + 3 attribute + 2 cities + 1 default task = 13
+    assert (thin_count, rich_count) == (7, 13)
+    assert custom.get_questions(get_brand("task_shop"))["scored_count"] == thin_count + 1
+    # Use cases only feed brand-named "is X good for ..." questions: listed (off), never scored.
+    fit = [q for q in rich_qs["questions"] if q["intent_type"] == "fit"]
+    assert len(fit) == 2 and not any(q["scored"] or q["enabled"] for q in fit)
+
+    by_key = {b["brand_key"]: b for b in real_client.get("/brands").json()}
+    assert by_key["thin_shop"]["question_count"] == thin_count
+    assert by_key["rich_shop"]["question_count"] == rich_count
+    assert thin.json()["question_count"] == thin_count
+
+
+def test_legacy_mention_summary_counts_scored_raw_observations() -> None:
+    from app.interface.snapshots import normalize_snapshot
+
+    record = {
+        **LEGACY_RECORD,
+        "entities": {"self": "Old Brand", "rival": "Rival"},
+        "raw_observations": [
+            {"observation_id": "q0-s0", "mentions": [{"entity_id": "rival", "entity_kind": "competitor", "rank": 1},
+                                                     {"entity_id": "self", "entity_kind": "self", "rank": 2}]},
+            {"observation_id": "q1-s0", "scored": True, "mentions": [{"entity_id": "self", "rank": 1}]},
+            {"observation_id": "p0-s0", "scored": False, "mentions": [{"entity_id": "self", "rank": 1}]},
+            {"observation_id": "q2-s0", "mentions": [{"entity_id": "stranger", "entity_kind": "discovered", "rank": 1}]},
+        ],
+    }
+    assert normalize_snapshot(record)["mention_summary"] == {
+        "total_answers": 3,
+        "entities": {
+            "self": {"answers_mentioning": 2, "answers_ranked_first": 1},
+            "rival": {"answers_mentioning": 1, "answers_ranked_first": 1},
+        },
+    }
+    stored = {"total_answers": 0, "entities": {}}
+    assert normalize_snapshot({**record, "mention_summary": stored})["mention_summary"] == stored
+    assert normalize_snapshot(LEGACY_RECORD)["mention_summary"] == {
+        "total_answers": 1, "entities": {"self": {"answers_mentioning": 0, "answers_ranked_first": 0}},
+    }

@@ -1,4 +1,7 @@
 import type { Gap } from "./api/types";
+import { useT } from "./i18n";
+import type { MessageKey } from "./i18n";
+import { pages as enPages } from "./i18n/en/pages";
 
 export function pct(value: number | null | undefined, digits = 1): string {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
@@ -107,4 +110,42 @@ export function evidenceHref(brandKey: string, runId: string, refs?: string[]): 
   const base = `/brands/${encodeURIComponent(brandKey)}/runs/${encodeURIComponent(runId)}/evidence`;
   if (!refs || refs.length === 0) return base;
   return `${base}?refs=${refs.map(encodeURIComponent).join(",")}`;
+}
+
+// ---------------------------------------------------------------------------
+// Translated helpers (shop-owner view). The helpers above stay English-only for
+// the technical "numbers behind this" panels.
+// ---------------------------------------------------------------------------
+
+/** Rating word band for a 0–1 score: 0–24 rarely, 25–49 sometimes, 50–74 often, 75–100 top. */
+export type RatingBand = "rarely" | "sometimes" | "often" | "top";
+
+export function ratingKey(score0to1: number): RatingBand {
+  const s = Math.round(Math.min(1, Math.max(0, score0to1)) * 100);
+  if (s >= 75) return "top";
+  if (s >= 50) return "often";
+  if (s >= 25) return "sometimes";
+  return "rarely";
+}
+
+/** Translation key for each rating band ("Top choice", "Rarely recommended", …). */
+export const RATING_KEY: Record<RatingBand, MessageKey> = {
+  rarely: "pages.rating.rarely",
+  sometimes: "pages.rating.sometimes",
+  often: "pages.rating.often",
+  top: "pages.rating.top",
+};
+
+/** 0–1 score -> whole points out of 100, as shown to shop owners. */
+export function scoreOutOf100(score0to1: number): number {
+  return Math.round(Math.min(1, Math.max(0, score0to1)) * 100);
+}
+
+/** Translated, plain group name for a question intent ("“How do I …” questions"). */
+export function useIntentLabel(): (intent: string | null | undefined) => string {
+  const t = useT();
+  return (intent) => {
+    const key = `intent.${intent ?? ""}`;
+    return key in enPages ? t(`pages.${key}` as MessageKey) : t("pages.intent.other");
+  };
 }
