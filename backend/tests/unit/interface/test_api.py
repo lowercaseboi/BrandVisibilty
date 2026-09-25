@@ -143,8 +143,10 @@ def client(monkeypatch: pytest.MonkeyPatch):
     providers.resolve_provider_ids = resolve_provider_ids
 
     runner = types.ModuleType("app.pipeline.runner")
+    runner.calls = []
 
-    def run_pipeline(brand_key, *, providers="auto", samples=3, round=1, record=False, on_progress=None):
+    def run_pipeline(brand_key, *, providers="auto", samples=3, round=None, record=False, on_progress=None):
+        runner.calls.append({"providers": providers, "samples": samples, "round": round})
         on_progress("querying", 1, 2)
         on_progress("scoring", 2, 2)
         return {"run_id": "run-job", "status": "completed"}
@@ -158,6 +160,7 @@ def client(monkeypatch: pytest.MonkeyPatch):
 
     sys.modules.pop("app.interface.main", None)
     main = importlib.import_module("app.interface.main")
+    main.fake_runner = runner
     try:
         yield TestClient(main.app)
     finally:
@@ -228,3 +231,67 @@ def test_run_job_lifecycle(client: TestClient) -> None:
     assert client.get("/jobs/unknown").status_code == 404
     assert client.post("/jobs/unknown/cancel").status_code == 404
     assert client.post(f"/jobs/{job_id}/cancel").status_code == 409
+
+
+def test_run_without_round_lets_the_pipeline_pick_it(client: TestClient) -> None:
+    from app.interface import main
+
+    for body, expected in (({"providers": "synthetic", "samples": 1}, None), ({"round": 4}, 4)):
+        res = client.post("/brands/gajanan_vada_pav/runs", json=body)
+        assert res.status_code == 202
+        job_id = res.json()["job_id"]
+        for _ in range(100):
+            if client.get(f"/jobs/{job_id}").json()["status"] not in ("queued", "running"):
+                break
+            time.sleep(0.02)
+        assert main.fake_runner.calls[-1]["round"] == expected
+    assert client.post("/brands/gajanan_vada_pav/runs", json={"round": 0}).status_code == 422
+
+
+@pytest.fixture
+def real_client(tmp_path, monkeypatch: pytest.MonkeyPatch):
+    """The real brands registry + question-set module over a temp DATA_DIR."""
+    from app.tracking import store
+
+    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    sys.modules.pop("app.interface.main", None)
+    main = importlib.import_module("app.interface.main")
+    try:
+        yield TestClient(main.app)
+    finally:
+        sys.modules.pop("app.interface.main", None)
+
+
+def test_questions_get_put_delete(real_client: TestClient) -> None:
+    url = "/brands/gajanan_vada_pav/questions"
+    assert real_client.get("/brands/nope/questions").status_code == 404
+    assert real_client.put("/brands/nope/questions", json={"questions": [{"text": "hello there"}]}).status_code == 404
+    assert real_client.delete("/brands/nope/questions").status_code == 404
+
+    body = real_client.get(url).json()
+    assert body["brand_key"] == "gajanan_vada_pav" and body["customized"] is False
+    assert body["scored_count"] == 20 and body["unscored_count"] == 0
+    assert set(body["questions"][0]) == {"id", "text", "intent_type", "source", "enabled", "names_brand", "scored"}
+
+    res = real_client.put(url, json={"questions": [
+        {"text": "best vada pav near Dadar station"},
+        {"text": "is Gajanan Vada Pav good for breakfast", "enabled": True},
+        {"text": "vada pav outlet for students", "intent_type": "category_discovery", "source": "template"},
+    ]})
+    assert res.status_code == 200
+    saved = res.json()
+    assert saved["customized"] is True and saved["scored_count"] == 2 and saved["unscored_count"] == 1
+    assert saved["questions"][1] | {"id": 1} == {
+        "id": 1, "text": "is Gajanan Vada Pav good for breakfast", "intent_type": "custom", "source": "custom",
+        "enabled": True, "names_brand": True, "scored": False,
+    }
+    assert real_client.get(url).json() == saved
+
+    res = real_client.put(url, json={"questions": [{"text": "is Gajanan Vada Pav open late"}]})
+    assert res.status_code == 422 and "must not mention" in res.json()["detail"]
+    res = real_client.put(url, json={"questions": [{"text": "hello there", "intent_type": "bogus"}]})
+    assert res.status_code == 422 and isinstance(res.json()["detail"], str)
+    assert real_client.get(url).json() == saved  # a rejected save changes nothing
+
+    reset = real_client.delete(url).json()
+    assert reset["customized"] is False and reset["scored_count"] == 20

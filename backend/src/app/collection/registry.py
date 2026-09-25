@@ -49,6 +49,11 @@ _LABELS = {
 }
 
 
+def provider_label(provider_id: str) -> str:
+    """Human-readable provider name for progress messages; unknown ids are returned as-is."""
+    return _LABELS.get(provider_id, provider_id)
+
+
 @dataclass(frozen=True)
 class ProviderInfo:
     provider_id: str

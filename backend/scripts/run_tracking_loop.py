@@ -34,7 +34,8 @@ def _progress_printer(brand_key: str):
 
     def on_progress(message: str, done: int, total: int) -> None:
         line = f"  [{brand_key}] {done}/{total}  {message}"
-        failed = "FAILED" in message or "unavailable" in message or "failed" in message
+        lowered = message.lower()
+        failed = any(word in lowered for word in ("failed", "unavailable", "skipped", "could not"))
         if is_tty and not failed:
             pad = max(0, state["last_len"] - len(line))
             sys.stdout.write("\r" + line + " " * pad)
@@ -73,8 +74,11 @@ def main() -> int:
     parser.add_argument(
         "--providers", default="auto", help="'auto' (every configured provider, else synthetic) or a comma list"
     )
-    parser.add_argument("--samples", type=int, default=3, help="samples per unprompted query (default 3)")
-    parser.add_argument("--round", type=int, default=1, help="round number (varies synthetic data; default 1)")
+    parser.add_argument("--samples", type=int, default=3, help="times each question is asked per provider (default 3)")
+    parser.add_argument(
+        "--round", type=int, default=None,
+        help="synthetic data only: simulated week to generate (default: next round automatically)",
+    )
     parser.add_argument("--record", action="store_true", help="record live responses to the replay cache")
     args = parser.parse_args()
 

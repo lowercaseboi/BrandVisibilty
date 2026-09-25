@@ -12,6 +12,26 @@ export function humanize(value: string | null | undefined): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
+// Friendly names for query-set intent types (backend querysets/templates.py).
+const INTENT_LABELS: Record<string, string> = {
+  category_discovery: "Discovery — 'best … for …'",
+  problem_first: "Problem-first — 'how do I …'",
+  alternative_seeking: "Alternatives to competitors",
+  attribute_constrained: "By attribute — 'most affordable …'",
+  local_contextual: "Local — '… in <city>'",
+  recommendation_seeking: "Who to hire",
+  identity: "About your brand",
+  fit: "About your brand — fit",
+  commercial: "About your brand — pricing",
+  head_to_head: "Your brand vs competitors",
+  custom: "Your own questions",
+};
+
+export function intentLabel(intent: string | null | undefined): string {
+  if (!intent) return "—";
+  return INTENT_LABELS[intent] ?? humanize(intent);
+}
+
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso);

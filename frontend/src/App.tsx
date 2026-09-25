@@ -4,6 +4,7 @@ import { BrandListPage } from "./pages/BrandListPage";
 import { BrandDashboardPage } from "./pages/BrandDashboardPage";
 import { ProvidersPage } from "./pages/ProvidersPage";
 import { EvidencePage } from "./pages/EvidencePage";
+import { QuestionsPage } from "./pages/QuestionsPage";
 
 function NotFound() {
   return (
@@ -51,6 +52,7 @@ export default function App() {
           <Route path="/" element={<BrandListPage />} />
           <Route path="/providers" element={<ProvidersPage />} />
           <Route path="/brands/:brandKey" element={<BrandDashboardPage />} />
+          <Route path="/brands/:brandKey/questions" element={<QuestionsPage />} />
           <Route path="/brands/:brandKey/runs/:runId/evidence" element={<EvidencePage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -123,3 +123,9 @@ def test_replay_roundtrip(tmp_path):
     assert replay.query("q", SamplingParams()).payload == result.payload
     with pytest.raises(ReplayMiss):
         replay.query("other", SamplingParams())
+
+
+def test_provider_label():
+    assert registry.provider_label("groq") == "Groq"
+    assert registry.provider_label("gemini") == "Google Gemini"
+    assert registry.provider_label("mystery") == "mystery"

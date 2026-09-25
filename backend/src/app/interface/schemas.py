@@ -55,8 +55,51 @@ class RunRequest(BaseModel):
         'or a comma-separated list such as "gemini,groq" or "synthetic".',
         examples=["auto", "synthetic", "gemini,groq"],
     )
-    samples: int = Field(default=3, ge=1, le=10, description="Samples per unprompted query per provider")
-    round: int = Field(default=1, ge=1, description="Round number (synthetic provider uses it to vary output)")
+    samples: int = Field(
+        default=3,
+        ge=1,
+        le=10,
+        description="How many times each question is asked per provider. AI answers vary from one ask to the "
+        "next, so more answers give a steadier score and a narrower confidence range, at the cost of more API calls.",
+    )
+    round: int | None = Field(
+        default=None,
+        ge=1,
+        description="Synthetic demo data only: which simulated week to generate. Omit (null) to pick the next "
+        "round automatically; real providers ignore it.",
+    )
+
+
+QuestionSource = Literal["template", "custom"]
+
+
+class QuestionIn(BaseModel):
+    text: str = Field(description="The question, as a customer would type it (3-200 characters)")
+    intent_type: str = Field(default="custom", description='A template intent type, or "custom"')
+    source: QuestionSource = "custom"
+    enabled: bool = True
+
+
+class SaveQuestionsRequest(BaseModel):
+    questions: list[QuestionIn]
+
+
+class Question(BaseModel):
+    id: int = Field(description="Position in the list (stable until the list is saved again)")
+    text: str
+    intent_type: str
+    source: QuestionSource
+    enabled: bool
+    names_brand: bool = Field(description="True when the question mentions the brand itself")
+    scored: bool = Field(description="enabled and not names_brand: counts toward Coverage, Prominence and SoV")
+
+
+class QuestionSet(BaseModel):
+    brand_key: str
+    customized: bool = Field(description="True when the brand has a saved (edited) question list")
+    questions: list[Question]
+    scored_count: int = Field(description="Enabled questions that count toward scores")
+    unscored_count: int = Field(description="Enabled questions that name the brand: asked, but not scored")
 
 
 class Job(BaseModel):

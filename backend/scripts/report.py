@@ -318,6 +318,7 @@ def show_evidence(s: dict, n: int) -> None:
         print(
             f"  {c(o.get('observation_id', '?'), 'magenta')}  {c(o.get('provider_id', '?'), 'cyan')}"
             f" {c(o.get('model_version') or '', 'grey')}  intent {o.get('intent_type', '?')}"
+            + ("" if o.get("scored", True) else "  " + c("not scored (names brand)", "grey"))
         )
         print(f"  {c('Q:', 'bold')} {c(o.get('query_text', '?'), 'bold')}")
         summary = ", ".join(

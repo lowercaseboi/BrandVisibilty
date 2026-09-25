@@ -61,6 +61,11 @@ function ObservationCard({ obs, entities }: { obs: Observation; entities: Record
         <div className="obs-meta">
           <span className="badge badge-live">{obs.provider_id}</span>
           {obs.intent_type && <span className="badge">{humanize(obs.intent_type)}</span>}
+          {obs.scored === false && (
+            <span className="badge badge-job-partial" title="The question names the brand, so it is shown but not scored">
+              Not scored (names brand)
+            </span>
+          )}
           <span className={`badge ${mentionsBrand ? "badge-ok" : "badge-muted"}`}>
             {mentionsBrand ? "Brand mentioned" : "Brand absent"}
           </span>

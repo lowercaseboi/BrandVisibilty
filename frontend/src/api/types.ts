@@ -45,7 +45,37 @@ export interface Job {
 export interface StartRunRequest {
   providers?: string;
   samples?: number;
+  // Synthetic demo data only; omit it and the backend picks the next round.
   round?: number;
+}
+
+export type QuestionSource = "template" | "custom";
+
+export interface Question {
+  id: number;
+  text: string;
+  intent_type: string;
+  source: QuestionSource;
+  enabled: boolean;
+  // The question itself names the brand, so a mention is guaranteed: asked and
+  // shown in Evidence, but excluded from scores (PRD §10.1).
+  names_brand: boolean;
+  scored: boolean;
+}
+
+export interface QuestionSet {
+  brand_key: string;
+  customized: boolean;
+  questions: Question[];
+  scored_count: number;
+  unscored_count: number;
+}
+
+export interface QuestionInput {
+  text: string;
+  intent_type?: string;
+  source?: QuestionSource;
+  enabled?: boolean;
 }
 
 export interface ProviderBreakdown {
@@ -130,6 +160,8 @@ export interface Observation {
   model_version: string;
   response_text: string;
   mentions: Mention[];
+  // false = brand-named question (query_id "p<i>"): shown, never scored. Absent = scored.
+  scored?: boolean;
 }
 
 export interface ObservationsResponse {

@@ -102,11 +102,16 @@ export function BrandDashboardPage() {
             </p>
           )}
         </div>
-        {snapshot && (
-          <Link to={evidenceHref(brandKey, snapshot.run_id)} className="btn btn-secondary">
-            Browse all responses
+        <div className="page-head-actions">
+          <Link to={`/brands/${encodeURIComponent(brandKey)}/questions`} className="btn btn-secondary">
+            Questions asked
           </Link>
-        )}
+          {snapshot && (
+            <Link to={evidenceHref(brandKey, snapshot.run_id)} className="btn btn-secondary">
+              Browse all responses
+            </Link>
+          )}
+        </div>
       </div>
 
       {snapshot && <OriginBanner origin={snapshot.data_origin} />}

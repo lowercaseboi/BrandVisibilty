@@ -137,6 +137,11 @@ calls are skipped: each failure has already used up its retries, so an exhausted
 
 `observation_id` is `"<provider_id>:q<idx>-s<sample>"`, and `query_id` is `"q<idx>"`.
 
+Each raw observation also carries `"scored": bool`, which is `true` when absent in legacy records. Brand-named
+questions from a customised question set (§8) are asked and stored for Evidence with `scored: false`, `query_id`
+`"p<idx>"` and `observation_id` `"<provider_id>:p<idx>-s<sample>"`. They never reach the scorer, the gap detector,
+the recommendation engine or the admission counts.
+
 ## 6. Recommendation engine — `app/recommendation/engine.py`
 
 ```python
@@ -162,7 +167,10 @@ def recommend(gaps: list[Gap], observations: list[Observation], self_entity_id: 
 | GET    | `/brands/{key}/snapshots/latest`                  | Snapshot without `raw_observations`; 404 if none |
 | GET    | `/brands/{key}/snapshots`                         | Snapshot[] oldest first, without `raw_observations` |
 | GET    | `/brands/{key}/snapshots/{run_id}/observations`   | `raw_observations[]` + `entities`                |
-| POST   | `/brands/{key}/runs`                              | body `{providers?: "auto", samples?: 3, round?: 1}` → 202 `Job` |
+| GET    | `/brands/{key}/questions`                         | `QuestionSet` (§8); 404 unknown brand            |
+| PUT    | `/brands/{key}/questions`                         | body `{questions: [{text, intent_type?, source?, enabled?}]}` → `QuestionSet`; 422 with a readable message |
+| DELETE | `/brands/{key}/questions`                         | reset to the suggested questions → `QuestionSet` |
+| POST   | `/brands/{key}/runs`                              | body `{providers?: "auto", samples?: 3, round?: null}` → 202 `Job`. `round` only affects synthetic data; when null it is the brand's synthetic run count + 1 |
 | GET    | `/jobs/{job_id}`                                  | `Job`                                            |
 | GET    | `/jobs?brand_key=`                                | `Job[]` submitted since server start, optionally filtered by brand |
 | POST   | `/jobs/{job_id}/cancel`                           | `Job`; 404 if unknown, 409 if already finished   |
@@ -179,3 +187,33 @@ The frontend's Run panel re-attaches to a brand's active job via `GET /jobs?bran
 
 CORS is open to `http://localhost:5173` and `http://localhost:8080`. The frontend reads its API base from `VITE_API_BASE`
 (default `/api`); nginx or the Vite proxy forward `/api/*` to the backend with the `/api` prefix stripped.
+
+Job `message` strings are human-readable and shown directly in the UI, for example
+`Groq · question 4 of 20, answer 2 of 3 · “best vada pav outlet for students” · brand mentioned`. Failures are
+summarised (`rate limited`, `provider error 503`, `timed out`) and never include raw exception text. `done` and
+`total` count API calls: providers × questions × samples.
+
+## 8. Question sets: `app/querysets/custom.py`
+
+Customers can review and edit the questions the LLMs are asked (DESIGN §3, mandatory human review).
+
+- **No saved file** (the default): the run uses `freeze(generate_draft(params))`, filtered to unprompted questions,
+  exactly as before. The hash and `comparability_key` are unchanged.
+- **Saved** at `DATA_DIR/questions/<brand_key>.json` as `{questions: [{text, intent_type, source, enabled}], updated_at}`.
+  Enabled questions are frozen as `template_set_version "v1-custom"`. The new hash starts a new comparability segment,
+  and the trend chart breaks the line there.
+- A question **names the brand** when `detect_mentions(text, brand.alias_table())` finds the self entity. Those
+  questions are asked but not scored (PRD §10.1).
+- **Validation:**
+  - 1–60 questions, each 3–200 characters, with no case-insensitive duplicates.
+  - `intent_type` must be a template intent or `"custom"`.
+  - At least one enabled question must be scorable.
+  - Saving a list identical to the defaults deletes the file, so the baseline isn't broken for nothing.
+
+```jsonc
+// QuestionSet
+{"brand_key": "gajanan_vada_pav", "customized": false,
+ "questions": [{"id": 0, "text": "best vada pav outlet for students", "intent_type": "category_discovery",
+                "source": "template" | "custom", "enabled": true, "names_brand": false, "scored": true}],
+ "scored_count": 20, "unscored_count": 0}
+```

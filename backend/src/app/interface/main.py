@@ -17,7 +17,9 @@ from app.interface.schemas import (
     HealthResponse,
     Job,
     ProviderInfoOut,
+    QuestionSet,
     RunRequest,
+    SaveQuestionsRequest,
 )
 from app.interface.snapshots import normalize_snapshot
 from app.tracking import store
@@ -48,6 +50,11 @@ TAGS = [
     {"name": "meta", "description": "Service health."},
     {"name": "providers", "description": "LLM providers available to this server (keys are never exposed)."},
     {"name": "brands", "description": "Pilot and user-created brands."},
+    {
+        "name": "questions",
+        "description": "The questions each AI model is asked for a brand. Customers can review, disable and add "
+        "questions; ones that name the brand are asked but not scored.",
+    },
     {"name": "snapshots", "description": "Scored visibility snapshots, one per completed run."},
     {"name": "runs", "description": "Start a tracking run in the background and follow its progress."},
 ]
@@ -143,6 +150,46 @@ def create_brand(body: CreateBrandRequest) -> BrandSummary:
     return _brand_summary(cfg, store.brand_keys_with_data())
 
 
+# --------------------------------------------------------------------------- questions
+
+
+def _question_sets():
+    # Imported lazily, like the pipeline: it pulls in the query generator and mention detector.
+    from app.querysets import custom
+
+    return custom
+
+
+def _brand_or_404(brand_key: str) -> Any:
+    try:
+        return brands_registry.get_brand(brand_key)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Unknown brand '{brand_key}'") from exc
+
+
+@app.get("/brands/{brand_key}/questions", tags=["questions"], response_model=QuestionSet)
+def get_questions(brand_key: str) -> dict[str, Any]:
+    """The questions a run asks: the saved list, or the suggested template questions."""
+    return _question_sets().get_questions(_brand_or_404(brand_key))
+
+
+@app.put("/brands/{brand_key}/questions", tags=["questions"], response_model=QuestionSet)
+def save_questions(brand_key: str, body: SaveQuestionsRequest) -> dict[str, Any]:
+    """Replace the brand's question list. 422 with a plain-English reason if it is invalid.
+    Changing the questions starts a new comparability baseline for the trend chart."""
+    brand = _brand_or_404(brand_key)
+    try:
+        return _question_sets().save_questions(brand, [q.model_dump() for q in body.questions])
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.delete("/brands/{brand_key}/questions", tags=["questions"], response_model=QuestionSet)
+def reset_questions(brand_key: str) -> dict[str, Any]:
+    """Go back to the suggested template questions."""
+    return _question_sets().reset_questions(_brand_or_404(brand_key))
+
+
 # --------------------------------------------------------------------------- snapshots
 
 
@@ -193,10 +240,7 @@ def snapshot_observations(brand_key: str, run_id: str) -> dict[str, Any]:
 def start_run(brand_key: str, body: RunRequest | None = None) -> dict[str, Any]:
     """Queue a tracking run. Poll `GET /jobs/{job_id}` for progress; runs execute one at a time."""
     body = body or RunRequest()
-    try:
-        brands_registry.get_brand(brand_key)
-    except KeyError as exc:
-        raise HTTPException(status_code=404, detail=f"Unknown brand '{brand_key}'") from exc
+    _brand_or_404(brand_key)
     try:
         provider_registry.resolve_provider_ids(body.providers)
     except ValueError as exc:

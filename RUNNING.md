@@ -63,6 +63,27 @@ make report                                           # one line per brand
 You can also start a run from the UI (brand page → **Run analysis**, with a **Cancel** button while it runs) or through
 the API (`POST /brands/{key}/runs`, then `GET /jobs/{id}` or `POST /jobs/{id}/cancel`). A cancelled run saves nothing.
 
+### How a run works (and what "0/60" means)
+A run asks each selected AI every **scored question** a few times, then scores the answers.
+The counter in the Run panel counts API calls: **questions × answers per question × providers**. With 20 questions,
+Standard depth (3) and one provider, that is 60 calls.
+
+- **Depth: Quick (1), Standard (3) or Thorough (5).** An LLM gives a slightly different answer each time it is asked.
+  Asking each question several times gives a steadier score and a narrower confidence range, at the cost of more
+  API calls. Use Quick on tight free-tier quotas.
+- **Round** only exists for the offline synthetic provider, where each run simulates a later week to build a demo
+  trend. It is picked automatically now; `--round` on the CLI still overrides it.
+
+### Choosing the questions
+Open a brand, then **View / edit questions** (`/brands/<key>/questions`). You can:
+- see exactly what the AIs are asked;
+- switch suggested questions off, or fix awkward or duplicate ones;
+- add your own, such as "best vada pav near Dadar station".
+
+A question that contains the brand's own name (or an alias) is still asked and shown in Evidence, but it is **not
+scored**, because a mention is guaranteed. Saving a changed list starts a new baseline on the trend chart. **Reset to
+suggested questions** returns to the original set and its baseline. The API is `GET/PUT/DELETE /brands/{key}/questions`.
+
 ### Switching PCs / pulling a teammate's changes
 ```bash
 git pull && make up      # rebuilds images with the new code; your .env.local stays local

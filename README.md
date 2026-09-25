@@ -24,6 +24,8 @@ Brand config ──► Query set ──► LLM providers ──► Mention detec
 - **Frozen query sets.** Templates generate around 30 queries per brand. About 20 are unprompted: category
   discovery, problem-first, alternative-seeking, attribute-constrained, local and recommendation-seeking. About 10
   are prompted: identity, fit, cost and head-to-head. The query set is hashed so runs stay comparable over time.
+- **Editable questions.** Customers can see exactly what the AIs are asked, switch suggested questions off and add
+  their own. Questions that name the brand are asked and shown as evidence, but are not scored.
 - **Metrics, computed over the unprompted subset only:**
   - **Coverage** is the share of answers that mention the brand.
   - **Prominence** is how early the brand appears when it is mentioned.

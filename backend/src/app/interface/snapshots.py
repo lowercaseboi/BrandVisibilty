@@ -12,7 +12,7 @@ import json
 import re
 from typing import Any
 
-_LEGACY_OBS_ID = re.compile(r"^(?:(?P<provider>[^:]+):)?(?P<query>q\d+)-s\d+$")
+_LEGACY_OBS_ID = re.compile(r"^(?:(?P<provider>[^:]+):)?(?P<query>[qp]\d+)-s\d+$")
 
 
 def _sha1(text: str) -> str:
@@ -119,4 +119,6 @@ def _normalize_observation(obs: dict[str, Any], default_provider: str) -> dict[s
     out.setdefault("model_version", "")
     out.setdefault("response_text", "")
     out["mentions"] = list(out.get("mentions") or [])
+    # Records written before question sets existed only held scored observations.
+    out["scored"] = bool(out.get("scored", True))
     return out

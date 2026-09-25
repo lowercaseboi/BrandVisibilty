@@ -38,7 +38,7 @@ class JobManager:
         self._worker: threading.Thread | None = None
         self._cancel_requested: set[str] = set()
 
-    def submit(self, brand_key: str, *, providers: str, samples: int, round: int) -> dict[str, Any]:
+    def submit(self, brand_key: str, *, providers: str, samples: int, round: int | None = None) -> dict[str, Any]:
         job_id = uuid.uuid4().hex
         job = {
             "job_id": job_id,

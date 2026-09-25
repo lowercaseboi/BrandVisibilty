@@ -5,6 +5,8 @@ import type {
   Observation,
   ObservationsResponse,
   ProviderInfo,
+  QuestionInput,
+  QuestionSet,
   Snapshot,
   StartRunRequest,
 } from "./types";
@@ -75,6 +77,18 @@ function postJson<T>(path: string, body: unknown): Promise<T> {
   });
 }
 
+function putJson<T>(path: string, body: unknown): Promise<T> {
+  return request<T>(path, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+function deleteJson<T>(path: string): Promise<T> {
+  return request<T>(path, { method: "DELETE" });
+}
+
 const b = encodeURIComponent;
 
 // The backend reports composite_score / ci_low / ci_high on a 0-100 scale (scorer.py);
@@ -131,4 +145,16 @@ export function listJobs(brandKey: string): Promise<Job[]> {
 
 export function cancelJob(jobId: string): Promise<Job> {
   return postJson(`/jobs/${b(jobId)}/cancel`, {});
+}
+
+export function getQuestions(brandKey: string): Promise<QuestionSet> {
+  return getJson(`/brands/${b(brandKey)}/questions`);
+}
+
+export function saveQuestions(brandKey: string, questions: QuestionInput[]): Promise<QuestionSet> {
+  return putJson(`/brands/${b(brandKey)}/questions`, { questions });
+}
+
+export function resetQuestions(brandKey: string): Promise<QuestionSet> {
+  return deleteJson(`/brands/${b(brandKey)}/questions`);
 }

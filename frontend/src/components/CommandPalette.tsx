@@ -72,6 +72,12 @@ export function CommandPalette() {
         to: `/brands/${encodeURIComponent(b.brand_key)}`,
         group: "Brands",
       })),
+      ...brands.map((b) => ({
+        label: `${b.brand} — questions`,
+        hint: "View / edit what the AI models are asked",
+        to: `/brands/${encodeURIComponent(b.brand_key)}/questions`,
+        group: "Questions",
+      })),
       ...PAGES,
     ];
     return all
