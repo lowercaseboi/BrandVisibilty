@@ -40,6 +40,6 @@ def test_gemini_expands_one_canonical_query_into_natural_phrasing():
 def test_generate_draft_end_to_end_with_real_gemini():
     adapter = GeminiAdapter(api_key=GEMINI_API_KEY)
     draft = generate_draft(PARAMS, llm_provider=adapter)
-    assert len(draft.queries) == 30
+    assert len(draft.queries) == len(generate_draft(PARAMS).queries)  # expansion rephrases, never adds/drops
     frozen = freeze(draft)
     assert frozen.content_hash

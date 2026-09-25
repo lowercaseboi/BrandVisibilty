@@ -226,3 +226,5 @@ def test_run_job_lifecycle(client: TestClient) -> None:
         time.sleep(0.02)
     assert job["status"] == "completed" and job["run_id"] == "run-job" and job["done"] == job["total"] == 2
     assert client.get("/jobs/unknown").status_code == 404
+    assert client.post("/jobs/unknown/cancel").status_code == 404
+    assert client.post(f"/jobs/{job_id}/cancel").status_code == 409

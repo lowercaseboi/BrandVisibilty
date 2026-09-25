@@ -2,6 +2,11 @@
 
 MVP stand-in for Celery: one worker thread drains a FIFO queue, so runs execute
 one at a time. Job state lives in process memory and is lost on restart.
+
+Cancelling a queued job drops it before it starts. Cancelling a running job is
+cooperative: it stops at the next provider-call boundary during collection and saves
+nothing. Once collection is done the run is too close to finishing to leave half-saved,
+so a late cancel is ignored and the run completes normally.
 """
 
 from __future__ import annotations
@@ -15,6 +20,12 @@ from typing import Any
 # (brand_key, providers, samples, round, on_progress) -> snapshot record
 RunFn = Callable[..., dict]
 
+TERMINAL_STATUSES = frozenset({"completed", "partial", "failed", "cancelled"})
+
+
+class JobCancelled(Exception):
+    """Raised from on_progress inside the pipeline to unwind a cancelled run."""
+
 
 class JobManager:
     def __init__(self, run_fn: Callable[[], RunFn]) -> None:
@@ -25,6 +36,7 @@ class JobManager:
         self._lock = threading.Lock()
         self._queue: queue.Queue[tuple[str, dict[str, Any]]] = queue.Queue()
         self._worker: threading.Thread | None = None
+        self._cancel_requested: set[str] = set()
 
     def submit(self, brand_key: str, *, providers: str, samples: int, round: int) -> dict[str, Any]:
         job_id = uuid.uuid4().hex
@@ -57,6 +69,19 @@ class JobManager:
             jobs = [j for j in jobs if j["brand_key"] == brand_key]
         return jobs
 
+    def cancel(self, job_id: str) -> dict[str, Any] | None:
+        """None if unknown; otherwise the job after the request (unchanged if already finished)."""
+        with self._lock:
+            job = self._jobs.get(job_id)
+            if job is None:
+                return None
+            if job["status"] == "queued":
+                job.update(status="cancelled", message="Cancelled before it started")
+            elif job["status"] == "running":
+                self._cancel_requested.add(job_id)
+                job["message"] = "Cancelling after the current call…"
+            return dict(job)
+
     def _update(self, job_id: str, **fields: Any) -> None:
         with self._lock:
             self._jobs[job_id].update(fields)
@@ -71,7 +96,8 @@ class JobManager:
         while True:
             job_id, kwargs = self._queue.get()
             try:
-                self._execute(job_id, kwargs)
+                if self._jobs[job_id]["status"] != "cancelled":
+                    self._execute(job_id, kwargs)
             finally:
                 self._queue.task_done()
 
@@ -80,10 +106,18 @@ class JobManager:
         self._update(job_id, status="running", message="Starting run")
 
         def on_progress(message: str, done: int, total: int) -> None:
-            self._update(job_id, message=message, done=done, total=total)
+            with self._lock:
+                if job_id in self._cancel_requested and done < total:
+                    raise JobCancelled
+                if job_id in self._cancel_requested:
+                    message = f"{message} (too late to cancel, finishing)"
+                self._jobs[job_id].update(message=message, done=done, total=total)
 
         try:
             snapshot = self._run_fn()(brand_key, on_progress=on_progress, **kwargs)
+        except JobCancelled:
+            self._update(job_id, status="cancelled", message="Cancelled, nothing saved")
+            return
         except Exception as exc:  # noqa: BLE001 - surface any failure on the job, never crash the worker
             self._update(job_id, status="failed", message="Run failed", error=f"{type(exc).__name__}: {exc}")
             return

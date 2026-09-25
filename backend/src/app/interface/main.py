@@ -213,6 +213,17 @@ def get_job(job_id: str) -> dict[str, Any]:
     return job
 
 
+@app.post("/jobs/{job_id}/cancel", tags=["runs"], response_model=Job)
+def cancel_job(job_id: str) -> dict[str, Any]:
+    """Drop a queued job, or stop a running one at its next provider call (nothing is saved)."""
+    job = jobs.cancel(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail=f"Unknown job '{job_id}'")
+    if job["status"] in ("completed", "partial", "failed"):
+        raise HTTPException(status_code=409, detail=f"Job already finished ({job['status']})")
+    return job
+
+
 @app.get("/jobs", tags=["runs"], response_model=list[Job])
 def list_jobs(brand_key: str | None = Query(default=None)) -> list[dict[str, Any]]:
     """Jobs submitted since the server started (in-memory), optionally filtered by brand."""

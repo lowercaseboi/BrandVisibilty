@@ -18,7 +18,7 @@ class _FakeProvider:
 
     def query(self, prompt, params):
         self.calls += 1
-        if self.provider_id == "flaky" and self.calls % 2 == 0:
+        if self.provider_id == "dead" or (self.provider_id == "flaky" and self.calls % 2 == 0):
             raise TimeoutError("simulated timeout")
         text = "Try Ashok Vada Pav first, then Gajanan Vada Pav." if "best" in prompt else "Jumbo King is popular."
         return CollectionResult(self.provider_id, "llm", f"{self.provider_id}-v1", text, 5)
@@ -81,3 +81,19 @@ def test_run_pipeline_raises_when_nothing_collected(tmp_path, monkeypatch):
     with pytest.raises(RuntimeError):
         run_pipeline("perfume_pilot", providers="broken", samples=1)
     assert store.load_snapshots("perfume_pilot") == []
+
+
+def test_provider_failing_repeatedly_is_abandoned(tmp_path, monkeypatch):
+    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    _install_fakes(monkeypatch)
+    from app.pipeline import runner
+
+    progress = []
+    snap = runner.run_pipeline(
+        "gajanan_vada_pav", providers="steady,dead", samples=1, on_progress=lambda m, d, t: progress.append((m, d, t))
+    )
+    assert snap["status"] == "partial" and snap["observation_count"] == 20
+    dead_failures = [m for m, _, _ in progress if m.startswith("dead:") and "FAILED" in m]
+    assert len(dead_failures) == runner.GIVE_UP_AFTER_CONSECUTIVE_FAILURES
+    assert any("[dead] skipped remaining calls" in m for m, _, _ in progress)
+    assert max(d for _, d, _ in progress) == progress[-1][2] == 40

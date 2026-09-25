@@ -32,6 +32,9 @@ ProgressFn = Callable[[str, int, int], None]  # (message, done, total)
 _BOOTSTRAP_SEED = 42
 
 
+GIVE_UP_AFTER_CONSECUTIVE_FAILURES = 3
+
+
 class _Progress:
     """Thread-safe call counter that forwards to the caller's on_progress."""
 
@@ -83,14 +86,27 @@ def _collect_provider(
     alias_table = brand.alias_table()
     replay_path = store.DATA_DIR / "replay" / f"{brand.brand_key}.json"
     records: list[tuple[dict, Observation]] = []
+    attempted = 0
+    consecutive_failures = 0
     for query_index, query in enumerate(queries):
         for sample_index in range(samples):
             observation_id = f"{provider_id}:q{query_index}-s{sample_index}"
+            attempted += 1
             try:
                 result = query_with_retry(provider, query.text, sampling_params)
             except Exception as exc:  # noqa: BLE001 - one failed sample must not kill the run
+                consecutive_failures += 1
                 progress.step(f"{observation_id} FAILED: {type(exc).__name__}: {exc}")
+                if consecutive_failures >= GIVE_UP_AFTER_CONSECUTIVE_FAILURES:
+                    # Each failure has already used up its retries (minutes, on a rate limit), so a
+                    # provider that keeps failing (quota gone) would otherwise stall the whole run.
+                    progress.step(
+                        f"[{provider_id}] skipped remaining calls after {consecutive_failures} failures in a row",
+                        n=planned - attempted,
+                    )
+                    return records
                 continue
+            consecutive_failures = 0
 
             if record:
                 try:

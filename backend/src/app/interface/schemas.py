@@ -10,7 +10,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-JobStatus = Literal["queued", "running", "completed", "partial", "failed"]
+JobStatus = Literal["queued", "running", "completed", "partial", "failed", "cancelled"]
 
 
 class BrandSummary(BaseModel):

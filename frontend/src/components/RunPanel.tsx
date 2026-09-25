@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { getJob, listProviders, startRun } from "../api/client";
+import { cancelJob, getJob, listJobs, listProviders, startRun } from "../api/client";
 import type { Job, ProviderInfo } from "../api/types";
 import { useAsync } from "../api/useAsync";
 
-const TERMINAL = new Set(["completed", "partial", "failed"]);
+const TERMINAL = new Set(["completed", "partial", "failed", "cancelled"]);
 
 // Starts POST /brands/{key}/runs and polls GET /jobs/{id} every second.
 export function RunPanel({ brandKey, onComplete }: { brandKey: string; onComplete: () => void }) {
@@ -18,6 +18,22 @@ export function RunPanel({ brandKey, onComplete }: { brandKey: string; onComplet
   const [job, setJob] = useState<Job | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
+  // Re-attach to this brand's unfinished job after navigating away and back, so the
+  // panel shows it (and blocks a duplicate run) instead of offering a fresh "Run".
+  useEffect(() => {
+    let cancelled = false;
+    listJobs(brandKey)
+      .then((jobs) => {
+        const active = jobs.filter((j) => !TERMINAL.has(j.status)).pop();
+        if (!cancelled && active) setJob((current) => current ?? active);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [brandKey]);
 
   const onCompleteRef = useRef(onComplete);
   useEffect(() => {
@@ -62,6 +78,18 @@ export function RunPanel({ brandKey, onComplete }: { brandKey: string; onComplet
       setError(err instanceof Error ? err.message : "Failed to start run.");
     } finally {
       setStarting(false);
+    }
+  }
+
+  async function cancel() {
+    if (!job) return;
+    setCancelling(true);
+    try {
+      setJob(await cancelJob(job.job_id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to cancel run.");
+    } finally {
+      setCancelling(false);
     }
   }
 
@@ -121,6 +149,11 @@ export function RunPanel({ brandKey, onComplete }: { brandKey: string; onComplet
         <button className="btn btn-primary" onClick={run} disabled={running || starting}>
           {running ? "Running…" : starting ? "Starting…" : "Run analysis"}
         </button>
+        {running && (
+          <button className="btn btn-secondary" onClick={cancel} disabled={cancelling}>
+            {cancelling ? "Cancelling…" : "Cancel"}
+          </button>
+        )}
       </div>
       {synthetic && (
         <p className="muted small">
@@ -149,6 +182,7 @@ export function RunPanel({ brandKey, onComplete }: { brandKey: string; onComplet
             <p className="small">Run finished with some provider/sample failures — results are marked partial.</p>
           )}
           {job.status === "completed" && <p className="small">Run complete — dashboard updated.</p>}
+          {job.status === "cancelled" && <p className="small">Run cancelled — nothing was saved.</p>}
           {job.status === "failed" && (
             <div className="alert alert-error">Run failed: {job.error ?? job.message ?? "unknown error"}</div>
           )}

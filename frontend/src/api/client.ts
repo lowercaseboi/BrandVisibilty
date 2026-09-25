@@ -124,3 +124,11 @@ export function startRun(brandKey: string, body: StartRunRequest): Promise<Job> 
 export function getJob(jobId: string): Promise<Job> {
   return getJson(`/jobs/${b(jobId)}`);
 }
+
+export function listJobs(brandKey: string): Promise<Job[]> {
+  return getJson(`/jobs?brand_key=${b(brandKey)}`);
+}
+
+export function cancelJob(jobId: string): Promise<Job> {
+  return postJson(`/jobs/${b(jobId)}/cancel`, {});
+}

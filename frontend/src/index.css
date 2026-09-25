@@ -388,6 +388,11 @@ section > .metric-cards {
   color: var(--warn);
 }
 
+.badge-job-cancelled {
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
 .badge-job-failed {
   background: var(--err-bg);
   border-color: var(--err-border);

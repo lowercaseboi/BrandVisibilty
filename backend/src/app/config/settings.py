@@ -48,10 +48,10 @@ class Settings(BaseSettings):
 
     # Google Gemini
     gemini_api_key: str | None = None
-    # "gemini-2.0-flash"/"gemini-2.5-flash"/"gemini-2.5-pro" are all retired for new API
-    # keys as of this key's account (confirmed live via /v1beta/models); "gemini-3.6-flash"
-    # is the model Google's own 404 message on this key recommends as the replacement.
-    gemini_model: str = "gemini-3.6-flash"
+    # "gemini-2.x" models are retired for new API keys. "gemini-3.6-flash" works but its free
+    # tier is only 20 requests/day/model — less than one run. "gemini-3.1-flash-lite" is GA
+    # and has a separate, larger free-tier quota (checked live against /v1beta/models).
+    gemini_model: str = "gemini-3.1-flash-lite"
 
     # OpenAI (or anything that speaks its chat-completions API via OPENAI_BASE_URL)
     openai_api_key: str | None = None
@@ -60,7 +60,8 @@ class Settings(BaseSettings):
 
     # Groq (OpenAI-compatible, fixed base URL)
     groq_api_key: str | None = None
-    groq_model: str = "llama-3.3-70b-versatile"
+    # llama-3.3-70b-versatile was retired by Groq; gpt-oss-120b is its general-chat replacement.
+    groq_model: str = "openai/gpt-oss-120b"
 
     # OpenRouter (OpenAI-compatible, fixed base URL)
     openrouter_api_key: str | None = None

@@ -17,14 +17,23 @@ Then open:
 On the first start, the backend seeds **synthetic offline demo data** for the 3 pilot brands, 3 rounds each, so the
 dashboard is never empty. The UI labels this data as synthetic. Real runs appear alongside it.
 
+### Repo inside OneDrive (Windows)
+OneDrive turns synced files into cloud placeholders, and `docker compose build` fails on them with
+`invalid file request <path>`. Either clone outside OneDrive (e.g. `C:\dev`), or mirror to a local folder and
+build from there (PowerShell, from the repo root; re-run after every code change):
+```powershell
+robocopy . "$env:USERPROFILE\brandlens-build" /MIR /XD node_modules .venv dist .git __pycache__ /XF *.pyc
+docker compose --project-directory "$env:USERPROFILE\brandlens-build" up --build -d
+```
+
 ### Bring your own model
 Put any key you have in `.env.local`. That file is gitignored, so it never gets committed. Then restart with `make up`.
 
 | Provider            | Variables                                                 |
 |---------------------|-----------------------------------------------------------|
-| Google Gemini       | `GEMINI_API_KEY` (optional `GEMINI_MODEL`)                |
+| Google Gemini       | `GEMINI_API_KEY` (optional `GEMINI_MODEL`, default `gemini-3.1-flash-lite`) |
 | OpenAI              | `OPENAI_API_KEY` (optional `OPENAI_MODEL`, `OPENAI_BASE_URL`) |
-| Groq                | `GROQ_API_KEY`                                            |
+| Groq                | `GROQ_API_KEY` (optional `GROQ_MODEL`, default `openai/gpt-oss-120b`) |
 | OpenRouter          | `OPENROUTER_API_KEY`                                      |
 | Anthropic Claude    | `ANTHROPIC_API_KEY`                                       |
 | Ollama (local)      | `OLLAMA_BASE_URL=http://host.docker.internal:11434`, `OLLAMA_MODEL` |

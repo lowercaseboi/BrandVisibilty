@@ -29,7 +29,7 @@ export interface ProviderInfo {
   kind: ProviderKind;
 }
 
-export type JobStatus = "queued" | "running" | "completed" | "partial" | "failed";
+export type JobStatus = "queued" | "running" | "completed" | "partial" | "failed" | "cancelled";
 
 export interface Job {
   job_id: string;
