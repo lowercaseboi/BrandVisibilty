@@ -32,5 +32,5 @@ npm run lint    # oxlint
 |------|------|
 | `/` | Brands: cards per brand + "Add brand" form |
 | `/providers` | Configured LLM providers (never shows keys) |
-| `/brands/:brandKey` | Dashboard: run analysis, metrics + CI, trend, gaps, recommendations |
+| `/brands/:brandKey` | Dashboard: run analysis (with progress + cancel), metrics + CI, trend, gaps, recommendations |
 | `/brands/:brandKey/runs/:runId/evidence?refs=a,b` | Raw LLM answers with highlighted mentions |

@@ -15,7 +15,7 @@ Every provider implements the existing `LLMProvider` protocol (`app/collection/t
 
 | provider id   | env vars (key / model override)                          | notes                                    |
 |---------------|----------------------------------------------------------|------------------------------------------|
-| `gemini`      | `GEMINI_API_KEY` / `GEMINI_MODEL`                        | existing adapter                         |
+| `gemini`      | `GEMINI_API_KEY` / `GEMINI_MODEL`                        | key sent as `x-goog-api-key` header      |
 | `openai`      | `OPENAI_API_KEY` / `OPENAI_MODEL` (`OPENAI_BASE_URL`)    | OpenAI-compatible chat-completions       |
 | `groq`        | `GROQ_API_KEY` / `GROQ_MODEL`                            | OpenAI-compatible, fixed base URL        |
 | `openrouter`  | `OPENROUTER_API_KEY` / `OPENROUTER_MODEL`                | OpenAI-compatible, fixed base URL        |
@@ -44,6 +44,11 @@ def build_provider(provider_id: str, *, brand: "BrandConfig | None" = None, roun
 ```
 
 Retry/backoff for 429, 5xx and timeouts lives in `app/collection/retry.py::query_with_retry(provider, prompt, params) -> CollectionResult`.
+It makes up to 4 attempts with capped exponential backoff and jitter. A numeric `Retry-After` header (capped at 60s)
+wins over the computed backoff. Other errors are not retried.
+
+Adapters must put keys only in request headers, never in the URL. httpx includes the URL in `HTTPStatusError`
+messages, and those messages reach job progress, the API and the UI.
 
 ## 2. Brands — `app/brands/registry.py`
 
@@ -99,7 +104,8 @@ Pipeline steps:
 5. `score` → `detect_gaps` → `recommend`.
 6. `build_snapshot` → `append_snapshot` → return the record.
 
-A provider or sample failure never kills the run (AC-9). It marks `status="partial"` and lists the provider under
+A provider or sample failure never kills the run (AC-9). After 3 consecutive failed calls, a provider's remaining
+calls are skipped: each failure has already used up its retries, so an exhausted quota would otherwise stall the run. It marks `status="partial"` and lists the provider under
 `admission.missing_providers`. `record=True` writes live responses to the replay cache at
 `DATA_DIR/replay/<brand_key>.json`.
 
@@ -158,10 +164,18 @@ def recommend(gaps: list[Gap], observations: list[Observation], self_entity_id: 
 | GET    | `/brands/{key}/snapshots/{run_id}/observations`   | `raw_observations[]` + `entities`                |
 | POST   | `/brands/{key}/runs`                              | body `{providers?: "auto", samples?: 3, round?: 1}` → 202 `Job` |
 | GET    | `/jobs/{job_id}`                                  | `Job`                                            |
+| GET    | `/jobs?brand_key=`                                | `Job[]` submitted since server start, optionally filtered by brand |
+| POST   | `/jobs/{job_id}/cancel`                           | `Job`; 404 if unknown, 409 if already finished   |
 
-`Job` = `{job_id, brand_key, status: "queued"|"running"|"completed"|"partial"|"failed", message, done, total, run_id|null, error|null}`.
+`Job` = `{job_id, brand_key, status: "queued"|"running"|"completed"|"partial"|"failed"|"cancelled", message, done, total, run_id|null, error|null}`.
 
 Jobs run in a background thread, one at a time, and are held in memory. That's an MVP stand-in for Celery.
+
+Cancelling a queued job drops it. Cancelling a running job is cooperative: the run stops at the next provider call
+during collection and saves nothing. Once collection has finished, a late cancel is ignored and the run completes.
+The frontend's Run panel re-attaches to a brand's active job via `GET /jobs?brand_key=`.
+
+`GET /brands/{key}/runs` is a hidden alias of `/brands/{key}/snapshots` that the frontend client still uses.
 
 CORS is open to `http://localhost:5173` and `http://localhost:8080`. The frontend reads its API base from `VITE_API_BASE`
 (default `/api`); nginx or the Vite proxy forward `/api/*` to the backend with the `/api` prefix stripped.
