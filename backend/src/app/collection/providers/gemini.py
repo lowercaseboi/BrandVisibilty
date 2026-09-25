@@ -39,9 +39,11 @@ class GeminiAdapter(LLMProvider):
 
         url = _ENDPOINT_TEMPLATE.format(model=self._model)
         start = time.monotonic()
+        # Key goes in a header, never the URL: httpx puts the URL in HTTPStatusError messages
+        # and its request log, and those messages reach job progress, the API and the UI.
         response = httpx.post(
             url,
-            params={"key": self._api_key},
+            headers={"x-goog-api-key": self._api_key},
             json=body,
             timeout=_TIMEOUT_SECONDS,
         )

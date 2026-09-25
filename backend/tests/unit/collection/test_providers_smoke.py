@@ -10,6 +10,7 @@ import pytest
 from app.analysis.mention_detector import detect_mentions
 from app.analysis.types import EntityAlias
 from app.collection import registry
+from app.collection.providers.gemini import GeminiAdapter
 from app.collection.providers.openai_compat import OpenAICompatibleAdapter
 from app.collection.providers.replay import ReplayMiss, ReplayProvider, record_response
 from app.collection.providers.synthetic import SyntheticProvider
@@ -94,6 +95,24 @@ def test_openai_compat_adapter_parses_response(monkeypatch):
     assert result.source_id == "groq" and result.payload == "1. Ashok Vada Pav"
     assert result.model_version == "llama-3.3-70b-versatile-resolved"
     assert result.token_usage == {"prompt_tokens": 5, "completion_tokens": 7}
+
+
+def test_gemini_adapter_keeps_key_out_of_url_and_errors(monkeypatch):
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["url"] = str(request.url)
+        seen["key_header"] = request.headers.get("x-goog-api-key")
+        return httpx.Response(503, json={"error": {"message": "overloaded"}})
+
+    transport = httpx.MockTransport(handler)
+    monkeypatch.setattr(httpx, "post", lambda *a, **kw: httpx.Client(transport=transport).post(*a, **kw))
+    adapter = GeminiAdapter(api_key="AIza-test-secret", model="gemini-3.1-flash-lite")
+    with pytest.raises(httpx.HTTPStatusError) as excinfo:
+        adapter.query("vada pav in Mumbai", SamplingParams())
+    assert seen["key_header"] == "AIza-test-secret"
+    assert "AIza-test-secret" not in seen["url"]
+    assert "AIza-test-secret" not in str(excinfo.value)
 
 
 def test_replay_roundtrip(tmp_path):
