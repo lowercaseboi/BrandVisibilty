@@ -23,5 +23,7 @@ backend/data/
 # OS
 .DS_Store
 
+.env.local
+
 # Claude Code agent worktrees
 .claude/worktrees/
