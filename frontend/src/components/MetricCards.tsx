@@ -1,5 +1,6 @@
 import type { AnalysisResult } from "../api/types";
 import { useFormat, useT } from "../i18n";
+import { InfoTip } from "./InfoTip";
 
 function Card({
   label,
@@ -14,9 +15,11 @@ function Card({
 }) {
   return (
     <div className="metric-card">
-      <span className="metric-label">{label}</span>
+      <span className="metric-label">
+        {label}
+        <InfoTip text={explainer} label={label} />
+      </span>
       <span className={`metric-value ${undefinedValue ? "metric-undefined" : ""}`}>{value}</span>
-      <span className="metric-explainer">{explainer}</span>
     </div>
   );
 }
@@ -39,6 +42,7 @@ export function MetricCards({ analysis }: { analysis: AnalysisResult }) {
         <div>
           <span className="metric-label">
             {t("dashboard.metrics.composite")}
+            <InfoTip text={t("dashboard.metrics.compositeExplainer")} label={t("dashboard.metrics.composite")} />
             {analysis.prominence === null && <span className="metric-note"> · {t("dashboard.metrics.renormalized")}</span>}
           </span>
           <span className="metric-value metric-value-hero">
@@ -56,7 +60,6 @@ export function MetricCards({ analysis }: { analysis: AnalysisResult }) {
           <span className="ci-bar-min">0</span>
           <span className="ci-bar-max">100</span>
         </div>
-        <span className="metric-explainer">{t("dashboard.metrics.compositeExplainer")}</span>
       </div>
 
       <Card

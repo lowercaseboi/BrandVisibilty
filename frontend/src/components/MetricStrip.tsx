@@ -27,7 +27,8 @@ export function MetricStrip({ analysis, compact = false }: { analysis: AnalysisR
         <div key={label}>
           <dt className="eyebrow">
             {label}
-            <InfoTip text={info} label={label} plain={compact} />
+            {/* Info tips only on a brand's own page; benchmark cards stay clean. */}
+            {!compact && <InfoTip text={info} label={label} />}
           </dt>
           <dd>{value}</dd>
         </div>

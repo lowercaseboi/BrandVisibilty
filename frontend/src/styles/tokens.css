@@ -11,48 +11,69 @@
   color-scheme: light;
 
   /* surfaces */
-  --bg: #f5f4f1; /* warm off-white page */
-  --surface: rgb(255 255 255 / 0.72); /* glass cards */
-  --surface-solid: #ffffff;
-  --surface-2: #f8f7f5; /* panels, table heads, subtle fills */
-  --surface-3: #efeeea; /* tracks, hover fills */
-  --border: rgb(24 20 16 / 0.08);
-  --border-strong: rgb(24 20 16 / 0.17); /* hover borders, inputs */
-  --field-bg: rgb(255 255 255 / 0.75);
-  --popover: #ffffff; /* menus: opaque, since blur can't see past the header */
+  /* Light theme follows the landing page: cream paper, navy ink, amber signal. */
+  --bg: oklch(96.3% 0.011 90); /* warm off-white page */
+  --surface: oklch(99% 0.006 90 / 0.72); /* glass cards */
+  --surface-solid: oklch(99.2% 0.005 90);
+  --surface-2: oklch(94.6% 0.015 91); /* panels, table heads, subtle fills */
+  --surface-3: oklch(92.5% 0.019 92); /* tracks, hover fills */
+  --border: oklch(22.3% 0.049 274.6 / 0.1);
+  --border-strong: oklch(22.3% 0.049 274.6 / 0.2); /* hover borders, inputs */
+  --field-bg: oklch(99% 0.006 90 / 0.8);
+  --popover: oklch(99.2% 0.005 90); /* menus: opaque, since blur can't see past the header */
 
   /* text */
-  --text: #374151;
-  --text-h: #111827;
-  --muted: #5f6673; /* >= 5:1 on every surface */
+  --text: oklch(31% 0.045 274.6);
+  --text-h: oklch(24.3% 0.045 274.6);
+  --muted: oklch(47% 0.035 274.6); /* >= 5:1 on every surface */
 
   /* accent (vermillion) — primary buttons, focus, "you" in charts */
-  --accent: #d03e15;
-  --accent-hover: #b83a12;
-  --accent-soft: #fdeee8;
-  --accent-text: #b83a12;
-  --accent-grad: #c93a13; /* solid (no gradient); white text >= 4.5:1 */
-  --accent-grad-hover: #a93210;
-  --on-accent: #ffffff;
-  --focus: #d03e15;
+  --accent: oklch(77.5% 0.135 76.5);
+  --accent-hover: oklch(72% 0.14 74);
+  --accent-soft: oklch(77.5% 0.135 76.5 / 0.2);
+  --accent-text: oklch(50% 0.12 70);
+  --accent-grad: oklch(77.5% 0.135 76.5); /* solid (no gradient); white text >= 4.5:1 */
+  --accent-grad-hover: oklch(72% 0.14 74);
+  --on-accent: oklch(21% 0.045 60);
+  --focus: oklch(22.3% 0.049 274.6);
 
   /* depth */
   --glass-highlight: rgb(255 255 255 / 0.85); /* 1px inner top edge on glass */
   --blur: blur(18px) saturate(170%);
-  --shadow-1: 0 1px 2px rgb(24 20 16 / 0.04), 0 8px 24px -12px rgb(24 20 16 / 0.14);
-  --shadow-2: 0 2px 6px rgb(24 20 16 / 0.05), 0 24px 48px -20px rgb(24 20 16 / 0.28);
-  --shadow-accent: 0 8px 22px -8px rgb(208 62 21 / 0.55);
-  --shadow-pop: 0 18px 44px -14px rgb(24 20 16 / 0.3), 0 2px 6px rgb(24 20 16 / 0.06);
+  --shadow-1: 0 1px 2px oklch(22.3% 0.049 274.6 / 0.05), 0 8px 24px -12px oklch(22.3% 0.049 274.6 / 0.16);
+  --shadow-2: 0 2px 6px oklch(22.3% 0.049 274.6 / 0.06), 0 24px 48px -20px oklch(22.3% 0.049 274.6 / 0.3);
+  --shadow-accent: 0 8px 22px -8px oklch(72% 0.14 74 / 0.6);
+  --shadow-pop: 0 18px 44px -14px oklch(22.3% 0.049 274.6 / 0.3), 0 2px 6px oklch(22.3% 0.049 274.6 / 0.06);
 
   /* page glow + faint grid (behind everything) */
-  --glow-1: rgb(255 122 69 / 0.2);
-  --glow-2: rgb(255 196 120 / 0.2);
-  --glow-3: rgb(120 140 255 / 0.12);
-  --grid-line: rgb(24 20 16 / 0.045);
+  --glow-1: oklch(77.5% 0.135 76.5 / 0.22);
+  --glow-2: oklch(68.8% 0.079 183.5 / 0.16);
+  --glow-3: oklch(40% 0.08 274.6 / 0.1);
+  --grid-line: oklch(22.3% 0.049 274.6 / 0.05);
 
   /* scores out of 100: a solid, slightly translucent accent (no gradient); "/100" is accent-tinted */
   --score-ink: color-mix(in srgb, var(--accent) 80%, transparent);
-  --score-outof: color-mix(in srgb, var(--accent) 55%, var(--muted));
+  --score-outof: color-mix(in srgb, var(--accent-text) 75%, var(--muted));
+
+  /* Glass score numbers: see-through fill + crisp edge (darker amber so it reads on cream). */
+  --score-glass-fill: color-mix(in srgb, var(--accent-text) 52%, transparent);
+  --score-glass-edge: var(--accent-text);
+
+  /* Landing bands (alternating sections). Light: navy ink + cream paper, as designed. */
+  --band-dark: oklch(22.3% 0.049 274.6);
+  --band-dark-raised: oklch(28.3% 0.06 274.6);
+  --band-dark-fg: oklch(95.5% 0.014 90);
+  --band-dark-dim: oklch(95.5% 0.014 90 / 0.66);
+  --band-dark-line: oklch(96% 0.02 90 / 0.18);
+  --band-light: oklch(96.3% 0.011 90);
+  --band-light-raised: oklch(92.5% 0.019 92);
+  --band-light-fg: oklch(24.3% 0.045 274.6);
+  --band-light-dim: oklch(24.3% 0.045 274.6 / 0.64);
+  --band-light-line: oklch(22.3% 0.049 274.6 / 0.14);
+  --signal: oklch(77.5% 0.135 76.5);
+  --signal-fg: oklch(21% 0.045 60);
+  --detected: oklch(68.8% 0.079 183.5);
+  --missing: oklch(66% 0.15 28);
 
   /* status */
   --ok: #047857;
@@ -82,16 +103,16 @@
   --hl-disc-line: #7e22ce;
 
   /* charts */
-  --chart-self: var(--accent); /* "you" */
+  --chart-self: oklch(62% 0.14 72); /* "you" */
   --chart-other: #9ca3af; /* competitors */
-  --chart-line: #111827;
-  --chart-band: rgb(208 62 21 / 0.16);
+  --chart-line: oklch(22.3% 0.049 274.6);
+  --chart-band: oklch(77.5% 0.135 76.5 / 0.24);
   --chart-grid: rgb(24 20 16 / 0.08);
 
   /* type */
   /* One monospace family for the whole UI; Devanagari falls back to Noto Sans. */
   --sans: "Geist Mono", "Noto Sans Devanagari", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --display: var(--sans);
+  --display: "Space Grotesk", "Noto Sans Devanagari", system-ui, sans-serif; /* headings, wordmark, big numbers */
   --mono: var(--sans);
   --fs-2xs: 10.5px; /* eyebrows, status labels */
   --fs-xs: 11.5px;
@@ -132,6 +153,22 @@
 /* Dark: near-black with a warm glow. Keep this block and the one below identical. */
 :root[data-theme="dark"] {
   color-scheme: dark;
+  --score-glass-fill: color-mix(in srgb, var(--accent) 42%, transparent);
+  --score-glass-edge: color-mix(in srgb, var(--accent) 78%, transparent);
+  --band-dark: #090c13;
+  --band-dark-raised: #121826;
+  --band-dark-fg: #f9fafb;
+  --band-dark-dim: rgb(249 250 251 / 0.66);
+  --band-dark-line: rgb(255 255 255 / 0.1);
+  --band-light: #0f1420;
+  --band-light-raised: #161d2c;
+  --band-light-fg: #f3f4f6;
+  --band-light-dim: rgb(243 244 246 / 0.64);
+  --band-light-line: rgb(255 255 255 / 0.09);
+  --signal: #ff6a3d;
+  --signal-fg: #0b0f19;
+  --detected: #4fd1b5;
+  --missing: #fca5a5;
   --bg: #090c13;
   --surface: rgb(20 26 40 / 0.62);
   --surface-solid: #121826;
@@ -195,6 +232,22 @@
 @media (prefers-color-scheme: dark) {
   :root[data-theme="system"] {
     color-scheme: dark;
+    --score-glass-fill: color-mix(in srgb, var(--accent) 42%, transparent);
+    --score-glass-edge: color-mix(in srgb, var(--accent) 78%, transparent);
+    --band-dark: #090c13;
+    --band-dark-raised: #121826;
+    --band-dark-fg: #f9fafb;
+    --band-dark-dim: rgb(249 250 251 / 0.66);
+    --band-dark-line: rgb(255 255 255 / 0.1);
+    --band-light: #0f1420;
+    --band-light-raised: #161d2c;
+    --band-light-fg: #f3f4f6;
+    --band-light-dim: rgb(243 244 246 / 0.64);
+    --band-light-line: rgb(255 255 255 / 0.09);
+    --signal: #ff6a3d;
+    --signal-fg: #0b0f19;
+    --detected: #4fd1b5;
+    --missing: #fca5a5;
     --bg: #090c13;
     --surface: rgb(20 26 40 / 0.62);
     --surface-solid: #121826;

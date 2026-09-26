@@ -127,7 +127,7 @@ export function BrandDashboardPage() {
   return (
     <div className="dash">
       <p className="crumbs">
-        <Link to="/">{t("dashboard.crumbs.back")}</Link>
+        <Link to="/app">{t("dashboard.crumbs.back")}</Link>
       </p>
       <div className="page-head dash-head">
         <div>
