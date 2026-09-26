@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { getLatestSnapshot, listBrands } from "../api/client";
 import type { BrandSummary } from "../api/types";
@@ -91,37 +92,39 @@ function BrandCard({ brand }: { brand: BrandSummary }) {
   const [play, setPlay] = useState(0);
   const replay = () => setPlay((n) => n + 1);
 
+  // Six fixed slots, always rendered (empty when unused), so cards in a row line up via subgrid.
   let ring;
-  let foot;
+  let rating: ReactNode = null;
+  let upper: ReactNode = null;
+  let meta: ReactNode = null;
+  let extra: ReactNode = null;
   let label: string | undefined;
   if (snap) {
     const score = scoreOutOf100(snap.analysis_result.composite_score);
     // Rating word from the low end of the likely range, so a lucky point estimate can't overclaim.
-    const rating = ratingFromRange(...scoreRange(snap.analysis_result));
+    const r = ratingFromRange(...scoreRange(snap.analysis_result));
     const when = fmt.relativeTime(snap.collection_completed_at);
     label = t("pages.brands.scoreLabel", { score: fmt.number(score) });
-    ring = <ScoreRing score={score} band={rating.band} play={play} />;
-    foot = (
+    ring = <ScoreRing score={score} band={r.band} play={play} />;
+    rating = <span className={`pg-rating pg-rating-${r.band}`}>{t(RATING_KEY[r.band])}</span>;
+    if (r.upper) upper = <p className="pg-rating-upper">{t("pages.rating.couldBe", { rating: t(RATING_KEY[r.upper]) })}</p>;
+    meta = (
       <>
-        <span className={`pg-rating pg-rating-${rating.band}`}>{t(RATING_KEY[rating.band])}</span>
-        {rating.upper && (
-          <p className="pg-rating-upper">{t("pages.rating.couldBe", { rating: t(RATING_KEY[rating.upper]) })}</p>
-        )}
-        <div className="pg-card-meta">
-          {when && <span className="muted small">{t("pages.brands.checked", { when })}</span>}
-          {snap.data_origin === "synthetic" && <span className="badge badge-synthetic">{t("pages.origin.synthetic")}</span>}
-          {snap.data_origin === "replay" && <span className="badge badge-replay">{t("pages.origin.replay")}</span>}
-        </div>
-        <Details>
-          <MetricStrip analysis={snap.analysis_result} compact />
-        </Details>
+        {when && <span className="muted small">{t("pages.brands.checked", { when })}</span>}
+        {snap.data_origin === "synthetic" && <span className="badge badge-synthetic">{t("pages.origin.synthetic")}</span>}
+        {snap.data_origin === "replay" && <span className="badge badge-replay">{t("pages.origin.replay")}</span>}
       </>
+    );
+    extra = (
+      <Details>
+        <MetricStrip analysis={snap.analysis_result} compact />
+      </Details>
     );
   } else {
     ring = <ScoreRing score={null} play={play} />;
-    if (!brand.has_data) foot = <span className="status-dot status-dot-idle">{t("pages.brands.noChecks")}</span>;
-    else if (latest.status === "loading") foot = <span className="muted small">{t("common.loading")}</span>;
-    else foot = <span className="status-dot status-dot-ok">{t("pages.brands.hasResults")}</span>;
+    if (!brand.has_data) rating = <span className="status-dot status-dot-idle">{t("pages.brands.noChecks")}</span>;
+    else if (latest.status === "loading") rating = <span className="muted small">{t("common.loading")}</span>;
+    else rating = <span className="status-dot status-dot-ok">{t("pages.brands.hasResults")}</span>;
   }
 
   return (
@@ -144,8 +147,13 @@ function BrandCard({ brand }: { brand: BrandSummary }) {
         {label && <span className="sr-only">{label}</span>}
         {ring}
       </div>
-      <div className="sample-card-foot">{foot}</div>
-      {typeof qCount === "number" && qCount < THIN_QUESTIONS && <p className="pg-thin">{t.n("pages.brands.thin", qCount)}</p>}
+      <div className="sample-card-slot">{rating}</div>
+      <div className="sample-card-slot">{upper}</div>
+      <div className="sample-card-slot pg-card-meta">{meta}</div>
+      <div className="sample-card-slot">
+        {extra}
+        {typeof qCount === "number" && qCount < THIN_QUESTIONS && <p className="pg-thin">{t.n("pages.brands.thin", qCount)}</p>}
+      </div>
     </Link>
   );
 }

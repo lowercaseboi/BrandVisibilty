@@ -60,9 +60,12 @@ body::before {
 body::after {
   content: "";
   position: fixed;
-  inset: 0;
+  inset: 0 -12%; /* wider than the viewport so the tilted plane still covers the edges */
   z-index: -1;
   pointer-events: none;
+  /* A gentle backwards tilt: lines converge towards the bottom for a sense of depth. */
+  transform: perspective(1100px) rotateX(10deg);
+  transform-origin: 50% 0;
   background:
     linear-gradient(to right, var(--grid-line) 1px, transparent 1px) 0 0 / 48px 48px,
     linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px) 0 0 / 48px 48px;

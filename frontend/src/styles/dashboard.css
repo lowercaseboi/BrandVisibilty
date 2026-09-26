@@ -581,10 +581,8 @@
   margin: 0 0 var(--space-2);
 }
 
-.run-plan {
+.run-sub {
   margin: 0 0 var(--space-4);
-  font-size: 16px;
-  color: var(--text-h);
 }
 
 .run-actions {
@@ -594,42 +592,97 @@
   gap: var(--space-2) var(--space-3);
 }
 
-.run-options-toggle {
-  display: inline-flex;
-  align-items: center;
-}
-
-.run-options {
-  margin-top: var(--space-4);
-  padding: var(--space-4);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface-2);
+/* Settings row: AI sources · depth · questions. */
+.run-grid {
   display: grid;
-  gap: var(--space-4);
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.4fr) minmax(0, 0.6fr);
+  gap: var(--space-4) var(--space-5);
+  align-items: start;
 }
 
-.run-options[hidden] {
-  display: none;
-}
-
-.run-options select {
-  width: 100%;
-  max-width: 420px;
+.run-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
   font-weight: 400;
 }
 
-.run-options .segmented {
+.run-field select {
+  width: 100%;
+  font-weight: 400;
+}
+
+.run-models {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.run-qcount {
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  color: var(--text-h);
+  line-height: 1.1;
+}
+
+.run-field .segmented {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   width: 100%;
-  max-width: 480px;
 }
 
-.run-options .segmented button {
+.run-field .segmented button {
   padding: 6px 8px;
   text-align: center;
   white-space: normal;
+}
+
+/* The math line: 27 questions × 3 samples × 2 AIs = 162 API calls. */
+.run-math {
+  margin: var(--space-5) 0 var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: var(--fs-sm);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.run-math b {
+  color: var(--text-h);
+  font-weight: 600;
+}
+
+.run-math i {
+  font-style: normal;
+  color: var(--muted);
+  padding: 0 2px;
+}
+
+.run-math-total {
+  color: var(--accent-text) !important;
+}
+
+.run-math-time {
+  margin-left: var(--space-3);
+  color: var(--muted);
+}
+
+.run-note {
+  margin: 0 0 var(--space-1);
+}
+
+.run-actions:last-child {
+  margin-top: var(--space-4);
+}
+
+@media (max-width: 760px) {
+  .run-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .run-hint {

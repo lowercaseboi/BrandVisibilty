@@ -80,7 +80,7 @@ export const dashboard = {
   // Expected score gain. {n} is a number of points out of 100, e.g. "+4 pts".
   "next.points": "+{n} pts",
   // Button that opens the rationale for a recommendation.
-  "next.why": "Rationale",
+  "next.why": "See why",
   "next.seeAnswers": "View supporting responses →",
   "next.showAll_one": "Show all {n} recommendation",
   "next.showAll_other": "Show all {n} recommendations",
@@ -230,15 +230,27 @@ export const dashboard = {
   "run.buttonFirst": "Run analysis",
   "run.starting": "Starting…",
   "run.planLoading": "Preparing…",
-  "run.plan_one": "{ais} will be queried with {n} query.",
-  "run.plan_other": "{ais} will be queried with {n} queries.",
-  "run.planPractice_one": "Simulated responses will be generated for {n} query. No AI is queried.",
-  "run.planPractice_other": "Simulated responses will be generated for {n} queries. No AI is queried.",
+  "run.sub": "Configure the next analysis. Totals update as you change the settings.",
+  "run.models": "Models",
+  "run.questionsLabel": "Questions",
+  // Under each depth option: {x} = answers per question, {n} = API calls it would make.
+  "run.depthCalls_one": "{x}× · {n} call",
+  "run.depthCalls_other": "{x}× · {n} calls",
+  // The math line: "27 questions × 3 samples × 2 AIs = 162 API calls". Numbers are shown separately.
+  "run.math.questions_one": "question",
+  "run.math.questions_other": "questions",
+  "run.math.samples_one": "sample",
+  "run.math.samples_other": "samples",
+  "run.math.ais_one": "AI",
+  "run.math.ais_other": "AIs",
+  "run.math.calls_one": "API call",
+  "run.math.calls_other": "API calls",
+  "run.math.unscored_one": "Includes {n} brand-named question: asked, but not scored.",
+  "run.math.unscored_other": "Includes {n} brand-named questions: asked, but not scored.",
+  "run.math.practice": "Simulated run: calls go to the offline simulator, not a live AI.",
   "run.time_one": "Estimated duration: {n} minute.",
   "run.time_other": "Estimated duration: {n} minutes.",
   "run.timeShort": "Estimated duration: under a minute.",
-  // Button that shows or hides the extra settings.
-  "run.options": "Options",
   "run.which": "AI sources",
   "run.whichAuto": "All connected AIs ({ais})",
   "run.whichAutoPractice": "Simulated data (no AI connected)",
@@ -248,9 +260,6 @@ export const dashboard = {
   "run.depth.quick": "Quick",
   "run.depth.standard": "Standard",
   "run.depth.thorough": "Thorough",
-  "run.depth.quickSub": "1 sample per query",
-  "run.depth.standardSub": "3 samples · recommended",
-  "run.depth.thoroughSub": "5 samples per query",
   "run.depthHint": "AI responses vary. More samples per query give a more stable score but take longer.",
   "run.editQuestions": "Review the query set →",
   "run.running": "Analysis in progress…",
@@ -291,8 +300,6 @@ export const dashboard = {
   // Technical lines, shown only in the detailed-metrics view.
   "run.tech.message": "Server message: {message}",
   "run.tech.error": "Error: {error}",
-  "run.tech.calls_one": "{n} AI call in total.",
-  "run.tech.calls_other": "{n} AI calls in total.",
   "run.tech.unscored_one": "{n} query names the brand, so it is run but not scored.",
   "run.tech.unscored_other": "{n} queries name the brand, so they are run but not scored.",
 
@@ -351,6 +358,9 @@ export const dashboard = {
   "providers.mentions": "Mentions",
   "providers.empty": "No per-AI breakdown for this analysis.",
 
+  // Main "Gaps" section on the brand page.
+  "gaps.title": "Gaps",
+  "gaps.intro": "Where the brand is losing visibility, detected by fixed rules over the responses.",
   "gaps.type.presence": "Low presence",
   "gaps.type.prominence": "Low prominence",
   "gaps.type.competitive": "Competitor ahead",

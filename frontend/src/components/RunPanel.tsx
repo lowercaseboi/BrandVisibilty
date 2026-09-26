@@ -13,11 +13,16 @@ const SKIP_ALL = "__all__";
 // Rough time per AI call; AIs run in parallel, so the estimate doesn't grow with the number of AIs.
 const SECONDS_PER_CALL = 3;
 
-const DEPTHS: { samples: number; label: MessageKey; sub: MessageKey }[] = [
-  { samples: 1, label: "dashboard.run.depth.quick", sub: "dashboard.run.depth.quickSub" },
-  { samples: 3, label: "dashboard.run.depth.standard", sub: "dashboard.run.depth.standardSub" },
-  { samples: 5, label: "dashboard.run.depth.thorough", sub: "dashboard.run.depth.thoroughSub" },
+const DEPTHS: { samples: number; label: MessageKey }[] = [
+  { samples: 1, label: "dashboard.run.depth.quick" },
+  { samples: 3, label: "dashboard.run.depth.standard" },
+  { samples: 5, label: "dashboard.run.depth.thorough" },
 ];
+
+/** API calls for one analysis: every question × samples × AIs (a simulated run counts as one source). */
+export function runCalls(questions: number, samples: number, ais: number): number {
+  return questions * samples * Math.max(1, ais);
+}
 
 const DONE_KEY: Partial<Record<JobStatus, MessageKey>> = {
   completed: "dashboard.run.done.completed",
@@ -75,7 +80,6 @@ export function RunPanel({
 
   const [provider, setProvider] = useState("auto");
   const [samples, setSamples] = useState(3);
-  const [optionsOpen, setOptionsOpen] = useState(false);
   const [job, setJob] = useState<Job | null>(null);
   const [error, setError] = useState<PanelError | null>(null);
   const [starting, setStarting] = useState(false);
@@ -175,16 +179,19 @@ export function RunPanel({
     }
   }
 
-  // ---- the plan sentence ("We'll ask Google Gemini and Groq 17 questions. About 3 minutes.")
+  // ---- the plan: which AIs, how deep, and the resulting number of API calls
   const ready = providers !== null && questions !== null;
   const autoIsPractice = providers !== null && liveConfigured.length === 0;
   const chosen = configured.find((p) => p.provider_id === provider);
   const practice = provider === "auto" ? autoIsPractice : chosen?.kind === "offline";
-  const askNames = provider === "auto" ? liveConfigured.map((p) => p.label || p.provider_id) : [labelOf(provider)];
   const providerCount = provider === "auto" ? Math.max(1, liveConfigured.length) : 1;
   const nQuestions = (questions?.scored_count ?? 0) + (questions?.unscored_count ?? 0);
   const unscored = questions?.unscored_count ?? 0;
   const seconds = nQuestions * samples * SECONDS_PER_CALL;
+  const sources = practice ? 1 : providerCount;
+  const calls = runCalls(nQuestions, samples, sources);
+  const withModel = (p: ProviderInfo) => (p.model ? `${labelOf(p.provider_id)} (${p.model})` : labelOf(p.provider_id));
+  const askModels = provider === "auto" ? liveConfigured.map(withModel) : chosen ? [withModel(chosen)] : [];
   const questionsHref = `/brands/${encodeURIComponent(brandKey)}/questions`;
 
   const jobProviders: ProviderProgress[] = job?.providers ?? [];
@@ -200,39 +207,10 @@ export function RunPanel({
 
       {!running && (
         <>
-          <p className="run-plan">
-            {!ready ? (
-              <span className="muted">{t("dashboard.run.planLoading")}</span>
-            ) : practice ? (
-              <>
-                {t.n("dashboard.run.planPractice", nQuestions)} {t("dashboard.run.timeShort")}
-              </>
-            ) : (
-              <>
-                {t.n("dashboard.run.plan", nQuestions, { ais: list(askNames) })}{" "}
-                {seconds < 60 ? t("dashboard.run.timeShort") : t.n("dashboard.run.time", Math.ceil(seconds / 60))}
-              </>
-            )}
-          </p>
-          <div className="run-actions">
-            <button type="button" className="btn btn-primary btn-large run-go" onClick={run} disabled={starting || !ready}>
-              {starting ? t("dashboard.run.starting") : hasData ? t("dashboard.run.buttonAgain") : t("dashboard.run.buttonFirst")}
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost run-options-toggle"
-              aria-expanded={optionsOpen}
-              aria-controls={optionsId}
-              onClick={() => setOptionsOpen((o) => !o)}
-            >
-              <span className="disclosure-caret" aria-hidden="true" />
-              {t("dashboard.run.options")}
-            </button>
-          </div>
-
-          <div id={optionsId} className="run-options" hidden={!optionsOpen}>
-            <label className="field">
-              <span>{t("dashboard.run.which")}</span>
+          <p className="section-note run-sub">{t("dashboard.run.sub")}</p>
+          <div className="run-grid">
+            <label className="run-field">
+              <span className="eyebrow">{t("dashboard.run.which")}</span>
               <select value={provider} onChange={(e) => setProvider(e.target.value)}>
                 <option value="auto">
                   {autoIsPractice
@@ -241,41 +219,73 @@ export function RunPanel({
                 </option>
                 {configured.map((p) => (
                   <option key={p.provider_id} value={p.provider_id}>
-                    {labelOf(p.provider_id)}
+                    {withModel(p)}
                   </option>
                 ))}
               </select>
+              {!practice && askModels.length > 0 && (
+                <span className="run-models">
+                  {t("dashboard.run.models")}: {list(askModels)}
+                </span>
+              )}
             </label>
-            <div className="run-depth">
-              <span className="run-depth-label" id={depthLabelId}>
+            <div className="run-field">
+              <span className="eyebrow" id={depthLabelId}>
                 {t("dashboard.run.depth")}
               </span>
               <div className="segmented" role="radiogroup" aria-labelledby={depthLabelId}>
-                {DEPTHS.map((d) => (
-                  <button
-                    key={d.samples}
-                    type="button"
-                    role="radio"
-                    aria-checked={samples === d.samples}
-                    className={samples === d.samples ? "is-active" : ""}
-                    onClick={() => setSamples(d.samples)}
-                  >
-                    {t(d.label)}
-                    <span className="segmented-sub">{t(d.sub)}</span>
-                  </button>
-                ))}
+                {DEPTHS.map((d) => {
+                  const c = runCalls(nQuestions, d.samples, sources);
+                  return (
+                    <button
+                      key={d.samples}
+                      type="button"
+                      role="radio"
+                      aria-checked={samples === d.samples}
+                      className={samples === d.samples ? "is-active" : ""}
+                      onClick={() => setSamples(d.samples)}
+                    >
+                      {t(d.label)}
+                      <span className="segmented-sub">
+                        {t.n("dashboard.run.depthCalls", c, { n: fmt.number(c), x: d.samples })}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
-              <p className="muted small run-hint">{t("dashboard.run.depthHint")}</p>
             </div>
-            <p className="small">
-              <Link to={questionsHref}>{t("dashboard.run.editQuestions")}</Link>
-            </p>
-            <Details>
-              <p className="muted small run-tech">
-                {t.n("dashboard.run.tech.calls", nQuestions * samples * (practice ? 1 : providerCount))}
-                {unscored > 0 && <> {t.n("dashboard.run.tech.unscored", unscored)}</>}
-              </p>
-            </Details>
+            <div className="run-field">
+              <span className="eyebrow">{t("dashboard.run.questionsLabel")}</span>
+              <span className="run-qcount">{ready ? fmt.number(nQuestions) : "—"}</span>
+              <Link to={questionsHref} className="small">
+                {t("dashboard.run.editQuestions")}
+              </Link>
+            </div>
+          </div>
+
+          {/* The math, always visible: questions × samples × AIs = API calls. */}
+          <p className="run-math">
+            {!ready ? (
+              <span className="muted">{t("dashboard.run.planLoading")}</span>
+            ) : (
+              <>
+                <b>{fmt.number(nQuestions)}</b> {t.n("dashboard.run.math.questions", nQuestions)} <i>×</i> <b>{samples}</b>{" "}
+                {t.n("dashboard.run.math.samples", samples)} <i>×</i> <b>{sources}</b> {t.n("dashboard.run.math.ais", sources)}{" "}
+                <i>=</i> <b className="run-math-total">{fmt.number(calls)}</b> {t.n("dashboard.run.math.calls", calls)}
+                <span className="run-math-time">
+                  {practice ? t("dashboard.run.timeShort") : seconds < 60 ? t("dashboard.run.timeShort") : t.n("dashboard.run.time", Math.ceil(seconds / 60))}
+                </span>
+              </>
+            )}
+          </p>
+          {ready && unscored > 0 && <p className="muted small run-note">{t.n("dashboard.run.math.unscored", unscored)}</p>}
+          {ready && practice && <p className="muted small run-note">{t("dashboard.run.math.practice")}</p>}
+          <p className="muted small run-note">{t("dashboard.run.depthHint")}</p>
+
+          <div className="run-actions">
+            <button type="button" className="btn btn-primary btn-large run-go" onClick={run} disabled={starting || !ready}>
+              {starting ? t("dashboard.run.starting") : hasData ? t("dashboard.run.buttonAgain") : t("dashboard.run.buttonFirst")}
+            </button>
           </div>
         </>
       )}

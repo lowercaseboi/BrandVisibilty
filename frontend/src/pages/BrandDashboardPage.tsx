@@ -19,7 +19,7 @@ import { ScoreHero } from "../components/dashboard/ScoreHero";
 import { useListFormat, useProviderLabel } from "../components/dashboard/helpers";
 import { evidenceHref } from "../format";
 import { useFormat, useT } from "../i18n";
-import { Details, DetailsToggle, useDetails } from "../settings/details";
+import { Details, DetailsToggle } from "../settings/details";
 
 interface DashboardData {
   brandName: string | null;
@@ -57,7 +57,6 @@ export function BrandDashboardPage() {
   const t = useT();
   const fmt = useFormat();
   const list = useListFormat();
-  const { showDetails, setShowDetails } = useDetails();
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
@@ -99,20 +98,15 @@ export function BrandDashboardPage() {
     clearTimer.current = window.setTimeout(() => setHighlightedGap(null), 3500);
   }, []);
 
-  // Deep link: /brands/x#gap-<id> turns on the numbers view (gaps live there) and
-  // highlights that gap once loaded. Handled once per hash so the switch can be turned off again.
+  // Deep link: /brands/x#gap-<id> scrolls to and highlights that gap once loaded (once per hash).
   const hasData = !!data?.latest;
   useEffect(() => {
     if (!hasData || !location.hash.startsWith("#gap-") || handledHash.current === location.hash) return;
-    if (!showDetails) {
-      setShowDetails(true);
-      return;
-    }
     handledHash.current = location.hash;
     const id = decodeURIComponent(location.hash.slice(5));
     const timer = window.setTimeout(() => traceGap(id), 50);
     return () => window.clearTimeout(timer);
-  }, [hasData, location.hash, showDetails, setShowDetails, traceGap]);
+  }, [hasData, location.hash, traceGap]);
 
   useEffect(() => () => window.clearTimeout(clearTimer.current), []);
 
@@ -183,31 +177,7 @@ export function BrandDashboardPage() {
         </div>
       )}
 
-      {snapshot && (
-        <>
-          <ScoreHero snapshot={snapshot} previous={previous} />
-
-          <NextSteps
-            recommendations={snapshot.recommendations ?? []}
-            gaps={snapshot.gaps ?? []}
-            brandKey={brandKey}
-            runId={snapshot.run_id}
-            entities={snapshot.entities}
-            labelOf={labelOf}
-          />
-
-          <CompetitorBars summary={snapshot.mention_summary} entities={snapshot.entities} selfName={selfName} />
-
-          <SampleAnswer brandKey={brandKey} runId={snapshot.run_id} labelOf={labelOf} />
-
-          <section className="dash-section" aria-labelledby="trend-title">
-            <h2 id="trend-title">{t("dashboard.trend.title")}</h2>
-            <div className="card">
-              <TrendChart snapshots={history.length ? history : [snapshot]} currentRunId={snapshot.run_id} labelOf={labelOf} />
-            </div>
-          </section>
-        </>
-      )}
+      {snapshot && <ScoreHero snapshot={snapshot} previous={previous} />}
 
       {data && (
         <RunPanel
@@ -221,6 +191,38 @@ export function BrandDashboardPage() {
 
       {snapshot && (
         <>
+          <section className="dash-section" aria-labelledby="trend-title">
+            <h2 id="trend-title">{t("dashboard.trend.title")}</h2>
+            <div className="card">
+              <TrendChart snapshots={history.length ? history : [snapshot]} currentRunId={snapshot.run_id} labelOf={labelOf} />
+            </div>
+          </section>
+
+          {/* Gaps are found by deterministic rules (DESIGN §5.1); technical fields show in the numbers view. */}
+          <section className="dash-section" aria-labelledby="gaps-title">
+            <h2 id="gaps-title">
+              {t("dashboard.gaps.title")} <span className="count">{snapshot.gaps?.length ?? 0}</span>
+            </h2>
+            <p className="section-note">{t("dashboard.gaps.intro")}</p>
+            <GapList
+              gaps={snapshot.gaps ?? []}
+              brandKey={brandKey}
+              runId={snapshot.run_id}
+              entities={snapshot.entities}
+              highlightedGapId={highlightedGap}
+              labelOf={labelOf}
+            />
+          </section>
+
+          <NextSteps
+            recommendations={snapshot.recommendations ?? []}
+            gaps={snapshot.gaps ?? []}
+            brandKey={brandKey}
+            runId={snapshot.run_id}
+            entities={snapshot.entities}
+            labelOf={labelOf}
+          />
+
           <div className="dash-details-switch">
             <DetailsToggle variant="inline" />
           </div>
@@ -255,19 +257,6 @@ export function BrandDashboardPage() {
               </div>
 
               <h3 className="dash-sub">
-                {t("dashboard.details.gaps")} <span className="count">{snapshot.gaps?.length ?? 0}</span>
-              </h3>
-              <p className="section-note">{t("dashboard.details.gapsNote")}</p>
-              <GapList
-                gaps={snapshot.gaps ?? []}
-                brandKey={brandKey}
-                runId={snapshot.run_id}
-                entities={snapshot.entities}
-                highlightedGapId={highlightedGap}
-                labelOf={labelOf}
-              />
-
-              <h3 className="dash-sub">
                 {t("dashboard.details.recs")} <span className="count">{snapshot.recommendations?.length ?? 0}</span>
               </h3>
               <p className="section-note">{t("dashboard.details.recsNote")}</p>
@@ -282,6 +271,10 @@ export function BrandDashboardPage() {
               />
             </section>
           </Details>
+
+          <CompetitorBars summary={snapshot.mention_summary} entities={snapshot.entities} selfName={selfName} />
+
+          <SampleAnswer brandKey={brandKey} runId={snapshot.run_id} labelOf={labelOf} />
         </>
       )}
     </div>

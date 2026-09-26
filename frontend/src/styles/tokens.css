@@ -48,7 +48,7 @@
   --glow-1: rgb(255 122 69 / 0.2);
   --glow-2: rgb(255 196 120 / 0.2);
   --glow-3: rgb(120 140 255 / 0.12);
-  --grid-line: rgb(24 20 16 / 0.055);
+  --grid-line: rgb(24 20 16 / 0.06);
 
   /* scores out of 100: number fades from ink into a faint accent; "/100" is accent-tinted */
   --score-ink: linear-gradient(170deg, var(--text-h) 35%, color-mix(in srgb, var(--accent) 62%, var(--text-h)));
@@ -159,7 +159,7 @@
   --glow-1: rgb(255 106 61 / 0.16);
   --glow-2: rgb(255 170 90 / 0.07);
   --glow-3: rgb(110 120 255 / 0.13);
-  --grid-line: rgb(255 255 255 / 0.04);
+  --grid-line: rgb(255 255 255 / 0.044);
   --score-ink: linear-gradient(170deg, var(--text-h) 35%, color-mix(in srgb, var(--accent) 70%, var(--text-h)));
   --score-outof: color-mix(in srgb, var(--accent) 60%, var(--muted));
   --ok: #6ee7b7;
@@ -222,7 +222,7 @@
     --glow-1: rgb(255 106 61 / 0.16);
     --glow-2: rgb(255 170 90 / 0.07);
     --glow-3: rgb(110 120 255 / 0.13);
-    --grid-line: rgb(255 255 255 / 0.04);
+    --grid-line: rgb(255 255 255 / 0.044);
     --score-ink: linear-gradient(170deg, var(--text-h) 35%, color-mix(in srgb, var(--accent) 70%, var(--text-h)));
     --score-outof: color-mix(in srgb, var(--accent) 60%, var(--muted));
     --ok: #6ee7b7;

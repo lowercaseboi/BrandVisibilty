@@ -71,17 +71,24 @@
   gap: 20px;
 }
 
-/* Tall glass card: name, score ring, rating. A warm glow in the corner brightens on hover. */
+/* Tall glass card: name, score ring, rating. A warm glow in the corner brightens on hover.
+   Each card spans six rows of the parent grid (subgrid), so the same slot — e.g. the rating —
+   sits at the same height in every card of a row, however many cards there are. */
 .sample-card {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-height: 300px;
+  display: grid;
+  grid-row: span 6;
+  grid-template-rows: subgrid;
+  row-gap: var(--space-2);
   padding: 22px;
   border-radius: var(--radius-lg);
+}
+
+.sample-card-slot:empty {
+  display: block;
+  min-height: 0;
 }
 
 .sample-card::before {
@@ -116,7 +123,7 @@
 }
 
 .sample-card h3 {
-  font-size: 16px;
+  font-size: 14.5px;
   font-weight: 600;
   letter-spacing: -0.04em;
   overflow-wrap: anywhere;
@@ -156,15 +163,10 @@
   padding: var(--space-3) 0;
 }
 
-.sample-card-foot {
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-2);
-}
 
 .sample-card.is-skeleton {
+  grid-row: auto;
+  display: block;
   min-height: 300px;
   background:
     linear-gradient(100deg, transparent 30%, var(--glass-highlight) 50%, transparent 70%) 0 0 / 250% 100%,

@@ -26,7 +26,7 @@
 .app-header-inner {
   max-width: var(--maxw);
   margin: 0 auto;
-  padding: 14px var(--gutter);
+  padding: 20px var(--gutter);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -86,7 +86,7 @@
 .header-tools {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   flex: none;
 }
 
@@ -151,7 +151,7 @@
 /* The round one: Connections. A little apart from the three settings. */
 .icon-btn-round {
   border-radius: 50%;
-  margin-left: 6px;
+  margin-left: 12px;
 }
 
 .icon-btn-round svg {

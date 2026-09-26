@@ -2,9 +2,11 @@ import { Link } from "react-router-dom";
 import type { Gap } from "../api/types";
 import { evidenceHref } from "../format";
 import { T, useFormat, useT } from "../i18n";
+import { Details } from "../settings/details";
 import { gapFinding, gapNumberPairs, gapScopeText, gapTypeText } from "./dashboard/helpers";
 
-// Gaps are found by deterministic rules (DESIGN §5.1) — no LLM involved. Details view only.
+// Gaps are found by deterministic rules (DESIGN §5.1) — no LLM involved. The plain finding is always
+// shown; the gap ID, raw numbers and "inferred" flag only in the numbers view.
 export function GapList({
   gaps,
   brandKey,
@@ -37,21 +39,25 @@ export function GapList({
             <div className="gap-head">
               <span className={`badge gap-type gap-type-${gap.gap_type}`}>{gapTypeText(gap.gap_type, t)}</span>
               <span className="gap-scope">{gapScopeText(gap, t, entities, labelOf)}</span>
-              {gap.is_inferred && <span className="badge badge-warn">{t("dashboard.gaps.inferred")}</span>}
-              <code className="gap-id">{id}</code>
+              <Details>
+                {gap.is_inferred && <span className="badge badge-warn">{t("dashboard.gaps.inferred")}</span>}
+                <code className="gap-id">{id}</code>
+              </Details>
             </div>
             <p className="small gap-explainer">
               <T k={finding.key} vars={finding.vars} />
             </p>
             <div className="gap-foot">
-              <div className="gap-numbers">
-                {gapNumberPairs(gap, t, fmt).map(([label, value]) => (
-                  <span key={label} className="kv">
-                    <span className="kv-label">{label}</span>
-                    <span className="kv-value">{value}</span>
-                  </span>
-                ))}
-              </div>
+              <Details>
+                <div className="gap-numbers">
+                  {gapNumberPairs(gap, t, fmt).map(([label, value]) => (
+                    <span key={label} className="kv">
+                      <span className="kv-label">{label}</span>
+                      <span className="kv-value">{value}</span>
+                    </span>
+                  ))}
+                </div>
+              </Details>
               {refs.length > 0 && (
                 <Link to={evidenceHref(brandKey, runId, refs)} className="link-evidence">
                   {t.n("dashboard.gaps.evidence", refs.length)}
