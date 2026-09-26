@@ -227,12 +227,9 @@ hr {
   color: var(--muted);
 }
 
-/* A score out of 100: the number carries a faint accent fade, "/100" a light accent tint. */
+/* A score out of 100: the number in a slightly translucent solid accent, "/100" a light accent tint. */
 .score-num {
-  background: var(--score-ink);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--score-ink);
   font-variant-numeric: tabular-nums;
 }
 

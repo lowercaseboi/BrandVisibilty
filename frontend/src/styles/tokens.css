@@ -31,8 +31,8 @@
   --accent-hover: #b83a12;
   --accent-soft: #fdeee8;
   --accent-text: #b83a12;
-  --accent-grad: linear-gradient(135deg, #d9481c 0%, #b3320e 100%); /* white text >= 4.5:1 end to end */
-  --accent-grad-hover: linear-gradient(135deg, #c43d14 0%, #9c2b0b 100%);
+  --accent-grad: #c93a13; /* solid (no gradient); white text >= 4.5:1 */
+  --accent-grad-hover: #a93210;
   --on-accent: #ffffff;
   --focus: #d03e15;
 
@@ -48,10 +48,10 @@
   --glow-1: rgb(255 122 69 / 0.2);
   --glow-2: rgb(255 196 120 / 0.2);
   --glow-3: rgb(120 140 255 / 0.12);
-  --grid-line: rgb(24 20 16 / 0.06);
+  --grid-line: rgb(24 20 16 / 0.045);
 
-  /* scores out of 100: number fades from ink into a faint accent; "/100" is accent-tinted */
-  --score-ink: linear-gradient(170deg, var(--text-h) 35%, color-mix(in srgb, var(--accent) 62%, var(--text-h)));
+  /* scores out of 100: a solid, slightly translucent accent (no gradient); "/100" is accent-tinted */
+  --score-ink: color-mix(in srgb, var(--accent) 80%, transparent);
   --score-outof: color-mix(in srgb, var(--accent) 55%, var(--muted));
 
   /* status */
@@ -148,8 +148,8 @@
   --accent-hover: #ff8a63;
   --accent-soft: rgb(255 106 61 / 0.14);
   --accent-text: #ff8a63;
-  --accent-grad: linear-gradient(135deg, #ff8a5c 0%, #ff5a2a 100%);
-  --accent-grad-hover: linear-gradient(135deg, #ffa07a 0%, #ff6a3d 100%);
+  --accent-grad: #ff6a3d;
+  --accent-grad-hover: #ff8a63;
   --on-accent: #0b0f19;
   --focus: #ff8a63;
   --glass-highlight: rgb(255 255 255 / 0.06);
@@ -160,7 +160,7 @@
   --glow-2: rgb(255 170 90 / 0.07);
   --glow-3: rgb(110 120 255 / 0.13);
   --grid-line: rgb(255 255 255 / 0.044);
-  --score-ink: linear-gradient(170deg, var(--text-h) 35%, color-mix(in srgb, var(--accent) 70%, var(--text-h)));
+  --score-ink: color-mix(in srgb, var(--accent) 85%, transparent);
   --score-outof: color-mix(in srgb, var(--accent) 60%, var(--muted));
   --ok: #6ee7b7;
   --ok-bg: #052e1f;
@@ -211,8 +211,8 @@
     --accent-hover: #ff8a63;
     --accent-soft: rgb(255 106 61 / 0.14);
     --accent-text: #ff8a63;
-    --accent-grad: linear-gradient(135deg, #ff8a5c 0%, #ff5a2a 100%);
-    --accent-grad-hover: linear-gradient(135deg, #ffa07a 0%, #ff6a3d 100%);
+    --accent-grad: #ff6a3d;
+    --accent-grad-hover: #ff8a63;
     --on-accent: #0b0f19;
     --focus: #ff8a63;
     --glass-highlight: rgb(255 255 255 / 0.06);
@@ -223,7 +223,7 @@
     --glow-2: rgb(255 170 90 / 0.07);
     --glow-3: rgb(110 120 255 / 0.13);
     --grid-line: rgb(255 255 255 / 0.044);
-    --score-ink: linear-gradient(170deg, var(--text-h) 35%, color-mix(in srgb, var(--accent) 70%, var(--text-h)));
+    --score-ink: color-mix(in srgb, var(--accent) 85%, transparent);
     --score-outof: color-mix(in srgb, var(--accent) 60%, var(--muted));
     --ok: #6ee7b7;
     --ok-bg: #052e1f;
