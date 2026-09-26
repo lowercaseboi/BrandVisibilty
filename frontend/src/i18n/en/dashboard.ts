@@ -4,7 +4,7 @@
 // Notes for translators:
 // - Voice: professional and concise, like an analytics report. Plain words, no slang, no
 //   exclamation marks. "AI assistants" means apps like ChatGPT or Google Gemini.
-// - "Query" = a question a customer might ask; "response" = the AI's answer; "analysis" = one run.
+// - "Question" = a question a customer might ask; "response" = the AI's answer; "analysis" = one run.
 // - {placeholders} are filled in by the app; keep them exactly. **text** is shown in bold.
 // - {ai} / {ais} are AI product names such as "Google Gemini" or "Google Gemini and Groq" (already joined).
 // - {name} and {competitor} are brand names — never translate them.
@@ -21,8 +21,8 @@ export const dashboard = {
   "head.lastChecked": "Last analysed {when} · Sources: {ais}",
   // Same, when the last analysis used simulated responses.
   "head.lastCheckedPractice": "Last analysed {when} · Simulated data, no live AI queried",
-  // Button: opens the query set.
-  "head.questions": "Query set",
+  // Button: opens the question set.
+  "head.questions": "Questions",
   // Button: opens every AI response.
   "head.answers": "AI responses",
 
@@ -35,11 +35,11 @@ export const dashboard = {
   "banner.partial_one": "{ais} did not respond in this run; results are based on the remaining AIs.",
   "banner.partial_other": "{ais} did not respond in this run; results are based on the remaining AIs.",
   "banner.partialUnknown": "Some responses were missing, which reduces precision for this run.",
-  "banner.questionsChanged": "The query set has changed since this analysis. Run a new analysis to reflect it.",
-  "banner.thin_one": "Only {n} query is tracked for this brand, so precision is low.",
-  "banner.thin_other": "Only {n} queries are tracked for this brand, so precision is low.",
+  "banner.questionsChanged": "The question set has changed since this analysis. Run a new analysis to reflect it.",
+  "banner.thin_one": "Only {n} question is tracked for this brand, so precision is low.",
+  "banner.thin_other": "Only {n} questions are tracked for this brand, so precision is low.",
   // Link after the sentence above.
-  "banner.thinLink": "Expand the query set →",
+  "banner.thinLink": "Add more questions →",
 
   // ================================================================ score hero
   "hero.title": "AI visibility score",
@@ -57,7 +57,7 @@ export const dashboard = {
   "hero.rangeWhy": "AI responses vary between runs, so the true score most likely falls within this interval.",
   // Shown when the range is wide. "Thorough" is the name of an option under "Options" below.
   "hero.rangeWide": "For a tighter estimate, select **Thorough** on the next run.",
-  "hero.rangeWideMax": "Expand the query set for a tighter estimate.",
+  "hero.rangeWideMax": "Expand the question set for a tighter estimate.",
   // Screen-reader text for the range bar.
   "hero.bandAria": "Likely range {lo} to {hi}, point estimate {score}, on a scale of 0 to 100",
   // Compared with the previous analysis. {n} is a number of points (out of 100).
@@ -65,6 +65,10 @@ export const dashboard = {
   "hero.change.up_other": "+{n} points since the last analysis",
   "hero.change.down_one": "−{n} point since the last analysis",
   "hero.change.down_other": "−{n} points since the last analysis",
+  // Strip under the range bar comparing mention rates (share of responses naming each brand).
+  "hero.peers": "Mention rate vs competitors",
+  // {you} = your share like "7%", {ahead} = competitors mentioned more often, {n} = competitors shown.
+  "hero.peersLegend": "Your brand: {you} of responses · {ahead} of {n} competitors mentioned more often",
   "hero.change.same": "Unchanged since the last analysis",
 
   // ================================================================ recommended actions
@@ -72,6 +76,9 @@ export const dashboard = {
   "next.intro": "Prioritised steps to improve how AI assistants find and recommend your brand.",
   "next.empty": "No priority issues detected. Re-run the analysis in a few weeks.",
   // Small labels above the two values on each card.
+  // Checklist: tick box on each card, and the progress line above the cards.
+  "next.markDone": "Mark as done",
+  "next.progress": "{done} of {total} completed",
   "next.effortLabel": "Effort",
   "next.impactLabel": "Est. impact",
   "next.effort.quick": "Low",
@@ -150,26 +157,26 @@ export const dashboard = {
   "action.video.step3": "Publish at least weekly.",
 
   // ---------------------------------------------------------------- rationale (plain reason)
-  "why.presence.overallNone": "AI assistants did not mention the brand in any response to category-level queries.",
+  "why.presence.overallNone": "AI assistants did not mention the brand in any response to category-level questions.",
   // {pct} is a percentage, e.g. "12%".
-  "why.presence.overall": "AI assistants mentioned the brand in only {pct} of responses to category-level queries.",
+  "why.presence.overall": "AI assistants mentioned the brand in only {pct} of responses to category-level questions.",
   "why.presence.providerNone": "{ai} did not mention the brand in any response.",
   "why.presence.provider": "{ai} mentioned the brand in only {pct} of its responses.",
   // {example} is one of the "intent.*" examples below, e.g. “best … near me”.
-  "why.presence.intentNone": "For queries such as {example}, the brand is never mentioned.",
-  "why.presence.intent": "For queries such as {example}, the brand appears in only {pct} of responses.",
-  "why.presence.intentGeneric": "For one query type, the brand appears in only {pct} of responses.",
+  "why.presence.intentNone": "For questions such as {example}, the brand is never mentioned.",
+  "why.presence.intent": "For questions such as {example}, the brand appears in only {pct} of responses.",
+  "why.presence.intentGeneric": "For one question type, the brand appears in only {pct} of responses.",
   // {rank} is a number like 3.4.
   "why.prominence": "The brand is mentioned but typically ranks low in the list (average position {rank}).",
   "why.competitive": "When both are mentioned, {competitor} is ranked ahead in {pct} of responses.",
-  "why.representation": "For queries that name the brand, {pct} of responses describe it inaccurately.",
-  "why.representationMixed": "For queries that name the brand, AI assistants describe it inconsistently.",
-  "why.representationBoth": "For queries that name the brand, {pct} of responses describe it inaccurately, and AI assistants are inconsistent with each other.",
+  "why.representation": "For questions that name the brand, {pct} of responses describe it inaccurately.",
+  "why.representationMixed": "For questions that name the brand, AI assistants describe it inconsistently.",
+  "why.representationBoth": "For questions that name the brand, {pct} of responses describe it inaccurately, and AI assistants are inconsistent with each other.",
   // {k} of {n} = counts of websites/videos.
   "why.source": "{k} of the {n} most-cited websites and videos in the category do not mention the brand.",
   "why.unknown": "A factor limiting the brand's visibility was detected.",
 
-  // Short examples of the kinds of queries people make ("…" = words that change).
+  // Short examples of the kinds of questions people make ("…" = words that change).
   "intent.category_discovery": "“best … near me”",
   "intent.problem_first": "“how do I …”",
   "intent.alternative_seeking": "“alternatives to …”",
@@ -193,8 +200,8 @@ export const dashboard = {
 
   // ================================================================ sample response
   "sample.title": "Sample AI response",
-  // Label above the query text (the query stays in its own language).
-  "sample.asked": "Query",
+  // Label above the question text (the question stays in its own language).
+  "sample.asked": "Question",
   "sample.answeredBy": "Response from {ai}",
   "sample.caption": "A verbatim response from this analysis.",
   "sample.readMore": "Expand",
@@ -217,7 +224,7 @@ export const dashboard = {
   "trend.pointDetails": "{origin} · {ais}",
   "trend.legendScore": "Score",
   "trend.legendBand": "Likely range",
-  "trend.legendBreak": "Methodology change (query set or AI sources) — scores on either side are not comparable.",
+  "trend.legendBreak": "Methodology change (question set or AI sources) — scores on either side are not comparable.",
   "origin.live": "Live AI responses",
   "origin.synthetic": "Simulated data",
   "origin.replay": "Replayed responses",
@@ -260,8 +267,8 @@ export const dashboard = {
   "run.depth.quick": "Quick",
   "run.depth.standard": "Standard",
   "run.depth.thorough": "Thorough",
-  "run.depthHint": "AI responses vary. More samples per query give a more stable score but take longer.",
-  "run.editQuestions": "Review the query set →",
+  "run.depthHint": "AI responses vary. More samples per question give a more stable score but take longer.",
+  "run.editQuestions": "Edit questions →",
   "run.running": "Analysis in progress…",
   // Overall progress, e.g. "12 of 51 complete".
   "run.progress": "{done} of {total} complete",
@@ -300,24 +307,24 @@ export const dashboard = {
   // Technical lines, shown only in the detailed-metrics view.
   "run.tech.message": "Server message: {message}",
   "run.tech.error": "Error: {error}",
-  "run.tech.unscored_one": "{n} query names the brand, so it is run but not scored.",
-  "run.tech.unscored_other": "{n} queries name the brand, so they are run but not scored.",
+  "run.tech.unscored_one": "{n} question names the brand, so it is run but not scored.",
+  "run.tech.unscored_other": "{n} questions name the brand, so they are run but not scored.",
 
   // ================================================================ empty state
   "empty.title": "No analyses yet",
-  "empty.body": "An analysis runs your customer queries — for example “best … near me” — against AI assistants such as Google Gemini and measures how often your brand is recommended.",
+  "empty.body": "An analysis runs your customer questions — for example “best … near me” — against AI assistants such as Google Gemini and measures how often your brand is recommended.",
   "empty.body2": "It takes a few minutes. Start it below.",
 
   // ================================================================ detailed metrics (details)
   "details.title": "Detailed metrics",
-  "details.intro": "Methodology and diagnostics. Scores use only queries that do not name the brand.",
+  "details.intro": "Methodology and diagnostics. Scores use only questions that do not name the brand.",
   "details.runId": "Run ID",
   "details.checkedOn": "Analysed on",
   "details.scored": "Scored responses",
   "details.mentioning": "Responses mentioning the brand",
-  "details.unscored": "Run but not scored (query names the brand)",
-  "details.clusters": "Query clusters",
-  "details.samples": "Samples per query",
+  "details.unscored": "Run but not scored (question names the brand)",
+  "details.clusters": "Question clusters",
+  "details.samples": "Samples per question",
   "details.metrics": "Scores",
   "details.admission": "Comparability over time",
   "details.perAi": "By AI source",
@@ -332,7 +339,7 @@ export const dashboard = {
   "metrics.renormalized": "re-weighted, because position can't be measured",
   // CI = confidence interval. {lo} and {hi} are scores out of 100.
   "metrics.ci": "95% confidence interval: {lo} – {hi}",
-  "metrics.ciNote": "bootstrap over queries",
+  "metrics.ciNote": "bootstrap over questions",
   "metrics.compositeExplainer": "A weighted combination of Coverage, Prominence and Share of voice, out of 100. The band shows how much the score could vary by chance alone.",
   "metrics.coverage": "Coverage",
   "metrics.coverageExplainer": "Share of responses that mention the brand at all.",
@@ -347,10 +354,10 @@ export const dashboard = {
   "admission.no": "⚠ Not admissible — not comparable over time",
   "admission.partial": "partial run",
   // {q} and {s} are percentages; {policy} is a version like "v0".
-  "admission.stats": "Query coverage {q} · Sample coverage {s} · policy {policy}",
+  "admission.stats": "Question coverage {q} · Sample coverage {s} · policy {policy}",
   "admission.missingAis": "AIs without responses: {ais}",
-  "admission.missingQuestions_one": "{n} query received no response",
-  "admission.missingQuestions_other": "{n} queries received no response",
+  "admission.missingQuestions_one": "{n} question received no response",
+  "admission.missingQuestions_other": "{n} questions received no response",
 
   "providers.ai": "AI",
   "providers.coverage": "Coverage",
@@ -366,9 +373,9 @@ export const dashboard = {
   "gaps.type.competitive": "Competitor ahead",
   "gaps.type.representation": "Misrepresentation",
   "gaps.type.source": "Source gap",
-  "gaps.scope.overall": "All AIs and queries",
+  "gaps.scope.overall": "All AIs and questions",
   "gaps.scope.provider": "On {ai}",
-  "gaps.scope.intent": "Query type: {intent}",
+  "gaps.scope.intent": "Question type: {intent}",
   "gaps.scope.competitor": "vs. {name}",
   "gaps.scope.mentions": "Across all mentions",
   "gaps.scope.other": "Overall",

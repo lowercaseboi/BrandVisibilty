@@ -6,8 +6,8 @@
 //   no exclamation marks. The reader may run any size of business, so avoid jargon where a
 //   common word works.
 // - "AI assistants" means apps like ChatGPT or Gemini. Keep product names (ChatGPT, Gemini, Google) in Latin script.
-// - "Query" = a question a customer might ask an AI assistant. "Response" = the AI's answer.
-//   "Analysis" = one run that asks every query and scores the responses.
+// - "Question" = a question a customer might ask an AI assistant. "Response" = the AI's answer.
+//   "Analysis" = one run that asks every question and scores the responses.
 // - {placeholders} are filled in by the app; keep them exactly. **text** is shown in bold.
 // - Examples (brand names, places) may be adapted to local ones. {brand} and {name} are brand names — never translate them.
 export const pages = {
@@ -28,8 +28,8 @@ export const pages = {
   // Real AI responses recorded earlier and scored again.
   "origin.replay": "Replayed responses",
 
-  // ---------------------------------------------------------------- query groups (intents)
-  // Group headings on the queries page. "…" stands for words that change per brand.
+  // ---------------------------------------------------------------- question groups (intents)
+  // Group headings on the questions page. "…" stands for words that change per brand.
   "intent.category_discovery": "Category discovery (“best … for …”)",
   "intent.problem_first": "Problem-led (“how do I …”)",
   "intent.alternative_seeking": "Alternatives (“alternatives to …”)",
@@ -42,8 +42,8 @@ export const pages = {
   "intent.head_to_head": "Head-to-head comparisons",
   "intent.trust": "Trust and reputation",
   "intent.sourcing": "Reviews and sources",
-  "intent.custom": "Custom queries",
-  "intent.other": "Other queries",
+  "intent.custom": "Custom questions",
+  "intent.other": "Other questions",
 
   // ---------------------------------------------------------------- Home (samples, your brands, try your own)
   "brands.samplesEyebrow": "Benchmarks",
@@ -55,10 +55,10 @@ export const pages = {
   "brands.tryOwnEyebrow": "New analysis",
   "brands.tryOwn": "Analyse your own brand",
   "brands.tryOwnSub":
-    "Describe the brand and its market. We generate a set of customer queries and measure how often AI assistants recommend you.",
+    "Describe the brand and its market. We generate a set of customer questions and measure how often AI assistants recommend you.",
   // Under a brand's name on its card.
-  "brands.tracked_one": "{n} tracked query",
-  "brands.tracked_other": "{n} tracked queries",
+  "brands.tracked_one": "{n} tracked question",
+  "brands.tracked_other": "{n} tracked questions",
   "brands.loading": "Loading brands…",
   "brands.loadError": "Brands could not be loaded.",
   // Accessible name for the whole score, e.g. "Score 42 out of 100".
@@ -67,12 +67,12 @@ export const pages = {
   "brands.checked": "Updated {when}",
   "brands.noChecks": "Not yet analysed",
   "brands.hasResults": "Results available",
-  "brands.thin_one": "Only {n} query — low precision",
-  "brands.thin_other": "Only {n} queries — low precision",
+  "brands.thin_one": "Only {n} question — low precision",
+  "brands.thin_other": "Only {n} questions — low precision",
 
   // ---------------------------------------------------------------- Add a brand (form)
   // Labels are short nouns. Placeholders for category, audience and customer needs stay in
-  // English: the app builds English queries from them.
+  // English: the app builds English questions from them.
   "add.optional": "(optional)",
 
   "add.name.label": "Brand name",
@@ -98,7 +98,7 @@ export const pages = {
   "add.jobs.label": "Customer needs",
   // Must start with an action word in English because it becomes "how do I <this>".
   "add.jobs.placeholder": "e.g. buy sweets for Diwali, send gifts to family abroad",
-  "add.jobs.hint": "What customers want to achieve. Each becomes a “how do I …” query; write in English.",
+  "add.jobs.hint": "What customers want to achieve. Each becomes a “how do I …” question; write in English.",
 
   "add.aliases.label": "Alternate names",
   "add.aliases.placeholder": "e.g. Chitale, Chitale Sweets",
@@ -121,62 +121,65 @@ export const pages = {
   "add.err.generic": "The brand could not be created. Please try again.",
 
   // {brand} is the brand name the user just added.
-  "add.done_one": "**{brand}** created. The analysis will run **{n}** query against AI assistants.",
-  "add.done_other": "**{brand}** created. The analysis will run **{n}** queries against AI assistants.",
+  "add.done_one": "**{brand}** created. The analysis will run **{n}** question against AI assistants.",
+  "add.done_other": "**{brand}** created. The analysis will run **{n}** questions against AI assistants.",
   "add.doneNoCount": "**{brand}** created.",
-  "add.thin": "A small query set gives low precision. Add customer needs or competitors to broaden it.",
+  "add.thin": "A small question set gives low precision. Add customer needs or competitors to broaden it.",
   "add.checkNow": "Run analysis",
-  "add.seeQuestions": "Review queries",
+  "add.seeQuestions": "Review questions",
   "add.another": "Add another brand",
 
-  // ---------------------------------------------------------------- Queries page
+  // ---------------------------------------------------------------- Questions page
   // {brand} is a brand name.
   "q.back": "← {brand}",
   "q.backGeneric": "← Back to report",
-  "q.title": "Query set",
+  "q.title": "Question set",
   "q.lede":
-    "Queries a real customer might put to an AI assistant. Each analysis runs every active query and records whether your brand appears in the response.",
+    "Questions a real customer might put to an AI assistant. Each analysis runs every active question and records whether your brand appears in the response.",
   "q.namedNote":
-    "Queries that name your brand are still run but excluded from the score — an AI will always mention a brand the query names.",
-  "q.loading": "Loading queries…",
-  "q.loadError": "Queries could not be loaded.",
+    "Questions that name your brand are still run but excluded from the score — an AI will always mention a brand the question names.",
+  "q.loading": "Loading questions…",
+  "q.loadError": "Questions could not be loaded.",
   "q.asked": "Active",
-  "q.counted": "Scored",
-  "q.notCounted": "Not scored",
-  "q.off": "Inactive",
+  "q.counted": "Counted",
+  "q.notCounted": "Not counted",
+  "q.off": "Paused",
   "q.unsaved": "Unsaved changes",
   "q.customized": "Custom set",
   "q.suggested": "Suggested set",
-  "q.unchecked_one": "{n} new or edited query will be screened for your brand name on save.",
-  "q.unchecked_other": "{n} new or edited queries will be screened for your brand name on save.",
-  "q.baseline": "Changing the query set starts a new baseline: new results will not be comparable with earlier ones.",
-  // "{on} of {total}" queries in this group are active.
+  "q.unchecked_one": "{n} new or edited question will be screened for your brand name on save.",
+  "q.unchecked_other": "{n} new or edited questions will be screened for your brand name on save.",
+  "q.baseline": "Changing the question set starts a new baseline: new results will not be comparable with earlier ones.",
+  // "{on} of {total}" questions in this group are active.
   "q.groupCount": "{on} of {total} active",
   "q.askedTitle": "Run in every analysis",
-  "q.notAskedTitle": "Inactive",
-  // Accessible name of the on/off switch. {text} is the query itself.
-  "q.toggleLabel": "Include this query: {text}",
-  "q.textLabel": "Query text",
-  "q.deleteLabel": "Delete this query: {text}",
-  "q.badgeNamed": "Not scored — names the brand",
+  "q.notAskedTitle": "Paused",
+  // Accessible name of the on/off switch. {text} is the question itself.
+  "q.toggleLabel": "Include this question: {text}",
+  "q.textLabel": "Question text",
+  "q.deleteLabel": "Delete this question: {text}",
   "q.badgeUnsaved": "Unsaved",
   "q.badgeYours": "Custom",
-  "q.addTitle": "Add a query",
+  // Hover text on the per-question bar: result of the last analysis.
+  "q.hitTitle": "Brand named in {m} of {n} responses in the last analysis",
+  // Collapsed section holding questions that are switched off. {n} = how many.
+  "q.pausedTitle": "Paused questions ({n})",
+  "q.addTitle": "Add a question",
   "q.addNote": "Phrase it as a customer would, without your brand name, so it is scored. Any language is accepted.",
-  "q.newLabel": "New query",
+  "q.newLabel": "New question",
   "q.newPlaceholder": "e.g. best place to buy attar in Pune",
-  "q.typeLabel": "Query type",
-  "q.duplicate": "This query is already in the set.",
-  "q.savedCustom": "Saved. The next analysis will use this query set.",
+  "q.typeLabel": "Question type",
+  "q.duplicate": "This question is already in the set.",
+  "q.savedCustom": "Saved. The next analysis will use this question set.",
   "q.savedDefault": "Saved. This matches the suggested set, so results remain comparable with earlier analyses.",
-  "q.resetDone": "Restored the suggested query set.",
-  "q.resetConfirm": "Restore the suggested query set? Custom queries and edits will be removed.",
+  "q.resetDone": "Restored the suggested question set.",
+  "q.resetConfirm": "Restore the suggested question set? Custom questions and edits will be removed.",
   // {message} is an English message from the server.
-  "q.saveError": "The queries could not be saved. Reason: {message}",
-  "q.resetError": "The queries could not be reset. Reason: {message}",
+  "q.saveError": "The questions could not be saved. Reason: {message}",
+  "q.resetError": "The questions could not be reset. Reason: {message}",
   "q.reset": "Restore suggested set",
   "q.resetting": "Restoring…",
-  "q.save": "Save query set",
+  "q.save": "Save question set",
 
   // ---------------------------------------------------------------- AI responses (evidence) page
   "answers.back": "← {brand}",
@@ -194,8 +197,8 @@ export const pages = {
   // Explains the small position markers, e.g. "#1".
   "answers.legend.rank": "#1 = first brand named in the response",
   "answers.search": "Search",
-  "answers.searchPlaceholder": "Search queries and responses…",
-  "answers.type": "Query type",
+  "answers.searchPlaceholder": "Search questions and responses…",
+  "answers.type": "Question type",
   "answers.allTypes": "All types",
   "answers.ai": "AI assistant",
   "answers.allAis": "All AI assistants",
@@ -205,10 +208,10 @@ export const pages = {
   "answers.loading": "Loading responses…",
   "answers.loadError": "Responses could not be loaded.",
   "answers.empty": "No responses match these filters.",
-  "answers.question": "Query",
+  "answers.question": "Question",
   "answers.named": "Brand mentioned",
   "answers.notNamed": "Brand not mentioned",
-  "answers.notCounted": "Not scored (query names the brand)",
+  "answers.notCounted": "Not scored (question names the brand)",
   // Short position marker. Keep "#" or use a word that works for any number, e.g. "No. {n}".
   "answers.rank": "#{n}",
   // Hover text for the marker / highlighted name. {name} is a brand name, {kind} is "Your brand" / "Competitors" / …

@@ -31,8 +31,10 @@ export const common = {
   // Confirmations after the header switch is pressed.
   "details.on": "Detailed metrics shown",
   "details.off": "Detailed metrics hidden",
+  // Small label in the header while detailed metrics are on.
+  "details.analyst": "Analyst view",
 
-  "footer.text": "Measures how often AI assistants recommend your brand in response to real customer queries.",
+  "footer.text": "Measures how often AI assistants recommend your brand in response to real customer questions.",
 
   "notFound.title": "Page not found",
   "notFound.body": "The page you requested does not exist or has been moved.",
@@ -65,8 +67,8 @@ export const common = {
   "unknown": "Unknown",
   "none": "None",
 
-  "count.questions_one": "{n} query",
-  "count.questions_other": "{n} queries",
+  "count.questions_one": "{n} question",
+  "count.questions_other": "{n} questions",
   "count.answers_one": "{n} response",
   "count.answers_other": "{n} responses",
   "count.ais_one": "{n} AI",

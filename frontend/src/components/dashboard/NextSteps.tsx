@@ -8,6 +8,27 @@ import { effortKey, effortLevel, gapFinding, humanizeId, sortByPriority } from "
 
 const TOP = 3;
 
+// "Done" ticks live in this browser only (no backend), per brand, keyed by the suggestion's group
+// key (action|competitor). That key is stable across runs, unlike recommendation IDs.
+const doneKey = (brandKey: string) => `bv.done.${brandKey}`;
+
+function readDone(brandKey: string): Set<string> {
+  try {
+    const raw = JSON.parse(localStorage.getItem(doneKey(brandKey)) ?? "[]");
+    return new Set(Array.isArray(raw) ? raw.filter((x): x is string => typeof x === "string") : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function writeDone(brandKey: string, done: Set<string>) {
+  try {
+    localStorage.setItem(doneKey(brandKey), JSON.stringify([...done]));
+  } catch {
+    /* storage unavailable */
+  }
+}
+
 interface Suggestion {
   key: string;
   /** Highest-priority recommendation in the group; drives title, effort and points. */
@@ -45,9 +66,13 @@ function SuggestionCard({
   runId,
   entities,
   labelOf,
+  done,
+  onToggleDone,
 }: {
   s: Suggestion;
   index: number;
+  done: boolean;
+  onToggleDone: () => void;
   brandKey: string;
   runId: string;
   entities?: Record<string, string>;
@@ -73,13 +98,17 @@ function SuggestionCard({
   const points = Math.round(rec.delta_composite ?? 0);
 
   return (
-    <li className="card next-card">
+    <li className={`card next-card${done ? " is-done" : ""}`}>
       <div className="next-card-head">
         <span className="next-num" aria-hidden="true">
           {String(index + 1).padStart(2, "0")}
         </span>
         <h3 className="next-title">{title}</h3>
       </div>
+      <label className="next-done">
+        <input type="checkbox" checked={done} onChange={onToggleDone} />
+        <span>{t("dashboard.next.markDone")}</span>
+      </label>
       <dl className="next-meta">
         <div>
           <dt className="eyebrow">{t("dashboard.next.effortLabel")}</dt>
@@ -163,10 +192,20 @@ export function NextSteps({
 }) {
   const t = useT();
   const [showAll, setShowAll] = useState(false);
+  const [done, setDone] = useState<Set<string>>(() => readDone(brandKey));
+  const toggleDone = (key: string) =>
+    setDone((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      writeDone(brandKey, next);
+      return next;
+    });
   const listId = useId();
   const gapById = new Map(gaps.map((g) => [g.gap_id, g]));
   const suggestions = groupSuggestions(recommendations, gapById);
   const visible = showAll ? suggestions : suggestions.slice(0, TOP);
+  const doneCount = suggestions.filter((s) => done.has(s.key)).length;
 
   return (
     <section className="dash-section" aria-labelledby="next-title">
@@ -176,6 +215,12 @@ export function NextSteps({
       ) : (
         <>
           <p className="section-note">{t("dashboard.next.intro")}</p>
+          <div className="next-progress">
+            <span>{t("dashboard.next.progress", { done: doneCount, total: suggestions.length })}</span>
+            <div className="progress progress-mini" aria-hidden="true">
+              <div className="progress-bar" style={{ width: `${(doneCount / suggestions.length) * 100}%` }} />
+            </div>
+          </div>
           <ol className="next-list" id={listId}>
             {visible.map((s, i) => (
               <SuggestionCard
@@ -186,6 +231,8 @@ export function NextSteps({
                 runId={runId}
                 entities={entities}
                 labelOf={labelOf}
+                done={done.has(s.key)}
+                onToggleDone={() => toggleDone(s.key)}
               />
             ))}
           </ol>

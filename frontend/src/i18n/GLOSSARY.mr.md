@@ -5,13 +5,13 @@ Used by `src/i18n/mr/*.ts`.
 **Register: professional written Marathi (प्रमाण मराठी).** The tone matches the English copy — an
 analytics product report. We use **तुम्ही**, the written `-े` endings (झाले, केले, ब्रँडचे) rather
 than the spoken `-ं` forms, and no chatty phrasing. Established business loanwords are kept where
-Marathi professionals use them (स्कोर, क्वेरी, बेंचमार्क, कॉन्फिडन्स). Buttons are short
+Marathi professionals use them (स्कोर, बेंचमार्क, कॉन्फिडन्स). Buttons are short
 imperatives (विश्लेषण चालवा, सेव्ह करा).
 
 Kept in Latin script: AI, Google, Google Business Profile, Justdial, IndiaMART, Zomato, Amazon,
 Instagram, WhatsApp (Business), YouTube (Shorts), Reels, Quora, Reddit, Facebook, ChatGPT, Gemini,
 Groq, QR, ID, API key, the metric names Coverage / Prominence / Share of voice, the depth options
-Quick / Standard / Thorough (they must match `hero.rangeWide`), and all brand names, query texts
+Quick / Standard / Thorough (they must match `hero.rangeWide`), and all brand names, question texts
 and AI responses. Numbers use Western digits.
 
 Postpositions after a `{var}` are written as a separate word (`{ais} ला`, `{ai} ने`,
@@ -23,8 +23,8 @@ Postpositions after a `{var}` are written as a separate word (`{ais} ला`, `{
 |---|---|---|
 | brand | ब्रँड (masc.: तुमचा ब्रँड, ब्रँडचे नाव) | |
 | AI assistant | AI असिस्टंट | |
-| query (customer question) | क्वेरी (plural: क्वेरी / क्वेरींमध्ये) | |
-| query set | क्वेरी संच | |
+| question (customer question) | प्रश्न (replaces क्वेरी, to match the /questions URL and API; masc., plural: प्रश्न, oblique: प्रश्नांमध्ये/प्रश्नांवर) | |
+| question set | प्रश्न संच | |
 | response (AI answer) | प्रतिसाद (same form in the plural) | replaces the spoken "उत्तरे" |
 | analysis (one run) | विश्लेषण | Run analysis = "विश्लेषण चालवा" |
 | run (technical) | रन | Run ID = "रन ID" |
@@ -57,4 +57,4 @@ Postpositions after a `{var}` are written as a separate word (`{ais} ला`, `{
 1. `rating.often` — **भक्कम दृश्यता** for "Strong visibility". "मजबूत" is the alternative.
 2. `why.presence.provider` — **{ai} ने त्याच्या…** assumes the AI is masculine. Drop "त्याच्या" if it reads oddly.
 3. `who.title` — **स्पर्धात्मक चित्र** for "Competitive landscape".
-4. `add.jobs.hint` asks for customer needs in **English**, because the query templates are English.
+4. `add.jobs.hint` asks for customer needs in **English**, because the question templates are English.

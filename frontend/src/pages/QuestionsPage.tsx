@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getQuestions, listBrands, resetQuestions, saveQuestions } from "../api/client";
+import { getLatestSnapshot, getObservations, getQuestions, listBrands, resetQuestions, saveQuestions } from "../api/client";
+import { useAsync } from "../api/useAsync";
 import type { QuestionInput, QuestionSet, QuestionSource } from "../api/types";
 import { useIntentLabel } from "../format";
 import { T, useFormat, useT } from "../i18n";
@@ -56,10 +57,42 @@ function namesBrand(r: Row): boolean | null {
   return r.serverText !== null && r.text === r.serverText ? r.names_brand : null;
 }
 
+type Hit = { named: number; total: number };
+
+/** Per question text: how many responses in the latest analysis named the brand. */
+async function loadHits(brandKey: string): Promise<Map<string, Hit>> {
+  const snap = await getLatestSnapshot(brandKey);
+  const { observations } = await getObservations(brandKey, snap.run_id);
+  const hits = new Map<string, Hit>();
+  for (const o of observations) {
+    const h = hits.get(o.query_text) ?? { named: 0, total: 0 };
+    h.total += 1;
+    if ((o.mentions ?? []).some((m) => m.entity_kind === "self")) h.named += 1;
+    hits.set(o.query_text, h);
+  }
+  return hits;
+}
+
 const errMessage = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
 type Notice = "savedCustom" | "savedDefault" | "resetDone";
 type ErrorState = { kind: "duplicate" } | { kind: "save" | "reset"; message: string };
+
+/** "2/6" plus a thin bar: responses naming the brand for this question in the last analysis. */
+function HitBar({ hit }: { hit: Hit | undefined }) {
+  const t = useT();
+  if (!hit || hit.total === 0) return <span className="q-hit q-hit-none">—</span>;
+  return (
+    <span className="q-hit" title={t("pages.q.hitTitle", { m: hit.named, n: hit.total })}>
+      <span className="q-hit-bar" aria-hidden="true">
+        <i style={{ width: `${(hit.named / hit.total) * 100}%` }} />
+      </span>
+      <span className="q-hit-num">
+        {hit.named}/{hit.total}
+      </span>
+    </span>
+  );
+}
 
 export function QuestionsPage() {
   const t = useT();
@@ -75,6 +108,9 @@ export function QuestionsPage() {
   const [busy, setBusy] = useState<"save" | "reset" | null>(null);
   const [newText, setNewText] = useState("");
   const [newIntent, setNewIntent] = useState("custom");
+  // Results of the last analysis per question; absent (no analysis yet) just hides the bars.
+  const hitsState = useAsync(() => loadHits(brandKey), [brandKey]);
+  const hits = hitsState.status === "ready" ? hitsState.data : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -127,6 +163,7 @@ export function QuestionsPage() {
   const unscored = enabled.filter((r) => namesBrand(r) === true).length;
   const unchecked = enabled.filter((r) => namesBrand(r) === null).length;
   const scored = enabled.length - unscored - unchecked;
+  const paused = rows.filter((r) => !r.enabled);
 
   function update(key: string, patch: Partial<Row>) {
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
@@ -187,6 +224,53 @@ export function QuestionsPage() {
     }
   }
 
+  // One question row. Rows that name the brand are dimmed with a hollow marker instead of a badge
+  // (the page header explains once why they aren't counted).
+  const renderRow = (r: Row) => {
+    const nb = namesBrand(r);
+    return (
+      <li key={r.key} className={`q-row${r.enabled ? "" : " is-off"}${nb === true ? " names-brand" : ""}`}>
+        <label className="switch" title={r.enabled ? t("pages.q.askedTitle") : t("pages.q.notAskedTitle")}>
+          <input
+            type="checkbox"
+            checked={r.enabled}
+            onChange={(e) => update(r.key, { enabled: e.target.checked })}
+            aria-label={t("pages.q.toggleLabel", { text: r.text })}
+          />
+          <span className="switch-track" aria-hidden="true" />
+        </label>
+        <div className="q-text">
+          {r.source === "custom" ? (
+            <input
+              className="q-edit"
+              value={r.text}
+              maxLength={200}
+              onChange={(e) => update(r.key, { text: e.target.value })}
+              aria-label={t("pages.q.textLabel")}
+            />
+          ) : (
+            <span>{r.text}</span>
+          )}
+          <span className="q-badges">
+            {nb === null && <span className="badge badge-muted">{t("pages.q.badgeUnsaved")}</span>}
+            {r.source === "custom" && <span className="badge">{t("pages.q.badgeYours")}</span>}
+          </span>
+        </div>
+        <HitBar hit={nb === false && hits ? hits.get(r.text) : undefined} />
+        {r.source === "custom" && (
+          <button
+            type="button"
+            className="btn btn-link q-delete"
+            onClick={() => remove(r.key)}
+            aria-label={t("pages.q.deleteLabel", { text: r.text })}
+          >
+            {t("common.delete")}
+          </button>
+        )}
+      </li>
+    );
+  };
+
   const dashboardHref = `/brands/${encodeURIComponent(brandKey)}`;
   const n = (x: number) => fmt.number(x);
 
@@ -201,7 +285,7 @@ export function QuestionsPage() {
         <div>
           <h1>{t("pages.q.title")}</h1>
           <p className="lede">{t("pages.q.lede")}</p>
-          <p className="lede pg-lede-2">{t("pages.q.namedNote")}</p>
+          <p className="lede pg-lede-2 q-named-note">{t("pages.q.namedNote")}</p>
         </div>
       </div>
 
@@ -254,7 +338,7 @@ export function QuestionsPage() {
 
           <div className="alert alert-info small">{t("pages.q.baseline")}</div>
 
-          {groups.map(([intent, list]) => (
+          {groups.filter(([, list]) => list.some((r) => r.enabled)).map(([intent, list]) => (
             <section key={intent} className="q-group">
               <h2>
                 {intentLabel(intent)}{" "}
@@ -267,54 +351,20 @@ export function QuestionsPage() {
               </h2>
               <div className="card card-flush">
                 <ul className="q-list">
-                  {list.map((r) => {
-                    const nb = namesBrand(r);
-                    return (
-                      <li key={r.key} className={`q-row${r.enabled ? "" : " is-off"}`}>
-                        <label className="switch" title={r.enabled ? t("pages.q.askedTitle") : t("pages.q.notAskedTitle")}>
-                          <input
-                            type="checkbox"
-                            checked={r.enabled}
-                            onChange={(e) => update(r.key, { enabled: e.target.checked })}
-                            aria-label={t("pages.q.toggleLabel", { text: r.text })}
-                          />
-                          <span className="switch-track" aria-hidden="true" />
-                        </label>
-                        <div className="q-text">
-                          {r.source === "custom" ? (
-                            <input
-                              className="q-edit"
-                              value={r.text}
-                              maxLength={200}
-                              onChange={(e) => update(r.key, { text: e.target.value })}
-                              aria-label={t("pages.q.textLabel")}
-                            />
-                          ) : (
-                            <span>{r.text}</span>
-                          )}
-                          <span className="q-badges">
-                            {nb === true && <span className="badge badge-job-partial">{t("pages.q.badgeNamed")}</span>}
-                            {nb === null && <span className="badge badge-muted">{t("pages.q.badgeUnsaved")}</span>}
-                            {r.source === "custom" && <span className="badge">{t("pages.q.badgeYours")}</span>}
-                          </span>
-                        </div>
-                        {r.source === "custom" && (
-                          <button
-                            type="button"
-                            className="btn btn-link q-delete"
-                            onClick={() => remove(r.key)}
-                            aria-label={t("pages.q.deleteLabel", { text: r.text })}
-                          >
-                            {t("common.delete")}
-                          </button>
-                        )}
-                      </li>
-                    );
-                  })}
+                  {list.filter((r) => r.enabled).map(renderRow)}
                 </ul>
               </div>
             </section>
           ))}
+
+          {paused.length > 0 && (
+            <details className="q-paused">
+              <summary>{t("pages.q.pausedTitle", { n: fmt.number(paused.length) })}</summary>
+              <div className="card card-flush">
+                <ul className="q-list">{paused.map(renderRow)}</ul>
+              </div>
+            </details>
+          )}
 
           <section>
             <h2 id="q-add-title">{t("pages.q.addTitle")}</h2>

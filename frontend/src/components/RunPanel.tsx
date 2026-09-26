@@ -6,6 +6,7 @@ import { useFormat, useT } from "../i18n";
 import type { MessageKey } from "../i18n";
 import { Details } from "../settings/details";
 import { useListFormat, useProviderLabel } from "./dashboard/helpers";
+import { runCalls } from "./runMath";
 
 const TERMINAL = new Set<JobStatus>(["completed", "partial", "failed", "cancelled"]);
 const SKIPPABLE = new Set(["queued", "running", "waiting"]);
@@ -19,10 +20,6 @@ const DEPTHS: { samples: number; label: MessageKey }[] = [
   { samples: 5, label: "dashboard.run.depth.thorough" },
 ];
 
-/** API calls for one analysis: every question × samples × AIs (a simulated run counts as one source). */
-export function runCalls(questions: number, samples: number, ais: number): number {
-  return questions * samples * Math.max(1, ais);
-}
 
 const DONE_KEY: Partial<Record<JobStatus, MessageKey>> = {
   completed: "dashboard.run.done.completed",

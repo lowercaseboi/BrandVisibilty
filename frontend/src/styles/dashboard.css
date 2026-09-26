@@ -134,6 +134,56 @@
   color: var(--ok);
 }
 
+/* Mention rate vs competitors: faint ticks for competitors, an accent bar for you. */
+.peer-strip {
+  margin-top: var(--space-4);
+}
+
+.peer-strip .eyebrow {
+  margin-bottom: 8px;
+}
+
+.peer-axis {
+  position: relative;
+  max-width: 520px;
+  height: 16px;
+}
+
+.peer-track {
+  position: absolute;
+  inset: 7px 0 auto;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--surface-3);
+}
+
+.peer-tick {
+  position: absolute;
+  top: 2px;
+  width: 2px;
+  height: 12px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--chart-other);
+  opacity: 0.8;
+}
+
+.peer-you {
+  top: 0;
+  width: 4px;
+  height: 16px;
+  margin-left: -2px;
+  background: var(--accent);
+  opacity: 1;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.peer-legend {
+  margin: 6px 0 0;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+
 .score-hero-metrics {
   margin-top: var(--space-5);
   padding-top: var(--space-4);
@@ -293,6 +343,40 @@
 .next-title {
   font-size: 15.5px;
   line-height: 1.4;
+}
+
+/* Checklist: a tick per card and an overall "n of m completed" bar. */
+.next-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-3);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+
+.next-progress .progress {
+  flex: 0 1 220px;
+}
+
+.next-done {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.next-card.is-done {
+  opacity: 0.6;
+}
+
+.next-card.is-done .next-title {
+  text-decoration: line-through;
+  text-decoration-color: var(--muted);
 }
 
 /* Effort and impact as a small spec table instead of coloured pills. */
@@ -480,7 +564,7 @@
    A real answer
    ========================================================= */
 
-.sample-card {
+.answer-card {
   margin: 0;
 }
 
@@ -858,4 +942,32 @@
 
 .rec-action {
   font-size: 11px;
+}
+
+.trend-one .trend-svg {
+  display: block;
+  max-width: 420px;
+}
+
+/* Sample response as a recorded artefact: source strip on top, accent rule down the response. */
+.answer-source {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin: calc(-1 * var(--space-1)) 0 var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px dashed var(--border);
+}
+
+.answer-model,
+.answer-run {
+  font-size: var(--fs-xs);
+  background: none;
+  padding: 0;
+  color: var(--muted);
+}
+
+.answer-card .sample-answer {
+  border-left: 2px solid var(--accent);
 }

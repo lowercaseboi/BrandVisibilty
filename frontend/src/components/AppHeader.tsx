@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { getT, LANGS, useLang, useT } from "../i18n";
-import { DetailsToggle } from "../settings/details";
+import { DetailsToggle, useDetails } from "../settings/details";
 import { useTheme } from "../settings/theme";
 import { toast } from "./Toaster";
 
@@ -133,8 +133,9 @@ function useScrolled(): boolean {
 export function AppHeader() {
   const t = useT();
   const scrolled = useScrolled();
+  const { showDetails } = useDetails();
   return (
-    <header className={`app-header${scrolled ? " is-scrolled" : ""}`}>
+    <header className={`app-header${scrolled ? " is-scrolled" : ""}${showDetails ? " is-analyst" : ""}`}>
       <div className="app-header-inner">
         <Link to="/" className="brand-mark" aria-label={t("common.app.home")}>
           <Logo />
@@ -144,6 +145,8 @@ export function AppHeader() {
           </span>
         </Link>
         <div className="header-tools">
+          {/* Numbers view is a distinct mode: say so while it's on. */}
+          {showDetails && <span className="analyst-tag eyebrow">{t("common.details.analyst")}</span>}
           <ThemeButton />
           <LanguageToggle />
           <DetailsToggle variant="header" />

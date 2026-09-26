@@ -5,13 +5,13 @@ This file covers the Hindi UI strings in `src/i18n/hi/common.ts`, `hi/dashboard.
 **Register: professional business Hindi.** The tone matches the English copy — an analytics
 product report — and reads like a well-made Indian banking or analytics app. It always uses "आप",
 avoids chatty phrasing, and keeps established business loanwords where Indian professionals use
-them (स्कोर, क्वेरी, विज़िबिलिटी, कॉन्फ़िडेंस, बेंचमार्क) rather than coining Sanskritised terms.
+them (स्कोर, विज़िबिलिटी, कॉन्फ़िडेंस, बेंचमार्क) rather than coining Sanskritised terms.
 Buttons are short imperatives ("विश्लेषण चलाएँ", "सेव करें"). Numbers stay in Western digits.
 
 Kept in Latin script: AI, Google, Google Business Profile, Justdial, IndiaMART, Zomato, Amazon,
 Instagram, WhatsApp (Business), YouTube (Shorts), Reels, Quora, Reddit, Facebook, ChatGPT, Gemini,
 Groq, QR, ID, API key, the metric names Coverage / Prominence / Share of voice, the depth options
-Quick / Standard / Thorough (they must match `hero.rangeWide`), and all brand names, query texts
+Quick / Standard / Thorough (they must match `hero.rangeWide`), and all brand names, question texts
 and AI responses.
 
 ## Core terms
@@ -19,8 +19,8 @@ and AI responses.
 | English | Hindi | Notes |
 |---|---|---|
 | AI assistant | AI असिस्टेंट | |
-| query (customer question) | क्वेरी (same form in the plural) | "सवाल" read as casual; "प्रश्न" as exam-like |
-| query set | क्वेरी सेट | |
+| question (customer question) | प्रश्न (replaces क्वेरी, to match the /questions URL and API) | "सवाल" reads casual |
+| question set | प्रश्न सेट | |
 | response (AI answer) | जवाब | "उत्तर" is also correct; जवाब reads more naturally in UI |
 | analysis (one run) | विश्लेषण | Run analysis = "विश्लेषण चलाएँ" |
 | run (technical) | रन | Run ID = "रन ID" |
@@ -51,6 +51,6 @@ and AI responses.
 ## Notes
 
 - The `intent.*` examples in `dashboard.ts` (“best … near me”) stay in English: they quote the
-  English query templates the app actually runs.
+  English question templates the app actually runs.
 - Form placeholders for fields that feed those templates (category, audience, customer needs) stay
   in English for the same reason.

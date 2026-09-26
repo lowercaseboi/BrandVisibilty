@@ -1,12 +1,47 @@
 import type { Snapshot } from "../../api/types";
 import { RATING_KEY, ratingFromRange, scoreRange } from "../../format";
-import { T, useT } from "../../i18n";
+import { T, useFormat, useT } from "../../i18n";
 import { Details } from "../../settings/details";
 import { MetricStrip } from "../MetricStrip";
-import { toScore } from "./helpers";
+import { humanizeId, toScore } from "./helpers";
 
 // A wide range means the score could move a lot by chance; suggest asking more times.
 const WIDE_RANGE = 0.25;
+
+/**
+ * Mention rate (share of responses naming each brand) for you and every competitor, on one
+ * 0–100% axis. Deliberately NOT the composite score: competitors only have mention counts, and
+ * mixing the two metrics on one axis would mislead.
+ */
+function PeerStrip({ snapshot }: { snapshot: Snapshot }) {
+  const t = useT();
+  const fmt = useFormat();
+  const summary = snapshot.mention_summary;
+  const total = summary?.total_answers ?? 0;
+  if (!summary?.entities || total <= 0 || !summary.entities.self) return null;
+  const rate = (id: string) => (summary.entities[id]?.answers_mentioning ?? 0) / total;
+  const others = Object.keys(summary.entities)
+    .filter((id) => id !== "self")
+    .map((id) => ({ id, name: snapshot.entities?.[id] ?? humanizeId(id), rate: rate(id) }));
+  if (others.length === 0) return null;
+  const you = rate("self");
+  const ahead = others.filter((o) => o.rate > you).length;
+  const pct = (x: number) => fmt.percent(x);
+  const vars = { you: pct(you), ahead, n: others.length };
+  return (
+    <div className="peer-strip">
+      <p className="eyebrow">{t("dashboard.hero.peers")}</p>
+      <div className="peer-axis" role="img" aria-label={t("dashboard.hero.peersLegend", vars)}>
+        <div className="peer-track" />
+        {others.map((o) => (
+          <span key={o.id} className="peer-tick" style={{ left: `${o.rate * 100}%` }} title={`${o.name} · ${pct(o.rate)}`} />
+        ))}
+        <span className="peer-tick peer-you" style={{ left: `${you * 100}%` }} title={pct(you)} />
+      </div>
+      <p className="peer-legend">{t("dashboard.hero.peersLegend", vars)}</p>
+    </div>
+  );
+}
 
 /** "How visible is your brand?" — the 0–100 score, a rating word, plain counts and the honest range. */
 export function ScoreHero({ snapshot, previous }: { snapshot: Snapshot; previous: Snapshot | null }) {
@@ -96,6 +131,7 @@ export function ScoreHero({ snapshot, previous }: { snapshot: Snapshot; previous
                 100
               </span>
             </div>
+            <PeerStrip snapshot={snapshot} />
             {wide && (
               <p className="score-range-hint">
                 <T k={samples >= 5 ? "dashboard.hero.rangeWideMax" : "dashboard.hero.rangeWide"} />

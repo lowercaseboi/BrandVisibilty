@@ -1,7 +1,7 @@
 import type { common as enCommon } from "../en/common";
 
 // Hindi — professional business register ("आप" form), like a well-made Indian banking or analytics app.
-// Keep "AI", "Google" and brand names in Latin script. Common business loanwords (स्कोर, क्वेरी) are fine.
+// Keep "AI", "Google" and brand names in Latin script. Common business loanwords (स्कोर) are fine.
 export const common: Record<keyof typeof enCommon, string> = {
   "app.name": "BrandVisibility",
   "app.tagline": "AI सर्च के लिए विज़िबिलिटी इंटेलिजेंस",
@@ -26,8 +26,9 @@ export const common: Record<keyof typeof enCommon, string> = {
   "details.hint": "घटक स्कोर, कॉन्फ़िडेंस इंटरवल और विश्लेषण तालिकाएँ",
   "details.on": "विस्तृत मेट्रिक्स दिखाए जा रहे हैं",
   "details.off": "विस्तृत मेट्रिक्स छिपाए गए",
+  "details.analyst": "एनालिस्ट व्यू",
 
-  "footer.text": "वास्तविक ग्राहक क्वेरी पर AI असिस्टेंट आपके ब्रांड की कितनी बार सिफ़ारिश करते हैं, इसका मापन।",
+  "footer.text": "वास्तविक ग्राहकों के प्रश्नों पर AI असिस्टेंट आपके ब्रांड की कितनी बार सिफ़ारिश करते हैं, इसका मापन।",
 
   "notFound.title": "पेज नहीं मिला",
   "notFound.body": "अनुरोधित पेज मौजूद नहीं है या स्थानांतरित कर दिया गया है।",
@@ -60,8 +61,8 @@ export const common: Record<keyof typeof enCommon, string> = {
   "unknown": "अज्ञात",
   "none": "कोई नहीं",
 
-  "count.questions_one": "{n} क्वेरी",
-  "count.questions_other": "{n} क्वेरी",
+  "count.questions_one": "{n} प्रश्न",
+  "count.questions_other": "{n} प्रश्न",
   "count.answers_one": "{n} जवाब",
   "count.answers_other": "{n} जवाब",
   "count.ais_one": "{n} AI",

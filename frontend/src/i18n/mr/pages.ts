@@ -2,7 +2,7 @@ import type { pages as enPages } from "../en/pages";
 
 // Marathi strings for the pages namespace — professional written register, "तुम्ही" form.
 // Terms follow src/i18n/GLOSSARY.mr.md.
-// Form placeholders for fields that feed the English query templates (category, audiences, jobs…) stay in English.
+// Form placeholders for fields that feed the English question templates (category, audiences, jobs…) stay in English.
 export const pages: Record<keyof typeof enPages, string> = {
   // ---------------------------------------------------------------- rating words
   "rating.rarely": "कमी दृश्यता",
@@ -15,12 +15,12 @@ export const pages: Record<keyof typeof enPages, string> = {
   "origin.synthetic": "सिम्युलेटेड डेटा",
   "origin.replay": "रीप्ले केलेले प्रतिसाद",
 
-  // ---------------------------------------------------------------- query groups (intents)
+  // ---------------------------------------------------------------- question groups (intents)
   "intent.category_discovery": "कॅटेगरी शोध (“… साठी सर्वोत्तम …”)",
   "intent.problem_first": "समस्या-आधारित (“… कसे करावे”)",
   "intent.alternative_seeking": "पर्याय (“… ला पर्याय”)",
   "intent.attribute_constrained": "वैशिष्ट्य-आधारित (“सर्वात स्वस्त / सर्वात जलद …”)",
-  "intent.local_contextual": "स्थानिक क्वेरी",
+  "intent.local_contextual": "स्थानिक प्रश्न",
   "intent.recommendation_seeking": "शिफारसीच्या विनंत्या",
   "intent.identity": "ब्रँडची ओळख",
   "intent.fit": "योग्यता (“… साठी योग्य आहे का”)",
@@ -28,8 +28,8 @@ export const pages: Record<keyof typeof enPages, string> = {
   "intent.head_to_head": "थेट तुलना",
   "intent.trust": "विश्वास आणि प्रतिष्ठा",
   "intent.sourcing": "रिव्ह्यू आणि स्रोत",
-  "intent.custom": "कस्टम क्वेरी",
-  "intent.other": "इतर क्वेरी",
+  "intent.custom": "कस्टम प्रश्न",
+  "intent.other": "इतर प्रश्न",
 
   // ---------------------------------------------------------------- Home (samples, your brands, try your own)
   "brands.samplesEyebrow": "बेंचमार्क",
@@ -41,17 +41,17 @@ export const pages: Record<keyof typeof enPages, string> = {
   "brands.tryOwnEyebrow": "नवीन विश्लेषण",
   "brands.tryOwn": "तुमच्या ब्रँडचे विश्लेषण करा",
   "brands.tryOwnSub":
-    "ब्रँड आणि त्याच्या बाजारपेठेची माहिती द्या. आम्ही ग्राहक क्वेरींचा संच तयार करून AI असिस्टंट तुमची किती वेळा शिफारस करतात ते मोजतो.",
-  "brands.tracked_one": "{n} ट्रॅक केलेली क्वेरी",
-  "brands.tracked_other": "{n} ट्रॅक केलेल्या क्वेरी",
+    "ब्रँड आणि त्याच्या बाजारपेठेची माहिती द्या. आम्ही ग्राहक प्रश्नांचा संच तयार करून AI असिस्टंट तुमची किती वेळा शिफारस करतात ते मोजतो.",
+  "brands.tracked_one": "{n} ट्रॅक केलेला प्रश्न",
+  "brands.tracked_other": "{n} ट्रॅक केलेले प्रश्न",
   "brands.loading": "ब्रँड लोड होत आहेत…",
   "brands.loadError": "ब्रँड लोड करता आले नाहीत.",
   "brands.scoreLabel": "स्कोर 100 पैकी {score}",
   "brands.checked": "{when} अपडेट केले",
   "brands.noChecks": "अद्याप विश्लेषण झालेले नाही",
   "brands.hasResults": "निकाल उपलब्ध",
-  "brands.thin_one": "फक्त {n} क्वेरी — अचूकता कमी",
-  "brands.thin_other": "फक्त {n} क्वेरी — अचूकता कमी",
+  "brands.thin_one": "फक्त {n} प्रश्न — अचूकता कमी",
+  "brands.thin_other": "फक्त {n} प्रश्न — अचूकता कमी",
 
   // ---------------------------------------------------------------- Add a brand (form)
   "add.optional": "(ऐच्छिक)",
@@ -78,7 +78,7 @@ export const pages: Record<keyof typeof enPages, string> = {
 
   "add.jobs.label": "ग्राहकांच्या गरजा",
   "add.jobs.placeholder": "उदा. buy sweets for Diwali, send gifts to family abroad",
-  "add.jobs.hint": "ग्राहकांना काय साध्य करायचे आहे. प्रत्येकातून “how do I …” क्वेरी तयार होते; इंग्रजीत लिहा.",
+  "add.jobs.hint": "ग्राहकांना काय साध्य करायचे आहे. प्रत्येकातून “how do I …” प्रश्न तयार होतो; इंग्रजीत लिहा.",
 
   "add.aliases.label": "पर्यायी नावे",
   "add.aliases.placeholder": "उदा. Chitale, Chitale Sweets",
@@ -98,58 +98,61 @@ export const pages: Record<keyof typeof enPages, string> = {
   "add.err.server": "ब्रँड तयार करता आला नाही. कारण: {message}",
   "add.err.generic": "ब्रँड तयार करता आला नाही. कृपया पुन्हा प्रयत्न करा.",
 
-  "add.done_one": "**{brand}** तयार केला. विश्लेषणात AI असिस्टंटना **{n}** क्वेरी विचारली जाईल.",
-  "add.done_other": "**{brand}** तयार केला. विश्लेषणात AI असिस्टंटना **{n}** क्वेरी विचारल्या जातील.",
+  "add.done_one": "**{brand}** तयार केला. विश्लेषणात AI असिस्टंटना **{n}** प्रश्न विचारला जाईल.",
+  "add.done_other": "**{brand}** तयार केला. विश्लेषणात AI असिस्टंटना **{n}** प्रश्न विचारले जातील.",
   "add.doneNoCount": "**{brand}** तयार केला.",
-  "add.thin": "लहान क्वेरी संचामुळे अचूकता कमी राहते. तो वाढवण्यासाठी ग्राहकांच्या गरजा किंवा स्पर्धक जोडा.",
+  "add.thin": "लहान प्रश्न संचामुळे अचूकता कमी राहते. तो वाढवण्यासाठी ग्राहकांच्या गरजा किंवा स्पर्धक जोडा.",
   "add.checkNow": "विश्लेषण चालवा",
-  "add.seeQuestions": "क्वेरी पाहा",
+  "add.seeQuestions": "प्रश्न पाहा",
   "add.another": "आणखी एक ब्रँड जोडा",
 
-  // ---------------------------------------------------------------- Queries page
+  // ---------------------------------------------------------------- Questions page
   "q.back": "← {brand}",
   "q.backGeneric": "← अहवालाकडे परत",
-  "q.title": "क्वेरी संच",
+  "q.title": "प्रश्न संच",
   "q.lede":
-    "प्रत्यक्ष ग्राहक AI असिस्टंटला विचारू शकेल अशा क्वेरी. प्रत्येक विश्लेषण सर्व सक्रिय क्वेरी चालवते आणि प्रतिसादात तुमचा ब्रँड आला की नाही याची नोंद करते.",
+    "प्रत्यक्ष ग्राहक AI असिस्टंटला विचारू शकेल असे प्रश्न. प्रत्येक विश्लेषण सर्व सक्रिय प्रश्न चालवते आणि प्रतिसादात तुमचा ब्रँड आला की नाही याची नोंद करते.",
   "q.namedNote":
-    "ज्या क्वेरींमध्ये तुमच्या ब्रँडचे नाव आहे, त्या चालवल्या जातात पण स्कोरमध्ये धरल्या जात नाहीत — क्वेरीत ज्या ब्रँडचे नाव असते, त्याचा उल्लेख AI करतोच.",
-  "q.loading": "क्वेरी लोड होत आहेत…",
-  "q.loadError": "क्वेरी लोड करता आल्या नाहीत.",
+    "जे प्रश्नांमध्ये तुमच्या ब्रँडचे नाव आहे, ते चालवले जातात पण स्कोरमध्ये धरले जात नाहीत — प्रश्नात ज्या ब्रँडचे नाव असते, त्याचा उल्लेख AI करतोच.",
+  "q.loading": "प्रश्न लोड होत आहेत…",
+  "q.loadError": "प्रश्न लोड करता आले नाहीत.",
   "q.asked": "सक्रिय",
-  "q.counted": "स्कोरमध्ये धरलेल्या",
-  "q.notCounted": "स्कोरबाहेर",
-  "q.off": "निष्क्रिय",
+  "q.counted": "गणनेत समाविष्ट",
+  "q.notCounted": "गणनेत समाविष्ट नाही",
+  "q.off": "थांबवलेले",
   "q.unsaved": "बदल सेव्ह झालेले नाहीत",
   "q.customized": "कस्टम संच",
   "q.suggested": "सुचवलेला संच",
-  "q.unchecked_one": "सेव्ह केल्यावर {n} नवीन किंवा संपादित क्वेरीमध्ये तुमच्या ब्रँडचे नाव तपासले जाईल.",
-  "q.unchecked_other": "सेव्ह केल्यावर {n} नवीन किंवा संपादित क्वेरींमध्ये तुमच्या ब्रँडचे नाव तपासले जाईल.",
-  "q.baseline": "क्वेरी संच बदलल्याने नवीन बेसलाइन सुरू होते: नवीन निकाल आधीच्या निकालांशी तुलनीय राहणार नाहीत.",
+  "q.unchecked_one": "सेव्ह केल्यावर {n} नवीन किंवा संपादित प्रश्नामध्ये तुमच्या ब्रँडचे नाव तपासले जाईल.",
+  "q.unchecked_other": "सेव्ह केल्यावर {n} नवीन किंवा संपादित प्रश्नांमध्ये तुमच्या ब्रँडचे नाव तपासले जाईल.",
+  "q.baseline": "प्रश्न संच बदलल्याने नवीन बेसलाइन सुरू होते: नवीन निकाल आधीच्या निकालांशी तुलनीय राहणार नाहीत.",
   "q.groupCount": "{total} पैकी {on} सक्रिय",
-  "q.askedTitle": "प्रत्येक विश्लेषणात चालवल्या जातात",
-  "q.notAskedTitle": "निष्क्रिय",
-  "q.toggleLabel": "ही क्वेरी समाविष्ट करा: {text}",
-  "q.textLabel": "क्वेरी",
-  "q.deleteLabel": "ही क्वेरी हटवा: {text}",
-  "q.badgeNamed": "स्कोरबाहेर — ब्रँडचे नाव आहे",
+  "q.askedTitle": "प्रत्येक विश्लेषणात चालवले जातात",
+  "q.notAskedTitle": "थांबवलेले",
+  "q.toggleLabel": "हा प्रश्न समाविष्ट करा: {text}",
+  "q.textLabel": "प्रश्न",
+  "q.deleteLabel": "हा प्रश्न हटवा: {text}",
   "q.badgeUnsaved": "सेव्ह झालेली नाही",
   "q.badgeYours": "कस्टम",
-  "q.addTitle": "क्वेरी जोडा",
+  // Hover text on the per-question bar: result of the last analysis.
+  "q.hitTitle": "मागील विश्लेषणाच्या {n} प्रतिसादांपैकी {m} मध्ये ब्रँडचे नाव आले",
+  // Collapsed section holding questions that are switched off. {n} = how many.
+  "q.pausedTitle": "थांबवलेले प्रश्न ({n})",
+  "q.addTitle": "प्रश्न जोडा",
   "q.addNote": "ग्राहक लिहील तशी, तुमच्या ब्रँडच्या नावाशिवाय लिहा, म्हणजे ती स्कोरमध्ये धरली जाईल. कोणतीही भाषा चालेल.",
-  "q.newLabel": "नवीन क्वेरी",
+  "q.newLabel": "नवीन प्रश्न",
   "q.newPlaceholder": "उदा. पुण्यात अत्तर घेण्यासाठी सर्वोत्तम ठिकाण",
-  "q.typeLabel": "क्वेरीचा प्रकार",
-  "q.duplicate": "ही क्वेरी संचात आधीपासून आहे.",
-  "q.savedCustom": "सेव्ह केले. पुढील विश्लेषण हाच क्वेरी संच वापरेल.",
+  "q.typeLabel": "प्रश्नाचा प्रकार",
+  "q.duplicate": "हा प्रश्न संचात आधीपासून आहे.",
+  "q.savedCustom": "सेव्ह केले. पुढील विश्लेषण हाच प्रश्न संच वापरेल.",
   "q.savedDefault": "सेव्ह केले. हा सुचवलेल्या संचाशी जुळतो, त्यामुळे निकाल आधीच्या विश्लेषणांशी तुलनीय राहतील.",
-  "q.resetDone": "सुचवलेला क्वेरी संच पुनर्संचयित केला.",
-  "q.resetConfirm": "सुचवलेला क्वेरी संच पुनर्संचयित करायचा? कस्टम क्वेरी आणि बदल काढून टाकले जातील.",
-  "q.saveError": "क्वेरी सेव्ह करता आल्या नाहीत. कारण: {message}",
-  "q.resetError": "क्वेरी रीसेट करता आल्या नाहीत. कारण: {message}",
+  "q.resetDone": "सुचवलेला प्रश्न संच पुनर्संचयित केला.",
+  "q.resetConfirm": "सुचवलेला प्रश्न संच पुनर्संचयित करायचा? कस्टम प्रश्न आणि बदल काढून टाकले जातील.",
+  "q.saveError": "प्रश्न सेव्ह करता आले नाहीत. कारण: {message}",
+  "q.resetError": "प्रश्न रीसेट करता आले नाहीत. कारण: {message}",
   "q.reset": "सुचवलेला संच पुनर्संचयित करा",
   "q.resetting": "पुनर्संचयित होत आहे…",
-  "q.save": "क्वेरी संच सेव्ह करा",
+  "q.save": "प्रश्न संच सेव्ह करा",
 
   // ---------------------------------------------------------------- AI responses (evidence) page
   "answers.back": "← {brand}",
@@ -166,8 +169,8 @@ export const pages: Record<keyof typeof enPages, string> = {
   "answers.legend.discovered": "उल्लेख झालेले इतर ब्रँड",
   "answers.legend.rank": "#1 = प्रतिसादात सर्वप्रथम आलेला ब्रँड",
   "answers.search": "शोधा",
-  "answers.searchPlaceholder": "क्वेरी आणि प्रतिसादांत शोधा…",
-  "answers.type": "क्वेरीचा प्रकार",
+  "answers.searchPlaceholder": "प्रश्न आणि प्रतिसादांत शोधा…",
+  "answers.type": "प्रश्नाचा प्रकार",
   "answers.allTypes": "सर्व प्रकार",
   "answers.ai": "AI असिस्टंट",
   "answers.allAis": "सर्व AI असिस्टंट",
@@ -177,10 +180,10 @@ export const pages: Record<keyof typeof enPages, string> = {
   "answers.loading": "प्रतिसाद लोड होत आहेत…",
   "answers.loadError": "प्रतिसाद लोड करता आले नाहीत.",
   "answers.empty": "या फिल्टरशी जुळणारे प्रतिसाद नाहीत.",
-  "answers.question": "क्वेरी",
+  "answers.question": "प्रश्न",
   "answers.named": "ब्रँडचा उल्लेख आहे",
   "answers.notNamed": "ब्रँडचा उल्लेख नाही",
-  "answers.notCounted": "स्कोरबाहेर (क्वेरीत ब्रँडचे नाव)",
+  "answers.notCounted": "स्कोरबाहेर (प्रश्नात ब्रँडचे नाव)",
   "answers.rank": "#{n}",
   "answers.rankTitle": "{name} — स्थान {n}",
   "answers.markTitle": "{name} ({kind}) — स्थान {n}",
@@ -189,7 +192,7 @@ export const pages: Record<keyof typeof enPages, string> = {
 
   // ---------------------------------------------------------------- Connections (AI assistants)
   "ais.title": "कनेक्शन",
-  "ais.lede": "प्रत्येक विश्लेषणात ज्या AI असिस्टंटना क्वेरी केली जाते.",
+  "ais.lede": "प्रत्येक विश्लेषणात ज्या AI असिस्टंटना प्रश्न विचारला जातो.",
   "ais.loading": "कनेक्शन लोड होत आहेत…",
   "ais.loadError": "कनेक्शन लोड करता आले नाहीत.",
   "ais.connected": "कनेक्टेड",

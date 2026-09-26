@@ -53,8 +53,31 @@ export function TrendChart({
 
   if (snapshots.length === 0) return null;
 
+  // One analysis is a point, not a line: draw that point with its range, plus a note.
   if (snapshots.length === 1) {
-    return <p className="muted trend-single">{t("dashboard.trend.single")}</p>;
+    const a = snapshots[0].analysis_result;
+    const sy = (v: number) => 12 + (1 - v / 100) * 96;
+    const score = toScore(a.composite_score);
+    return (
+      <div className="trend-one">
+        <svg className="trend-svg" viewBox="0 0 320 124" role="img" aria-label={t("dashboard.trend.single")}>
+          {[0, 50, 100].map((v) => (
+            <g key={v}>
+              <line x1={34} x2={310} y1={sy(v)} y2={sy(v)} className="trend-grid" />
+              <text x={26} y={sy(v) + 4} textAnchor="end" className="trend-axis">
+                {v}
+              </text>
+            </g>
+          ))}
+          <line x1={172} x2={172} y1={sy(toScore(a.ci_high))} y2={sy(toScore(a.ci_low))} className="trend-ci-whisker" />
+          <circle cx={172} cy={sy(score)} r={5} className="trend-point trend-point-current" />
+          <text x={184} y={sy(score) + 4} className="trend-value">
+            {score}
+          </text>
+        </svg>
+        <p className="muted trend-single">{t("dashboard.trend.single")}</p>
+      </div>
+    );
   }
 
   const n = snapshots.length;

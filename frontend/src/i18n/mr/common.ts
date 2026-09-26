@@ -26,8 +26,9 @@ export const common: Record<keyof typeof enCommon, string> = {
   "details.hint": "घटक स्कोर, कॉन्फिडन्स इंटरव्हल आणि विश्लेषण तक्ते",
   "details.on": "सविस्तर मेट्रिक्स दाखवले आहेत",
   "details.off": "सविस्तर मेट्रिक्स लपवले आहेत",
+  "details.analyst": "अ‍ॅनालिस्ट व्यू",
 
-  "footer.text": "प्रत्यक्ष ग्राहक क्वेरीवर AI असिस्टंट तुमच्या ब्रँडची किती वेळा शिफारस करतात, याचे मोजमाप.",
+  "footer.text": "प्रत्यक्ष ग्राहकांच्या प्रश्नांवर AI असिस्टंट तुमच्या ब्रँडची किती वेळा शिफारस करतात, याचे मोजमाप.",
 
   "notFound.title": "पान सापडले नाही",
   "notFound.body": "विनंती केलेले पान अस्तित्वात नाही किंवा हलवले गेले आहे.",
@@ -60,8 +61,8 @@ export const common: Record<keyof typeof enCommon, string> = {
   "unknown": "अज्ञात",
   "none": "काहीही नाही",
 
-  "count.questions_one": "{n} क्वेरी",
-  "count.questions_other": "{n} क्वेरी",
+  "count.questions_one": "{n} प्रश्न",
+  "count.questions_other": "{n} प्रश्न",
   "count.answers_one": "{n} प्रतिसाद",
   "count.answers_other": "{n} प्रतिसाद",
   "count.ais_one": "{n} AI",

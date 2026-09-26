@@ -1,6 +1,7 @@
 import { useId, useState } from "react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { Details } from "../../settings/details";
 import { getObservations } from "../../api/client";
 import type { Mention, Observation } from "../../api/types";
 import { useAsync } from "../../api/useAsync";
@@ -104,7 +105,12 @@ export function SampleAnswer({
     <section className="dash-section" aria-labelledby="sample-title">
       <h2 id="sample-title">{t("dashboard.sample.title")}</h2>
       <p className="section-note">{t("dashboard.sample.caption")}</p>
-      <figure className="card sample-card">
+      <figure className="card answer-card">
+        {/* Source strip: which AI and model produced this exact response. */}
+        <div className="answer-source">
+          <span className="badge badge-live">{labelOf(obs.provider_id)}</span>
+          {obs.model_version && <code className="answer-model">{obs.model_version}</code>}
+        </div>
         <p className="sample-label">{t("dashboard.sample.asked")}</p>
         <blockquote className="sample-question">{obs.query_text}</blockquote>
         <p className="sample-label">{t("dashboard.sample.answeredBy", { ai: labelOf(obs.provider_id) })}</p>
@@ -134,6 +140,9 @@ export function SampleAnswer({
                 </mark>
               ))}
           </span>
+          <Details>
+            <code className="answer-run">{runId}</code>
+          </Details>
           <Link to={evidenceHref(brandKey, runId)} className="sample-all">
             {t("dashboard.sample.seeAll")}
           </Link>

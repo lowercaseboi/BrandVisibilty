@@ -16,6 +16,29 @@
     box-shadow var(--dur-slow) var(--ease);
 }
 
+/* Analyst (numbers) view: an accent hairline under the header and a label by the icons. */
+.app-header.is-analyst {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.app-header.is-analyst.is-scrolled {
+  box-shadow:
+    inset 0 -2px 0 var(--accent),
+    0 12px 32px -24px rgb(0 0 0 / 0.35);
+}
+
+.analyst-tag {
+  margin-right: 4px;
+  color: var(--accent-text);
+  animation: fade 0.3s var(--ease);
+}
+
+@media (max-width: 640px) {
+  .analyst-tag {
+    display: none;
+  }
+}
+
 .app-header.is-scrolled {
   background: color-mix(in srgb, var(--bg) 62%, transparent);
   backdrop-filter: var(--blur);
