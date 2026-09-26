@@ -1,6 +1,7 @@
 /* oxlint-disable react/only-export-components -- provider and hook belong together */
 import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useState, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
+import { flushSync } from "react-dom";
 
 export type ThemePref = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
@@ -63,7 +64,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const toggle = useCallback(() => setPref(resolved === "dark" ? "light" : "dark"), [resolved, setPref]);
+  // Cross-fade the whole page between themes where the browser supports view transitions.
+  const toggle = useCallback(() => {
+    const next = resolved === "dark" ? "light" : "dark";
+    const doc = document as Document & { startViewTransition?: (update: () => void) => unknown };
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (doc.startViewTransition && !reduce) doc.startViewTransition(() => flushSync(() => setPref(next)));
+    else setPref(next);
+  }, [resolved, setPref]);
 
   const value = useMemo(() => ({ pref, resolved, setPref, toggle }), [pref, resolved, setPref, toggle]);
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

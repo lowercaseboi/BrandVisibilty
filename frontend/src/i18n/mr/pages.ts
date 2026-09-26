@@ -31,29 +31,20 @@ export const pages: Record<keyof typeof enPages, string> = {
   "intent.custom": "तुमचे स्वतःचे प्रश्न",
   "intent.other": "इतर प्रश्न",
 
-  // ---------------------------------------------------------------- Brands (list page)
-  "brands.title": "ब्रँड",
-  "brands.lede": "ChatGPT आणि Gemini सारखे AI असिस्टंट प्रत्येक ब्रँड किती वेळा सुचवतात.",
-  "brands.searchLabel": "ब्रँड शोधा",
-  "brands.searchPlaceholder": "ब्रँड शोधा…",
+  // ---------------------------------------------------------------- Home (samples, your brands, try your own)
+  "brands.samples": "उदाहरणे",
+  "brands.yours": "तुमचे ब्रँड",
+  "brands.tryOwn": "तुमचा ब्रँड तपासून पाहा",
   "brands.loading": "ब्रँड लोड होत आहेत…",
   "brands.loadError": "ब्रँड लोड करता आले नाहीत.",
-  "brands.noMatch": "“{q}” शी जुळणारा ब्रँड नाही.",
-  "brands.emptyTitle": "अजून एकही ब्रँड नाही",
-  "brands.emptyBody": "खाली ब्रँड जोडा. तुमचे ग्राहक विचारतात ते प्रश्न आम्ही AI असिस्टंटना विचारू आणि तुम्हाला किती वेळा सुचवलं जातं ते दाखवू.",
-  "brands.emptyCta": "ब्रँड जोडा",
   "brands.scoreLabel": "स्कोर: 100 पैकी {score}",
-  "brands.outOf100": "/ 100",
   "brands.checked": "{when} तपासलं",
   "brands.noChecks": "अजून तपासलं नाही — उघडून तपासा",
   "brands.hasResults": "निकाल तयार — उघडून पाहा",
   "brands.thin_one": "फक्त {n} प्रश्न — निकाल अंदाजे येतील",
   "brands.thin_other": "फक्त {n} प्रश्न — निकाल अंदाजे येतील",
-  "brands.pilot": "नमुना ब्रँड",
-  "brands.addTitle": "ब्रँड जोडा",
 
   // ---------------------------------------------------------------- Add a brand (form)
-  "add.intro": "या माहितीवरून आम्ही ग्राहक AI असिस्टंटला विचारतात तसे प्रश्न तयार करतो.",
   "add.optional": "(ऐच्छिक)",
 
   "add.name.label": "ब्रँडचं नाव",
@@ -209,24 +200,4 @@ export const pages: Record<keyof typeof enPages, string> = {
   "ais.offlineReplay": "सेव्ह केलेली उत्तरे: आधी नोंदवलेली खरी AI उत्तरे, पुन्हा वापरलेली.",
   "ais.autoNote":
     "“auto” सगळे जोडलेले लाइव्ह AI वापरतं; एकही जोडलेला नसेल तर सराव डेटा.",
-
-  // ---------------------------------------------------------------- Quick search (command palette)
-  "palette.label": "झटपट शोध",
-  "palette.placeholder": "ब्रँड किंवा पानावर जा…",
-  "palette.empty": "काही सापडलं नाही",
-  "palette.group.brands": "ब्रँड",
-  "palette.group.questions": "प्रश्न",
-  "palette.group.answers": "AI उत्तरे",
-  "palette.group.pages": "पाने",
-  "palette.brandHint": "हा ब्रँड उघडा",
-  "palette.brandHintNew": "अजून तपासलं नाही",
-  "palette.questionsFor": "प्रश्न — {brand}",
-  "palette.questionsHint": "AI ला काय विचारलं जातं ते पाहा किंवा बदला",
-  "palette.answersFor": "AI उत्तरे — {brand}",
-  "palette.answersHint": "AI असिस्टंटनी काय सांगितलं",
-  "palette.brandsHint": "सर्व ब्रँड",
-  "palette.aisHint": "आम्ही कोणत्या AI ला विचारतो",
-  "palette.navigate": "निवडा",
-  "palette.open": "उघडा",
-  "palette.close": "बंद करा",
 };

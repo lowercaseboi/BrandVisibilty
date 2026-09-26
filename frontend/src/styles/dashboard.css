@@ -528,7 +528,7 @@
 
 .trend-break-dot {
   fill: var(--warn);
-  stroke: var(--surface);
+  stroke: var(--surface-solid);
   stroke-width: 2;
 }
 

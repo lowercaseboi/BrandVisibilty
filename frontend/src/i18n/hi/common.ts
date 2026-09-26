@@ -2,17 +2,12 @@ import type { common as enCommon } from "../en/common";
 
 // Hindi — everyday spoken register for brand owners. Keep "AI", "Google" and brand names in Latin script.
 export const common: Record<keyof typeof enCommon, string> = {
-  "app.name": "AI Visibility",
+  "app.name": "BrandVisibility",
   "app.tagline": "देखिए, AI असिस्टेंट आपके ब्रांड का नाम सुझाते हैं या नहीं",
-  "app.home": "AI Visibility – मुख्य पेज",
+  "app.home": "BrandVisibility – मुख्य पेज",
   "app.skipToContent": "सीधे मुख्य हिस्से पर जाएँ",
 
-  "nav.label": "मुख्य मेनू",
-  "nav.brands": "ब्रांड",
   "nav.providers": "कनेक्शन",
-
-  "search.button": "खोजें",
-  "search.label": "ब्रांड और पेज खोजें (Ctrl K)",
 
   "lang.label": "भाषा",
   "lang.button": "भाषा बदलें (अभी: {lang})",

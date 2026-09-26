@@ -29,29 +29,20 @@ export const pages: Record<keyof typeof enPages, string> = {
   "intent.custom": "आपके अपने सवाल",
   "intent.other": "दूसरे सवाल",
 
-  // ---------------------------------------------------------------- Brands (list page)
-  "brands.title": "ब्रांड",
-  "brands.lede": "ChatGPT और Gemini जैसे AI असिस्टेंट हर ब्रांड को कितनी बार सुझाते हैं।",
-  "brands.searchLabel": "ब्रांड खोजें",
-  "brands.searchPlaceholder": "ब्रांड खोजें…",
+  // ---------------------------------------------------------------- Home (samples, your brands, try your own)
+  "brands.samples": "उदाहरण",
+  "brands.yours": "आपके ब्रांड",
+  "brands.tryOwn": "अपना ब्रांड आज़माएँ",
   "brands.loading": "ब्रांड लोड हो रहे हैं…",
   "brands.loadError": "ब्रांड लोड नहीं हो पाए।",
-  "brands.noMatch": "“{q}” से कोई ब्रांड नहीं मिला।",
-  "brands.emptyTitle": "अभी कोई ब्रांड नहीं",
-  "brands.emptyBody": "नीचे एक ब्रांड जोड़ें। हम AI असिस्टेंट से वही पूछेंगे जो आपके ग्राहक पूछते हैं, और दिखाएँगे कि आपको कितनी बार सुझाया जाता है।",
-  "brands.emptyCta": "ब्रांड जोड़ें",
   "brands.scoreLabel": "स्कोर 100 में से {score}",
-  "brands.outOf100": "/ 100",
   "brands.checked": "{when} जाँचा गया",
   "brands.noChecks": "अभी जाँच नहीं हुई — जाँचने के लिए खोलें",
   "brands.hasResults": "नतीजे तैयार — देखने के लिए खोलें",
   "brands.thin_one": "सिर्फ़ {n} सवाल — नतीजे मोटा अंदाज़ा होंगे",
   "brands.thin_other": "सिर्फ़ {n} सवाल — नतीजे मोटा अंदाज़ा होंगे",
-  "brands.pilot": "नमूना ब्रांड",
-  "brands.addTitle": "ब्रांड जोड़ें",
   // ---------------------------------------------------------------- Add a brand (form)
   // The app writes its questions in English, so examples in the boxes stay in English letters.
-  "add.intro": "इस जानकारी से हम वे सवाल बनाते हैं जो ग्राहक AI असिस्टेंट से पूछते हैं।",
   "add.optional": "(ज़रूरी नहीं)",
 
   "add.name.label": "ब्रांड का नाम",
@@ -198,24 +189,4 @@ export const pages: Record<keyof typeof enPages, string> = {
   "ais.offlineSynthetic": "डेमो डेटा: ऐप आज़माने के लिए बनाए गए नकली जवाब। असली जाँच नहीं।",
   "ais.offlineReplay": "सेव किए हुए जवाब: पहले रिकॉर्ड किए गए असली AI जवाब, फिर से इस्तेमाल।",
   "ais.autoNote": "“auto” हर जुड़े हुए लाइव AI का इस्तेमाल करता है, या कोई न जुड़ा हो तो डेमो डेटा।",
-
-  // ---------------------------------------------------------------- Quick search (command palette)
-  "palette.label": "जल्दी खोजें",
-  "palette.placeholder": "किसी ब्रांड या पेज पर जाएँ…",
-  "palette.empty": "कुछ नहीं मिला",
-  "palette.group.brands": "ब्रांड",
-  "palette.group.questions": "सवाल",
-  "palette.group.answers": "AI जवाब",
-  "palette.group.pages": "पेज",
-  "palette.brandHint": "यह ब्रांड खोलें",
-  "palette.brandHintNew": "अभी जाँच नहीं हुई",
-  "palette.questionsFor": "{brand} के सवाल",
-  "palette.questionsHint": "AI से क्या पूछा जाता है, देखें या बदलें",
-  "palette.answersFor": "{brand} के AI जवाब",
-  "palette.answersHint": "AI असिस्टेंट ने क्या कहा",
-  "palette.brandsHint": "सभी ब्रांड",
-  "palette.aisHint": "हम किन AI असिस्टेंट से पूछते हैं",
-  "palette.navigate": "ऊपर-नीचे",
-  "palette.open": "खोलें",
-  "palette.close": "बंद करें",
 };

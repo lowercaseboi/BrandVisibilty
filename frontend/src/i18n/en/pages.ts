@@ -42,36 +42,24 @@ export const pages = {
   "intent.custom": "Your own questions",
   "intent.other": "Other questions",
 
-  // ---------------------------------------------------------------- Brands (list page)
-  "brands.title": "Brands",
-  "brands.lede": "How often AI assistants like ChatGPT and Gemini recommend each brand.",
-  "brands.searchLabel": "Search brands",
-  "brands.searchPlaceholder": "Search brands…",
+  // ---------------------------------------------------------------- Home (samples, your brands, try your own)
+  "brands.samples": "Samples",
+  "brands.yours": "Your brands",
+  "brands.tryOwn": "Try your own",
   "brands.loading": "Loading brands…",
   "brands.loadError": "We couldn't load the brands.",
-  "brands.noMatch": "No brand matches “{q}”.",
-  "brands.emptyTitle": "No brands yet",
-  "brands.emptyBody":
-    "Add a brand below. We'll ask AI assistants what your customers ask and show how often you're recommended.",
-  "brands.emptyCta": "Add a brand",
   // Accessible name for the whole score, e.g. "Score 42 out of 100".
   "brands.scoreLabel": "Score {score} out of 100",
-  // Small text after the big score number.
-  "brands.outOf100": "/ 100",
   // {when} is a relative time like "2 days ago".
   "brands.checked": "Checked {when}",
   "brands.noChecks": "Not checked yet — open to check",
   "brands.hasResults": "Has results — open to see them",
   "brands.thin_one": "Only {n} question — results will be rough",
   "brands.thin_other": "Only {n} questions — results will be rough",
-  // Shown only in "numbers" mode: one of the three sample brands that came with the app.
-  "brands.pilot": "Sample brand",
-  "brands.addTitle": "Add a brand",
 
   // ---------------------------------------------------------------- Add a brand (form)
   // Labels are short nouns. Placeholders for category, audience and customer needs stay in
   // English: the app builds English questions from them.
-  "add.intro": "We use these details to write the questions customers ask AI assistants.",
   "add.optional": "(optional)",
 
   "add.name.label": "Brand name",
@@ -239,24 +227,4 @@ export const pages = {
   "ais.offlineReplay": "Saved answers: real AI answers recorded earlier, used again.",
   "ais.autoNote":
     "“auto” uses every connected live AI, or practice data when none is connected.",
-
-  // ---------------------------------------------------------------- Quick search (command palette)
-  "palette.label": "Quick search",
-  "palette.placeholder": "Go to a brand or page…",
-  "palette.empty": "Nothing found",
-  "palette.group.brands": "Brands",
-  "palette.group.questions": "Questions",
-  "palette.group.answers": "AI answers",
-  "palette.group.pages": "Pages",
-  "palette.brandHint": "Open this brand",
-  "palette.brandHintNew": "Not checked yet",
-  "palette.questionsFor": "Questions for {brand}",
-  "palette.questionsHint": "See or change what the AI is asked",
-  "palette.answersFor": "AI answers for {brand}",
-  "palette.answersHint": "What the AI assistants said",
-  "palette.brandsHint": "All brands",
-  "palette.aisHint": "Which AI assistants we ask",
-  "palette.navigate": "move",
-  "palette.open": "open",
-  "palette.close": "close",
 } as const;

@@ -13,8 +13,7 @@
 /* Translated labels can be long: let buttons wrap instead of overflowing on phones. */
 .pg-actions .btn,
 .q-actions .btn,
-.pg-empty .btn,
-.pg-form .form-actions .btn {
+.try-bottom .btn {
   white-space: normal;
   text-align: center;
 }
@@ -38,33 +37,200 @@
   font-size: var(--fs-sm);
 }
 
-/* ---------- Brands ---------- */
+/* ---------- Home: Samples / Your brands / Try your own ---------- */
 
-.brand-card h3 {
+.home-section + .home-section {
+  margin-top: 40px;
+}
+
+.home-label {
+  margin: 0 0 14px;
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--muted);
+}
+
+.sample-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr));
+  gap: 20px;
+}
+
+/* Tall glass card: name, score ring, rating. A warm glow in the corner brightens on hover. */
+.sample-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 300px;
+  padding: 22px;
+  border-radius: var(--radius-lg);
+}
+
+.sample-card::before {
+  content: "";
+  position: absolute;
+  inset: auto -30% -45% auto;
+  z-index: -1;
+  width: 80%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--glow-1), transparent);
+  opacity: 0.55;
+  transition:
+    opacity var(--dur-slow) var(--ease),
+    transform var(--dur-slow) var(--ease);
+}
+
+.sample-card:hover::before {
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+.sample-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.sample-card h3 {
+  font-size: 17px;
+  font-weight: 700;
   overflow-wrap: anywhere;
 }
 
-.pg-score {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 2px var(--space-2);
+.sample-card-go {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: var(--muted);
+  background: var(--surface-3);
+  transition:
+    transform 0.3s var(--ease),
+    background 0.3s var(--ease),
+    color 0.3s var(--ease);
 }
 
-.pg-score-value {
-  font-family: var(--mono);
+.sample-card:hover .sample-card-go {
+  color: var(--on-accent);
+  background: var(--accent-grad);
+  transform: translateX(3px);
+}
+
+/* Ring sits right under the name and the footer drops to the bottom, so rings line up across cards. */
+.sample-card-ring {
+  display: grid;
+  place-items: center;
+  padding: var(--space-3) 0;
+}
+
+.sample-card-foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.sample-card.is-skeleton {
+  min-height: 300px;
+  background:
+    linear-gradient(100deg, transparent 30%, var(--glass-highlight) 50%, transparent 70%) 0 0 / 250% 100%,
+    var(--surface);
+  animation: shimmer 1.4s linear infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 125% 0, 0 0;
+  }
+  to {
+    background-position: -125% 0, 0 0;
+  }
+}
+
+/* Score ring: the fill sweeps in from zero; its colour follows the rating band. */
+.score-ring {
+  position: relative;
+  width: 132px;
+  aspect-ratio: 1;
+  color: var(--muted);
+}
+
+.score-ring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.score-ring circle {
+  fill: none;
+  stroke-width: 9;
+}
+
+.score-ring-track {
+  stroke: var(--surface-3);
+}
+
+.score-ring-fill {
+  stroke: currentColor;
+  stroke-linecap: round;
+  animation: ring-fill 1.1s var(--ease) 0.15s backwards;
+}
+
+@keyframes ring-fill {
+  from {
+    stroke-dasharray: 0 100;
+  }
+}
+
+.score-ring-rarely {
+  color: var(--err);
+}
+
+.score-ring-sometimes {
+  color: var(--warn);
+}
+
+.score-ring-often,
+.score-ring-top {
+  color: var(--ok);
+}
+
+.score-ring-value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  padding-top: 44px;
+  font-family: var(--display);
   font-variant-numeric: tabular-nums;
-  font-size: 30px;
-  font-weight: 500;
-  line-height: 1.1;
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
   color: var(--text-h);
 }
 
-.pg-score-max {
-  font-family: var(--mono);
-  font-size: var(--fs-sm);
+.score-ring-value small {
+  margin-left: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
   color: var(--muted);
-  margin-right: var(--space-1);
+}
+
+.score-ring.is-empty .score-ring-value {
+  color: var(--muted);
 }
 
 .pg-rating {
@@ -118,22 +284,74 @@
   color: var(--warn);
 }
 
-.pg-empty h2 {
-  margin-top: 0;
-}
-
-.pg-empty .btn {
-  margin-top: var(--space-3);
-}
-
 .pg-add-section {
   scroll-margin-top: 80px;
 }
 
-/* ---------- Add a brand ---------- */
+/* ---------- Add a brand ("Try your own") ---------- */
 
-.pg-form .section-note {
-  margin-bottom: var(--space-4);
+.try-card {
+  padding: 26px 28px;
+  border-radius: var(--radius-lg);
+}
+
+.try-card .form-grid {
+  gap: 18px 22px;
+}
+
+.pg-form .field input {
+  width: 100%;
+}
+
+.field-row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: stretch;
+}
+
+.field-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Hints stay out of the way until the field is in use. */
+.pg-form .field-hint {
+  max-height: 0;
+  margin-top: -4px; /* cancels the field gap while hidden */
+  overflow: hidden;
+  opacity: 0;
+  transition:
+    max-height var(--dur-slow) var(--ease),
+    margin-top var(--dur-slow) var(--ease),
+    opacity var(--dur) var(--ease);
+}
+
+.pg-form .field:focus-within .field-hint {
+  max-height: 5em;
+  margin-top: 0;
+  opacity: 1;
+}
+
+/* Bottom row: the last field and the submit button side by side, set apart by a hairline. */
+.try-bottom {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.try-bottom .btn {
+  flex: none;
+  padding-inline: 22px;
+}
+
+@media (max-width: 640px) {
+  .try-card {
+    padding: 20px 18px;
+  }
+
+  .try-bottom .field-row {
+    flex-direction: column;
+  }
 }
 
 .pg-form .field > label {

@@ -1,18 +1,13 @@
 // English strings shared across the app (header, nav, footer, generic words).
-// Keys are flat; they are addressed as `common.<key>`, e.g. t("common.nav.brands").
+// Keys are flat; they are addressed as `common.<key>`, e.g. t("common.nav.providers").
 // Plural pairs use the `_one` / `_other` suffixes and are read with t.n("common.count.questions", n).
 export const common = {
-  "app.name": "AI Visibility",
+  "app.name": "BrandVisibility",
   "app.tagline": "See whether AI assistants recommend your brand",
-  "app.home": "AI Visibility home",
+  "app.home": "BrandVisibility home",
   "app.skipToContent": "Skip to main content",
 
-  "nav.label": "Main",
-  "nav.brands": "Brands",
   "nav.providers": "Connections",
-
-  "search.button": "Search",
-  "search.label": "Search brands and pages (Ctrl K)",
 
   "lang.label": "Language",
   "lang.button": "Change language (now {lang})",

@@ -1,4 +1,4 @@
-/* Reset, typography, page layout, focus rings, reduced motion. */
+/* Reset, typography, page layout, focus rings, motion, reduced motion. */
 
 *,
 *::before,
@@ -17,11 +17,26 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--bg);
+  /* Transparent so the glow below shows; <html> paints --bg. */
+  background: transparent;
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-wrap: break-word;
+}
+
+/* Soft glow behind the whole app: gives the glass surfaces something to frost.
+   Static on purpose — moving it would force every blurred card to re-render. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(42% 38% at 8% 0%, var(--glow-1), transparent 70%),
+    radial-gradient(38% 34% at 96% 6%, var(--glow-2), transparent 70%),
+    radial-gradient(50% 44% at 78% 100%, var(--glow-3), transparent 72%);
 }
 
 #root {
@@ -47,9 +62,10 @@ h2,
 h3,
 h4 {
   color: var(--text-h);
+  font-family: var(--display);
   font-weight: 700;
   line-height: 1.25;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.015em;
   text-wrap: balance;
 }
 
@@ -149,7 +165,6 @@ hr {
 .mono,
 .metric-value,
 .kv-value,
-.brand-card-score-value,
 .trend-value,
 .job-count,
 .count,
@@ -161,7 +176,6 @@ hr {
 .mono,
 .metric-value,
 .kv-value,
-.brand-card-score-value,
 .gap-id,
 .score {
   font-family: var(--mono);
@@ -181,15 +195,16 @@ input,
 select,
 textarea {
   font-size: 14.5px;
-  padding: 7px 10px;
-  border-radius: var(--radius);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border-strong);
-  background: var(--bg);
+  background: var(--field-bg);
   color: var(--text-h);
   min-width: 0;
   transition:
-    border-color var(--dur),
-    box-shadow var(--dur);
+    border-color var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease),
+    background var(--dur) var(--ease);
 }
 
 select {
@@ -204,15 +219,16 @@ textarea {
 input:hover,
 select:hover,
 textarea:hover {
-  border-color: var(--muted);
+  border-color: color-mix(in srgb, var(--muted) 60%, transparent);
 }
 
 input:focus,
 select:focus,
 textarea:focus {
   outline: none;
+  background: var(--surface-solid);
   border-color: var(--focus);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  box-shadow: 0 0 0 4px var(--accent-soft);
 }
 
 input::placeholder,
@@ -281,7 +297,7 @@ textarea:disabled {
 
 .app-footer {
   border-top: 1px solid var(--border);
-  background: var(--surface-2);
+  background: transparent;
   color: var(--muted);
   font-size: var(--fs-sm);
   text-align: center;
@@ -344,6 +360,68 @@ section > .metric-cards {
   .app {
     padding-top: var(--space-4);
   }
+}
+
+/* ---------- motion ---------- */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+}
+
+@keyframes spin-in {
+  from {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.6);
+  }
+}
+
+/* Each route fades up as it opens (App.tsx keys this wrapper on the path). */
+.page-enter {
+  animation: rise var(--dur-slow) var(--ease) backwards;
+}
+
+/* Children arrive one after another. */
+.stagger > * {
+  animation: rise 0.55s var(--ease) backwards;
+}
+
+.stagger > :nth-child(2) {
+  animation-delay: 70ms;
+}
+
+.stagger > :nth-child(3) {
+  animation-delay: 140ms;
+}
+
+.stagger > :nth-child(4) {
+  animation-delay: 210ms;
+}
+
+.stagger > :nth-child(n + 5) {
+  animation-delay: 280ms;
+}
+
+/* Theme switch: a quick cross-fade (theme.tsx uses the View Transitions API where available). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.35s;
+  animation-timing-function: var(--ease);
 }
 
 /* ---------- reduced motion ---------- */

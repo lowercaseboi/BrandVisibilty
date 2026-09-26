@@ -1,6 +1,5 @@
-import { Link, Route, Routes } from "react-router-dom";
+import { Link, Route, Routes, useLocation } from "react-router-dom";
 import { AppHeader } from "./components/AppHeader";
-import { CommandPalette } from "./components/CommandPalette";
 import { useT } from "./i18n";
 import { BrandListPage } from "./pages/BrandListPage";
 import { BrandDashboardPage } from "./pages/BrandDashboardPage";
@@ -23,6 +22,7 @@ function NotFound() {
 
 export default function App() {
   const t = useT();
+  const { pathname } = useLocation();
   return (
     <>
       <a href="#main" className="skip-link">
@@ -30,16 +30,18 @@ export default function App() {
       </a>
       <AppHeader />
       <main className="app" id="main" tabIndex={-1}>
-        <Routes>
-          <Route path="/" element={<BrandListPage />} />
-          <Route path="/providers" element={<ProvidersPage />} />
-          <Route path="/brands/:brandKey" element={<BrandDashboardPage />} />
-          <Route path="/brands/:brandKey/questions" element={<QuestionsPage />} />
-          <Route path="/brands/:brandKey/runs/:runId/evidence" element={<EvidencePage />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        {/* Keyed on the path so each page plays its entrance once. */}
+        <div className="page-enter" key={pathname}>
+          <Routes>
+            <Route path="/" element={<BrandListPage />} />
+            <Route path="/providers" element={<ProvidersPage />} />
+            <Route path="/brands/:brandKey" element={<BrandDashboardPage />} />
+            <Route path="/brands/:brandKey/questions" element={<QuestionsPage />} />
+            <Route path="/brands/:brandKey/runs/:runId/evidence" element={<EvidencePage />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </div>
       </main>
-      <CommandPalette />
       <footer className="app-footer">{t("common.footer.text")}</footer>
     </>
   );

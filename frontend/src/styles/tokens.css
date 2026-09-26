@@ -1,31 +1,53 @@
 /* Design tokens. `:root` is the light theme; `[data-theme="dark"]` is dark;
    `[data-theme="system"]` follows the OS. ThemeProvider (src/settings/theme.tsx)
    and the inline script in index.html set data-theme on <html>.
-   Every text/background pair below was checked for WCAG AA (>= 4.5:1). */
+   Every text/background pair below was checked for WCAG AA (>= 4.5:1).
+
+   Look: frosted-glass surfaces (`--surface` is translucent and paired with `--blur`) over a
+   soft glow painted behind the page (base.css, body::before). Use `--surface-solid` wherever
+   something must be fully opaque (chart strokes, popovers). */
 
 :root {
   color-scheme: light;
 
   /* surfaces */
-  --bg: #ffffff;
-  --surface: #ffffff; /* cards */
-  --surface-2: #f9fafb; /* panels, table heads, subtle fills (gray-50) */
-  --surface-3: #f3f4f6; /* tracks, hover fills (gray-100) */
-  --border: #e5e7eb; /* gray-200 */
-  --border-strong: #d1d5db; /* gray-300, hover borders, inputs */
+  --bg: #f5f4f1; /* warm off-white page */
+  --surface: rgb(255 255 255 / 0.72); /* glass cards */
+  --surface-solid: #ffffff;
+  --surface-2: #f8f7f5; /* panels, table heads, subtle fills */
+  --surface-3: #efeeea; /* tracks, hover fills */
+  --border: rgb(24 20 16 / 0.08);
+  --border-strong: rgb(24 20 16 / 0.17); /* hover borders, inputs */
+  --field-bg: rgb(255 255 255 / 0.75);
+  --popover: #ffffff; /* menus: opaque, since blur can't see past the header */
 
   /* text */
-  --text: #374151; /* body (gray-700) */
-  --text-h: #111827; /* headings, values (gray-900) */
-  --muted: #5f6673; /* secondary text; >= 5:1 on every surface */
+  --text: #374151;
+  --text-h: #111827;
+  --muted: #5f6673; /* >= 5:1 on every surface */
 
-  /* accent (vermillion) — use sparingly: primary buttons, focus, "you" in charts */
+  /* accent (vermillion) — primary buttons, focus, "you" in charts */
   --accent: #d03e15;
   --accent-hover: #b83a12;
   --accent-soft: #fdeee8;
-  --accent-text: #b83a12; /* links, accent text on bg/surfaces */
+  --accent-text: #b83a12;
+  --accent-grad: linear-gradient(135deg, #d9481c 0%, #b3320e 100%); /* white text >= 4.5:1 end to end */
+  --accent-grad-hover: linear-gradient(135deg, #c43d14 0%, #9c2b0b 100%);
   --on-accent: #ffffff;
   --focus: #d03e15;
+
+  /* depth */
+  --glass-highlight: rgb(255 255 255 / 0.85); /* 1px inner top edge on glass */
+  --blur: blur(18px) saturate(170%);
+  --shadow-1: 0 1px 2px rgb(24 20 16 / 0.04), 0 8px 24px -12px rgb(24 20 16 / 0.14);
+  --shadow-2: 0 2px 6px rgb(24 20 16 / 0.05), 0 24px 48px -20px rgb(24 20 16 / 0.28);
+  --shadow-accent: 0 8px 22px -8px rgb(208 62 21 / 0.55);
+  --shadow-pop: 0 18px 44px -14px rgb(24 20 16 / 0.3), 0 2px 6px rgb(24 20 16 / 0.06);
+
+  /* page glow (behind everything) */
+  --glow-1: rgb(255 122 69 / 0.2);
+  --glow-2: rgb(255 196 120 / 0.2);
+  --glow-3: rgb(120 140 255 / 0.12);
 
   /* status */
   --ok: #047857;
@@ -59,10 +81,11 @@
   --chart-other: #9ca3af; /* competitors */
   --chart-line: #111827;
   --chart-band: rgb(208 62 21 / 0.16);
-  --chart-grid: #e5e7eb;
+  --chart-grid: rgb(24 20 16 / 0.08);
 
   /* type */
   --sans: "Source Sans 3", "Noto Sans Devanagari", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: "Manrope", "Noto Sans Devanagari", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Consolas, monospace;
   --fs-xs: 12px;
   --fs-sm: 13.5px;
@@ -82,26 +105,35 @@
   --space-7: 48px;
 
   /* shape */
-  --radius: 8px;
-  --radius-sm: 6px;
+  --radius-lg: 20px; /* big feature cards */
+  --radius: 14px; /* cards */
+  --radius-sm: 10px; /* buttons, inputs, panels */
+  --radius-xs: 6px;
   --radius-pill: 999px;
-  --shadow-pop: 0 10px 30px -10px rgb(17 24 39 / 0.25), 0 2px 6px rgb(17 24 39 / 0.06); /* menus, palette only */
+
+  /* motion */
+  --dur: 0.18s;
+  --dur-slow: 0.45s;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1); /* quick out, soft landing */
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
 
   /* layout */
   --maxw: 1080px;
   --gutter: 20px;
-  --dur: 0.15s;
 }
 
-/* Dark: Hugging Face-style near-black. Keep this block and the one below identical. */
+/* Dark: near-black with a warm glow. Keep this block and the one below identical. */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0b0f19;
-  --surface: #101623;
-  --surface-2: #161e2e;
-  --surface-3: #1f2937;
-  --border: #1f2937;
-  --border-strong: #374151;
+  --bg: #090c13;
+  --surface: rgb(20 26 40 / 0.62);
+  --surface-solid: #121826;
+  --surface-2: #161d2c;
+  --surface-3: #1f2839;
+  --border: rgb(255 255 255 / 0.08);
+  --border-strong: rgb(255 255 255 / 0.17);
+  --field-bg: rgb(9 12 19 / 0.55);
+  --popover: #141a28;
   --text: #d1d5db;
   --text-h: #f9fafb;
   --muted: #9ca3af;
@@ -109,8 +141,17 @@
   --accent-hover: #ff8a63;
   --accent-soft: rgb(255 106 61 / 0.14);
   --accent-text: #ff8a63;
+  --accent-grad: linear-gradient(135deg, #ff8a5c 0%, #ff5a2a 100%);
+  --accent-grad-hover: linear-gradient(135deg, #ffa07a 0%, #ff6a3d 100%);
   --on-accent: #0b0f19;
   --focus: #ff8a63;
+  --glass-highlight: rgb(255 255 255 / 0.06);
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px -14px rgb(0 0 0 / 0.65);
+  --shadow-2: 0 2px 6px rgb(0 0 0 / 0.35), 0 26px 50px -20px rgb(0 0 0 / 0.8);
+  --shadow-accent: 0 10px 26px -10px rgb(255 106 61 / 0.55);
+  --glow-1: rgb(255 106 61 / 0.16);
+  --glow-2: rgb(255 170 90 / 0.07);
+  --glow-3: rgb(110 120 255 / 0.13);
   --ok: #6ee7b7;
   --ok-bg: #052e1f;
   --ok-border: #14532d;
@@ -137,19 +178,22 @@
   --chart-other: #6b7280;
   --chart-line: #f9fafb;
   --chart-band: rgb(255 106 61 / 0.2);
-  --chart-grid: #1f2937;
-  --shadow-pop: 0 16px 40px -12px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.04);
+  --chart-grid: rgb(255 255 255 / 0.08);
+  --shadow-pop: 0 18px 44px -12px rgb(0 0 0 / 0.75), 0 0 0 1px rgb(255 255 255 / 0.05);
 }
 
 @media (prefers-color-scheme: dark) {
   :root[data-theme="system"] {
     color-scheme: dark;
-    --bg: #0b0f19;
-    --surface: #101623;
-    --surface-2: #161e2e;
-    --surface-3: #1f2937;
-    --border: #1f2937;
-    --border-strong: #374151;
+    --bg: #090c13;
+    --surface: rgb(20 26 40 / 0.62);
+    --surface-solid: #121826;
+    --surface-2: #161d2c;
+    --surface-3: #1f2839;
+    --border: rgb(255 255 255 / 0.08);
+    --border-strong: rgb(255 255 255 / 0.17);
+    --field-bg: rgb(9 12 19 / 0.55);
+    --popover: #141a28;
     --text: #d1d5db;
     --text-h: #f9fafb;
     --muted: #9ca3af;
@@ -157,8 +201,17 @@
     --accent-hover: #ff8a63;
     --accent-soft: rgb(255 106 61 / 0.14);
     --accent-text: #ff8a63;
+    --accent-grad: linear-gradient(135deg, #ff8a5c 0%, #ff5a2a 100%);
+    --accent-grad-hover: linear-gradient(135deg, #ffa07a 0%, #ff6a3d 100%);
     --on-accent: #0b0f19;
     --focus: #ff8a63;
+    --glass-highlight: rgb(255 255 255 / 0.06);
+    --shadow-1: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px -14px rgb(0 0 0 / 0.65);
+    --shadow-2: 0 2px 6px rgb(0 0 0 / 0.35), 0 26px 50px -20px rgb(0 0 0 / 0.8);
+    --shadow-accent: 0 10px 26px -10px rgb(255 106 61 / 0.55);
+    --glow-1: rgb(255 106 61 / 0.16);
+    --glow-2: rgb(255 170 90 / 0.07);
+    --glow-3: rgb(110 120 255 / 0.13);
     --ok: #6ee7b7;
     --ok-bg: #052e1f;
     --ok-border: #14532d;
@@ -185,7 +238,7 @@
     --chart-other: #6b7280;
     --chart-line: #f9fafb;
     --chart-band: rgb(255 106 61 / 0.2);
-    --chart-grid: #1f2937;
-    --shadow-pop: 0 16px 40px -12px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.04);
+    --chart-grid: rgb(255 255 255 / 0.08);
+    --shadow-pop: 0 18px 44px -12px rgb(0 0 0 / 0.75), 0 0 0 1px rgb(255 255 255 / 0.05);
   }
 }

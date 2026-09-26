@@ -8,19 +8,16 @@ import { useTheme } from "../settings/theme";
 
 function Logo() {
   return (
-    <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
-      <rect width="32" height="32" rx="8" fill="var(--accent)" />
+    <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <linearGradient id="bv-logo-fill" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#ff7a45" />
+          <stop offset="1" stopColor="#c2360f" />
+        </linearGradient>
+      </defs>
+      <rect width="32" height="32" rx="9" fill="url(#bv-logo-fill)" />
       <path d="M8 22 L13 15 L18 18 L24 9" stroke="#fff" strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
       <circle cx="24" cy="9" r="2.4" fill="#fff" />
-    </svg>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-      <circle cx="11" cy="11" r="7" />
-      <path d="M20 20l-3.5-3.5" />
     </svg>
   );
 }
@@ -51,6 +48,15 @@ function GlobeIcon() {
   );
 }
 
+function GearIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+    </svg>
+  );
+}
+
 const menuItems = (menu: HTMLElement | null) =>
   Array.from(menu?.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]') ?? []);
 
@@ -61,7 +67,9 @@ function ThemeButton() {
   const current = t("common.theme.current", { theme: t(resolved === "dark" ? "common.theme.dark" : "common.theme.light") });
   return (
     <button type="button" className="icon-btn" onClick={toggle} aria-label={action} title={`${current} — ${action}`}>
-      {resolved === "dark" ? <MoonIcon /> : <SunIcon />}
+      <span className="icon-swap" key={resolved}>
+        {resolved === "dark" ? <MoonIcon /> : <SunIcon />}
+      </span>
     </button>
   );
 }
@@ -137,9 +145,6 @@ function LanguageMenu() {
         onKeyDown={onButtonKey}
       >
         <GlobeIcon />
-        <span className="lang-code" lang={current.code}>
-          {current.short}
-        </span>
       </button>
       {open && (
         <ul className="menu" role="menu" aria-label={t("common.lang.label")} ref={menuRef} onKeyDown={onMenuKey}>
@@ -169,38 +174,21 @@ function LanguageMenu() {
 
 export function AppHeader() {
   const t = useT();
+  const connections = t("common.nav.providers");
   return (
     <header className="app-header">
       <div className="app-header-inner">
         <Link to="/" className="brand-mark" aria-label={t("common.app.home")}>
           <Logo />
-          <span>
-            <span className="brand-mark-name">{t("common.app.name")}</span>
-            <span className="brand-mark-sub">{t("common.app.tagline")}</span>
-          </span>
+          <span className="brand-mark-name">{t("common.app.name")}</span>
         </Link>
-        <nav className="app-nav" aria-label={t("common.nav.label")}>
-          <NavLink to="/" end>
-            {t("common.nav.brands")}
-          </NavLink>
-          <NavLink to="/providers">{t("common.nav.providers")}</NavLink>
-        </nav>
         <div className="header-tools">
-          <button
-            type="button"
-            className="palette-trigger"
-            aria-label={t("common.search.label")}
-            aria-keyshortcuts="Control+K"
-            title={t("common.search.label")}
-            onClick={() => window.dispatchEvent(new Event("open-palette"))}
-          >
-            <SearchIcon />
-            <span className="palette-trigger-label">{t("common.search.button")}</span>
-            <kbd>Ctrl K</kbd>
-          </button>
-          <LanguageMenu />
           <ThemeButton />
+          <LanguageMenu />
           <DetailsToggle variant="header" />
+          <NavLink to="/providers" className="icon-btn icon-btn-round" aria-label={connections} title={connections}>
+            <GearIcon />
+          </NavLink>
         </div>
       </div>
     </header>

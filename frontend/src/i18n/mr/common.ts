@@ -3,17 +3,12 @@ import type { common as enCommon } from "../en/common";
 // Marathi — spoken register for brand owners ("तुम्ही" form). Keep "AI", "Google" and brand names in Latin script.
 // Terms follow src/i18n/GLOSSARY.mr.md.
 export const common: Record<keyof typeof enCommon, string> = {
-  "app.name": "AI Visibility",
+  "app.name": "BrandVisibility",
   "app.tagline": "AI असिस्टंट तुमचा ब्रँड सुचवतात का, ते पाहा",
-  "app.home": "AI Visibility – मुख्य पान",
+  "app.home": "BrandVisibility – मुख्य पान",
   "app.skipToContent": "थेट मुख्य भागावर जा",
 
-  "nav.label": "मुख्य मेनू",
-  "nav.brands": "ब्रँड",
   "nav.providers": "कनेक्शन",
-
-  "search.button": "शोधा",
-  "search.label": "ब्रँड आणि पाने शोधा (Ctrl K)",
 
   "lang.label": "भाषा",
   "lang.button": "भाषा बदला (सध्या: {lang})",

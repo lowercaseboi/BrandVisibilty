@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ApiError, createBrand } from "../api/client";
 import type { BrandSummary } from "../api/types";
@@ -17,23 +17,26 @@ type FieldSpec = {
   id: FieldId;
   list: boolean;
   required: boolean;
-  wide?: boolean;
   label: MessageKey;
   placeholder: MessageKey;
   hint: MessageKey;
 };
 
-// Order = order on screen. "Occasions" (use_cases) is left out on purpose: it only
-// feeds brand-named questions, which never count toward the score.
+// Order = order on screen: six in a two-column grid, then "jobs" on the bottom row beside the
+// submit button. "Occasions" (use_cases) is left out on purpose: it only feeds brand-named
+// questions, which never count toward the score.
 const FIELDS: FieldSpec[] = [
   { id: "name", list: false, required: true, label: "pages.add.name.label", placeholder: "pages.add.name.placeholder", hint: "pages.add.name.hint" },
   { id: "category", list: false, required: true, label: "pages.add.category.label", placeholder: "pages.add.category.placeholder", hint: "pages.add.category.hint" },
   { id: "cities", list: true, required: true, label: "pages.add.cities.label", placeholder: "pages.add.cities.placeholder", hint: "pages.add.cities.hint" },
   { id: "competitors", list: true, required: false, label: "pages.add.competitors.label", placeholder: "pages.add.competitors.placeholder", hint: "pages.add.competitors.hint" },
   { id: "audiences", list: true, required: false, label: "pages.add.audiences.label", placeholder: "pages.add.audiences.placeholder", hint: "pages.add.audiences.hint" },
-  { id: "jobs", list: true, required: false, wide: true, label: "pages.add.jobs.label", placeholder: "pages.add.jobs.placeholder", hint: "pages.add.jobs.hint" },
-  { id: "aliases", list: true, required: false, wide: true, label: "pages.add.aliases.label", placeholder: "pages.add.aliases.placeholder", hint: "pages.add.aliases.hint" },
+  { id: "aliases", list: true, required: false, label: "pages.add.aliases.label", placeholder: "pages.add.aliases.placeholder", hint: "pages.add.aliases.hint" },
+  { id: "jobs", list: true, required: false, label: "pages.add.jobs.label", placeholder: "pages.add.jobs.placeholder", hint: "pages.add.jobs.hint" },
 ];
+
+const GRID_FIELDS = FIELDS.filter((f) => f.id !== "jobs");
+const BOTTOM_FIELD = FIELDS.find((f) => f.id === "jobs")!;
 
 type Values = Record<FieldId, string>;
 type FieldError = { key: MessageKey; vars?: Vars };
@@ -190,46 +193,56 @@ export function AddBrandForm({ onCreated }: { onCreated: (brand: BrandSummary) =
 
   const errorCount = submitted ? Object.keys(errors).length : 0;
 
-  return (
-    <form className="card form pg-form" onSubmit={submit} noValidate ref={formRef}>
-      <p className="section-note">{t("pages.add.intro")}</p>
-      <div className="form-grid">
-        {FIELDS.map((f) => {
-          const err = shown(f.id);
-          const inputId = `add-${f.id}`;
-          const hintId = `${inputId}-hint`;
-          const errId = `${inputId}-error`;
-          return (
-            <div key={f.id} className={`field${f.wide ? " form-wide" : ""}`}>
-              <label htmlFor={inputId}>
-                {t(f.label)}
-                {!f.required && <span className="pg-optional"> {t("pages.add.optional")}</span>}
-              </label>
-              <input
-                id={inputId}
-                name={f.id}
-                value={values[f.id]}
-                onChange={onChange(f.id)}
-                onBlur={() => setTouched((tc) => ({ ...tc, [f.id]: true }))}
-                placeholder={t(f.placeholder)}
-                required={f.required}
-                aria-required={f.required}
-                aria-invalid={err ? true : undefined}
-                aria-describedby={err ? `${errId} ${hintId}` : hintId}
-                autoComplete={f.id === "name" ? "organization" : "off"}
-              />
-              <span id={hintId} className="field-hint">
-                {t(f.hint)}
-              </span>
-              {err && (
-                <span id={errId} className="field-error">
-                  {t(err.key, err.vars)}
-                </span>
-              )}
-            </div>
-          );
-        })}
+  // One labelled input with its hint (shown while focused) and error. `after` sits beside the input.
+  const renderField = (f: FieldSpec, className: string, after?: ReactNode) => {
+    const err = shown(f.id);
+    const inputId = `add-${f.id}`;
+    const hintId = `${inputId}-hint`;
+    const errId = `${inputId}-error`;
+    return (
+      <div key={f.id} className={`field ${className}`}>
+        <label htmlFor={inputId}>
+          {t(f.label)}
+          {!f.required && <span className="pg-optional"> {t("pages.add.optional")}</span>}
+        </label>
+        <div className="field-row">
+          <input
+            id={inputId}
+            name={f.id}
+            value={values[f.id]}
+            onChange={onChange(f.id)}
+            onBlur={() => setTouched((tc) => ({ ...tc, [f.id]: true }))}
+            placeholder={t(f.placeholder)}
+            required={f.required}
+            aria-required={f.required}
+            aria-invalid={err ? true : undefined}
+            aria-describedby={err ? `${errId} ${hintId}` : hintId}
+            autoComplete={f.id === "name" ? "organization" : "off"}
+          />
+          {after}
+        </div>
+        <span id={hintId} className="field-hint">
+          {t(f.hint)}
+        </span>
+        {err && (
+          <span id={errId} className="field-error">
+            {t(err.key, err.vars)}
+          </span>
+        )}
       </div>
+    );
+  };
+
+  return (
+    <form className="card form pg-form try-card" onSubmit={submit} noValidate ref={formRef}>
+      <div className="form-grid">{GRID_FIELDS.map((f) => renderField(f, ""))}</div>
+      {renderField(
+        BOTTOM_FIELD,
+        "try-bottom",
+        <button type="submit" className="btn btn-primary" disabled={busy}>
+          {busy ? t("pages.add.submitting") : t("pages.add.submit")}
+        </button>,
+      )}
       {errorCount > 0 && (
         <div className="alert alert-error" role="alert">
           {t("pages.add.fixErrors")}
@@ -240,11 +253,6 @@ export function AddBrandForm({ onCreated }: { onCreated: (brand: BrandSummary) =
           {serverError}
         </div>
       )}
-      <div className="form-actions">
-        <button type="submit" className="btn btn-primary" disabled={busy}>
-          {busy ? t("pages.add.submitting") : t("pages.add.submit")}
-        </button>
-      </div>
     </form>
   );
 }
