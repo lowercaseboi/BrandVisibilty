@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useMemo, useState } from "react
 import type { ReactNode } from "react";
 import { useT } from "../i18n";
 
-// "Show the numbers behind this": off by default, so shop owners get the simple view.
+// "Show the numbers behind this": off by default, so brand owners get the simple view.
 // When on, <Details> blocks render the technical panels (CI, admission, gap IDs, per-AI tables).
 
 type DetailsCtx = { showDetails: boolean; setShowDetails(v: boolean): void };
@@ -55,7 +55,7 @@ function ChartIcon() {
 }
 
 /**
- * The switch itself. `header` is a compact outlined button (icon + "Numbers", icon only on phones);
+ * The switch itself. `header` is a compact icon-only button (the tooltip and accessible name carry the text);
  * `inline` is a full-width-friendly switch with the whole sentence as its label.
  * Both expose role="switch" + aria-checked and the full sentence as the accessible name.
  */
@@ -77,7 +77,6 @@ export function DetailsToggle({ variant = "inline" }: { variant?: "header" | "in
         onClick={onClick}
       >
         <ChartIcon />
-        <span className="icon-btn-label">{t("common.details.short")}</span>
       </button>
     );
   }

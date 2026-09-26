@@ -1,24 +1,36 @@
 # Marathi glossary (मराठी शब्दसूची)
 
-Used by `src/i18n/mr/*.ts`. The reader is a shopkeeper in Mumbai or Pune, so the wording is spoken
-Marathi, not official Marathi. We always use **तुम्ही**. Verbs use the spoken `-ं` endings
-(झालं, घेतलं, दुकानाचं). Plural nouns use `-े` (उत्तरे, दुकाने, पाने). Buttons are short commands
-(आता तपासा, सेव्ह करा).
+Used by `src/i18n/mr/*.ts`. The reader runs a brand of any size — a perfume label, an optician
+chain, a vada pav stall, a D2C brand — mostly in Mumbai or Pune, so the wording is spoken Marathi,
+not official Marathi. We always use **तुम्ही**. Verbs use the spoken `-ं` endings
+(झालं, घेतलं, ब्रँडचं). Plural nouns use `-े` (उत्तरे, ठिकाणे, पाने); `नावं` is the one spoken
+exception, kept because it is what people say. Buttons are short commands (आता तपासा, सेव्ह करा).
+Form labels are short nouns, like the English (ब्रँडचं नाव, कॅटेगरी, स्पर्धक).
 
-Kept in Latin script: AI, Google, Google Maps, Google Business Profile, Justdial, Zomato, Swiggy,
-Instagram, WhatsApp (Business), YouTube (Shorts), Reels, Quora, Reddit, Facebook, ChatGPT, Gemini,
-Groq, QR, ID, API key, and all shop names, question texts and AI answers. Numbers use Western digits.
+Kept in Latin script: AI, Google, Google Business Profile, Justdial, IndiaMART, Zomato, Amazon,
+Instagram, WhatsApp (Business), YouTube (Shorts), YouTuber, Reels, Quora, Reddit, Facebook, ChatGPT,
+Gemini, Groq, QR, ID, API key, and all brand names, question texts and AI answers. Numbers use
+Western digits. Form placeholders for fields that feed the English question templates (category,
+audience, customer needs) stay in English.
 
 Postpositions after a `{var}` are written as a separate word (`{ais} ला`, `{ai} ने`,
-`{competitor} पेक्षा`, `{shop} कडे`). Marathi apps commonly do this with Latin-script names. Where
+`{competitor} पेक्षा`, `{brand} कडे`). Marathi apps commonly do this with Latin-script names. Where
 a sentence could be rebuilt so the name needs no ending, it was (`who.leader`, `palette.questionsFor`).
 
 ## Core terms
 
 | English | Marathi | Notes / alternatives rejected |
 |---|---|---|
-| shop | दुकान / दुकाने | "स्टोअर" rejected; दुकान is what every shopkeeper says |
-| your shops | तुमची दुकाने | |
+| brand | ब्रँड (masc.: तुमचा ब्रँड, ब्रँडचं नाव; plural also ब्रँड) | replaces the old "shop" = दुकान everywhere; no दुकान is left in `mr/*.ts`. "ब्रॅंड" and "नाममुद्रा" rejected |
+| Brands (nav, list page) / All brands | ब्रँड / सर्व ब्रँड | |
+| Add a brand | ब्रँड जोडा | |
+| category | कॅटेगरी | "प्रकार" is reserved for "question type" (प्रश्नाचा प्रकार) |
+| Locations | ठिकाणे | |
+| Audience | ग्राहक वर्ग | "ऑडियन्स" rejected as less familiar |
+| Customer needs | ग्राहकांच्या गरजा | |
+| Other names | इतर नावं | same words as the "Other names" colour key |
+| alternatives to … | … ला पर्याय | |
+| marketplace / product / sample | मार्केटप्लेस / प्रॉडक्ट / सॅम्पल | |
 | AI assistant | AI असिस्टंट | "AI सहाय्यक" is too bookish. Often just "AI" |
 | question | प्रश्न | same form for singular and plural |
 | answer | उत्तर / उत्तरे | "उत्तरं" (spoken) rejected so the plural is written the same way everywhere |
@@ -36,7 +48,7 @@ a sentence could be rebuilt so the name needs no ending, it was (`who.leader`, `
 | practice data (synthetic) | सराव डेटा | "डेमो डेटा" and "नमुना डेटा" were rejected. See the review list |
 | saved answers (replay) | सेव्ह केलेली उत्तरे | "जतन केलेली" is bookish; it also matches the "सेव्ह करा" button |
 | real AI answers | खरी AI उत्तरे | |
-| connected AIs | जोडलेले AI | "कनेक्टेड" rejected |
+| Connections (nav, page title) | कनेक्शन | short nav word; body text still says "जोडलेले AI" / "जोडलेला" |
 | not set up | सेट केलेला नाही | |
 | Options | पर्याय | |
 | Quick / Standard / Thorough | झटपट / नेहमीचं / बारकाईने | "सखोल" rejected as bookish. `hero.rangeWide` repeats **बारकाईने** word for word |
@@ -55,7 +67,8 @@ a sentence could be rebuilt so the name needs no ending, it was (`who.leader`, `
 | composite score | एकूण स्कोर (composite) | |
 | admissible | तुलना करता येईल (admissible) | "ग्राह्य" is legal jargon |
 | gap / problem | अडचण / अडचणी (gaps) | "त्रुटी" is too formal; "समस्या" is fine but longer |
-| rating: rarely / sometimes / often / top | क्वचितच सुचवतात / कधीकधी सुचवतात / बऱ्याचदा सुचवतात / पहिली पसंती | identical in `dashboard.hero.rating.*` and `pages.rating.*`. The subject (AI) is left implied |
+| rating: rarely / sometimes / often / top | क्वचितच सुचवतात / कधीकधी सुचवतात / बऱ्याचदा सुचवतात / पहिली पसंती | only in `pages.rating.*`. The subject (AI) is left implied |
+| Could be “{rating}” — AI answers vary. | “{rating}” सुद्धा असू शकतं — AI ची उत्तरे बदलत राहतात. | `pages.rating.couldBe`; "बदलत राहतात" matches `run.depthHint` |
 | review (customer) | रिव्ह्यू | |
 | list / listing | लिस्ट / लिस्टिंग | "यादी" is also natural, but लिस्ट was chosen to match "लिस्ट करा" |
 | post / photo / website / online | पोस्ट / फोटो / वेबसाइट / ऑनलाइन | |

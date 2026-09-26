@@ -17,7 +17,7 @@ interface Suggestion {
 }
 
 // The backend can suggest the same action for two gaps (e.g. "get listed" for two AIs).
-// A shop owner should see one card per thing to do, with every reason under "Why?".
+// A brand owner should see one card per thing to do, with every reason under "Why?".
 function groupSuggestions(recs: Recommendation[], gapById: Map<string, Gap>): Suggestion[] {
   const out: Suggestion[] = [];
   const byKey = new Map<string, Suggestion>();

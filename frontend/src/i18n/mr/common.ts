@@ -1,19 +1,19 @@
 import type { common as enCommon } from "../en/common";
 
-// Marathi — spoken register for shop owners ("तुम्ही" form). Keep "AI", "Google" and brand names in Latin script.
+// Marathi — spoken register for brand owners ("तुम्ही" form). Keep "AI", "Google" and brand names in Latin script.
 // Terms follow src/i18n/GLOSSARY.mr.md.
 export const common: Record<keyof typeof enCommon, string> = {
   "app.name": "AI Visibility",
-  "app.tagline": "AI असिस्टंट तुमचं दुकान सुचवतात का, ते पाहा",
+  "app.tagline": "AI असिस्टंट तुमचा ब्रँड सुचवतात का, ते पाहा",
   "app.home": "AI Visibility – मुख्य पान",
   "app.skipToContent": "थेट मुख्य भागावर जा",
 
   "nav.label": "मुख्य मेनू",
-  "nav.shops": "तुमची दुकाने",
-  "nav.providers": "जोडलेले AI",
+  "nav.brands": "ब्रँड",
+  "nav.providers": "कनेक्शन",
 
   "search.button": "शोधा",
-  "search.label": "दुकाने आणि पाने शोधा (Ctrl K)",
+  "search.label": "ब्रँड आणि पाने शोधा (Ctrl K)",
 
   "lang.label": "भाषा",
   "lang.button": "भाषा बदला (सध्या: {lang})",
@@ -26,14 +26,13 @@ export const common: Record<keyof typeof enCommon, string> = {
   "theme.current": "थीम: {theme}",
 
   "details.label": "यामागचे आकडे दाखवा",
-  "details.short": "आकडे",
-  "details.hint": "स्कोर, अंदाजे रेंज आणि सविस्तर तक्ते दाखवतो",
+  "details.hint": "स्कोर, अंदाजे रेंज आणि सविस्तर तक्ते",
 
-  "footer.text": "लोक AI असिस्टंटला सल्ला विचारतात तेव्हा ते तुमच्या दुकानाचं नाव किती वेळा घेतात, हे आम्ही तपासतो.",
+  "footer.text": "लोक AI असिस्टंटला सल्ला विचारतात तेव्हा ते तुमच्या ब्रँडचं नाव किती वेळा घेतात, हे आम्ही तपासतो.",
 
   "notFound.title": "हे पान सापडलं नाही",
   "notFound.body": "हे पान अस्तित्वात नाही किंवा दुसरीकडे हलवलं आहे.",
-  "notFound.back": "तुमच्या दुकानांकडे परत जा",
+  "notFound.back": "सर्व ब्रँडकडे परत जा",
 
   "loading": "लोड होत आहे…",
   "error": "काहीतरी चुकलं",
@@ -68,6 +67,6 @@ export const common: Record<keyof typeof enCommon, string> = {
   "count.answers_other": "{n} उत्तरे",
   "count.ais_one": "{n} AI",
   "count.ais_other": "{n} AI",
-  "count.shops_one": "{n} दुकान",
-  "count.shops_other": "{n} दुकाने",
+  "count.brands_one": "{n} ब्रँड",
+  "count.brands_other": "{n} ब्रँड",
 };

@@ -2,17 +2,22 @@
 // Flat keys, addressed as `pages.<key>`. Plural pairs use `_one` / `_other` suffixes.
 //
 // Notes for translators:
-// - The reader is a small shop owner (kirana store, vada pav stall). Use short, spoken words.
+// - The reader runs a brand of any size (a perfume brand, an optician chain, a street-food stall,
+//   a D2C label). Use short, spoken words. "Brand" means the business being checked.
 // - "AI assistants" means apps like ChatGPT or Gemini. Keep product names (ChatGPT, Gemini, Google) in Latin script.
 // - {placeholders} are filled in by the app; keep them exactly. **text** is shown in bold.
-// - Examples (shop names, places) may be adapted to local ones.
+// - Examples (brand names, places) may be adapted to local ones. {brand} and {name} are brand names — never translate them.
 export const pages = {
   // ---------------------------------------------------------------- rating words
-  // Shown next to the 0–100 score. Bands: 0–24, 25–49, 50–74, 75–100.
+  // Shown next to the 0–100 score. Bands: 0–24, 25–49, 50–74, 75–100. The word comes from the
+  // low end of the likely range, so it never claims more than the data supports.
   "rating.rarely": "Rarely recommended",
   "rating.sometimes": "Sometimes recommended",
   "rating.often": "Often recommended",
   "rating.top": "Top choice",
+  // Small line under the rating when the high end of the range reaches a better band.
+  // {rating} is one of the four rating words above, already translated.
+  "rating.couldBe": "Could be “{rating}” — AI answers vary.",
 
   // ---------------------------------------------------------------- data origin badges
   // Made-up answers used to try the app; not a real check.
@@ -21,117 +26,117 @@ export const pages = {
   "origin.replay": "Saved answers",
 
   // ---------------------------------------------------------------- question groups (intents)
-  // Group headings on the questions page. "…" stands for words that change per shop.
+  // Group headings on the questions page. "…" stands for words that change per brand.
   "intent.category_discovery": "“Best … for …” questions",
   "intent.problem_first": "“How do I …” questions",
-  "intent.alternative_seeking": "“Other shops like …” questions",
+  "intent.alternative_seeking": "“Alternatives to …” questions",
   "intent.attribute_constrained": "“Cheapest or fastest …” questions",
   "intent.local_contextual": "Questions about your area",
   "intent.recommendation_seeking": "“Who should I hire to …” questions",
-  "intent.identity": "About your shop",
-  "intent.fit": "Is your shop right for …",
+  "intent.identity": "About your brand",
+  "intent.fit": "Is your brand right for …",
   "intent.commercial": "About your prices",
-  "intent.head_to_head": "Your shop compared with others",
-  "intent.trust": "Can people trust your shop",
+  "intent.head_to_head": "Your brand vs others",
+  "intent.trust": "Can people trust your brand",
   "intent.sourcing": "Where to find reviews",
   "intent.custom": "Your own questions",
   "intent.other": "Other questions",
 
-  // ---------------------------------------------------------------- Your shops (list page)
-  "shops.title": "Your shops",
-  "shops.lede":
-    "See how often AI assistants like ChatGPT and Gemini suggest your shop when people ask them for a recommendation.",
-  "shops.searchLabel": "Search your shops",
-  "shops.searchPlaceholder": "Search by shop name…",
-  "shops.loading": "Loading your shops…",
-  "shops.loadError": "We couldn't load your shops.",
-  "shops.noMatch": "No shop matches “{q}”.",
-  "shops.emptyTitle": "No shops yet",
-  "shops.emptyBody":
-    "Add your shop below. We will ask AI assistants the questions your customers ask, and show you how often your shop is suggested.",
-  "shops.emptyCta": "Add your shop",
+  // ---------------------------------------------------------------- Brands (list page)
+  "brands.title": "Brands",
+  "brands.lede": "How often AI assistants like ChatGPT and Gemini recommend each brand.",
+  "brands.searchLabel": "Search brands",
+  "brands.searchPlaceholder": "Search brands…",
+  "brands.loading": "Loading brands…",
+  "brands.loadError": "We couldn't load the brands.",
+  "brands.noMatch": "No brand matches “{q}”.",
+  "brands.emptyTitle": "No brands yet",
+  "brands.emptyBody":
+    "Add a brand below. We'll ask AI assistants what your customers ask and show how often you're recommended.",
+  "brands.emptyCta": "Add a brand",
   // Accessible name for the whole score, e.g. "Score 42 out of 100".
-  "shops.scoreLabel": "Score {score} out of 100",
+  "brands.scoreLabel": "Score {score} out of 100",
   // Small text after the big score number.
-  "shops.outOf100": "/ 100",
+  "brands.outOf100": "/ 100",
   // {when} is a relative time like "2 days ago".
-  "shops.checked": "Checked {when}",
-  "shops.noChecks": "No checks yet — open to check",
-  "shops.hasResults": "Has results — open to see them",
-  "shops.thin_one": "Only {n} question — results will be rough",
-  "shops.thin_other": "Only {n} questions — results will be rough",
-  // Shown only in "numbers" mode: one of the three sample shops that came with the app.
-  "shops.pilot": "Sample shop",
-  "shops.addTitle": "Add your shop",
+  "brands.checked": "Checked {when}",
+  "brands.noChecks": "Not checked yet — open to check",
+  "brands.hasResults": "Has results — open to see them",
+  "brands.thin_one": "Only {n} question — results will be rough",
+  "brands.thin_other": "Only {n} questions — results will be rough",
+  // Shown only in "numbers" mode: one of the three sample brands that came with the app.
+  "brands.pilot": "Sample brand",
+  "brands.addTitle": "Add a brand",
 
-  // ---------------------------------------------------------------- Add your shop (form)
-  "add.intro": "Tell us a little about your shop. We use this to write the questions customers ask AI assistants.",
+  // ---------------------------------------------------------------- Add a brand (form)
+  // Labels are short nouns. Placeholders for category, audience and customer needs stay in
+  // English: the app builds English questions from them.
+  "add.intro": "We use these details to write the questions customers ask AI assistants.",
   "add.optional": "(optional)",
-  "add.listHint": "Separate with commas.",
 
-  "add.name.label": "Shop name",
-  "add.name.placeholder": "e.g. Sharma Kirana Store",
-  "add.name.hint": "The name your customers know you by.",
+  "add.name.label": "Brand name",
+  "add.name.placeholder": "e.g. Chitale Bandhu",
+  "add.name.hint": "The name customers know you by.",
 
-  "add.category.label": "What do you sell?",
-  "add.category.placeholder": "e.g. groceries",
-  "add.category.hint": "One or two words, like “vada pav” or “groceries”.",
+  "add.category.label": "Category",
+  "add.category.placeholder": "e.g. sweets",
+  "add.category.hint": "One or two words, e.g. perfume, opticians, vada pav.",
 
-  "add.cities.label": "Which areas or cities?",
-  "add.cities.placeholder": "e.g. Dadar, Mumbai",
-  "add.cities.hint": "Where your customers are. Separate with commas.",
+  "add.cities.label": "Locations",
+  "add.cities.placeholder": "e.g. Pune, Mumbai",
+  "add.cities.hint": "Cities or areas you serve, separated by commas.",
 
-  "add.competitors.label": "Nearby competitors",
-  "add.competitors.placeholder": "e.g. Patel Stores, Om Supermarket",
-  "add.competitors.hint": "AI answers are compared against these shops. Separate with commas.",
+  "add.competitors.label": "Competitors",
+  "add.competitors.placeholder": "e.g. Kaka Halwai, Haldiram's",
+  "add.competitors.hint": "Brands customers compare you with, separated by commas.",
 
-  "add.audiences.label": "Who are your customers?",
-  "add.audiences.placeholder": "e.g. families, office workers",
-  "add.audiences.hint": "Separate with commas.",
+  "add.audiences.label": "Audience",
+  "add.audiences.placeholder": "e.g. families, students",
+  "add.audiences.hint": "Who buys from you, separated by commas.",
 
-  "add.jobs.label": "What do customers come to you for?",
+  "add.jobs.label": "Customer needs",
   // Must start with an action word in English because it becomes "how do I <this>".
-  "add.jobs.placeholder": "e.g. get a quick breakfast near the station, get monthly groceries delivered",
-  "add.jobs.hint":
-    "Start each with an action, like “get …” or “find …”. Each one becomes a question such as “how do I get …”. Separate with commas.",
+  "add.jobs.placeholder": "e.g. buy sweets for Diwali, send gifts to family abroad",
+  "add.jobs.hint": "What people come to you for — each becomes a question like “how do I …”; write in English.",
 
-  "add.aliases.label": "Other names people use for your shop",
-  "add.aliases.placeholder": "e.g. Sharma Stores, Sharma ji ki dukaan",
-  "add.aliases.hint": "Short names or other spellings. Separate with commas.",
+  "add.aliases.label": "Other names",
+  "add.aliases.placeholder": "e.g. Chitale, Chitale Sweets",
+  "add.aliases.hint": "Short forms or other spellings, separated by commas.",
 
-  "add.submit": "Add my shop",
+  "add.submit": "Add brand",
   "add.submitting": "Adding…",
-  "add.fixErrors": "Please fix the highlighted boxes.",
+  "add.fixErrors": "Please fix the highlighted fields.",
 
   "add.err.required": "Please fill this in.",
   // The app can only make a web address for names with English letters (A–Z) or numbers.
   "add.err.latin": "Please use at least one letter or number in the name.",
-  "add.err.tooLong": "Too long — please use {max} letters or fewer.",
-  "add.err.itemTooLong": "“{item}” is too long — each one must be {max} letters or fewer.",
+  "add.err.tooLong": "Too long — use {max} characters or fewer.",
+  "add.err.itemTooLong": "“{item}” is too long — each one must be {max} characters or fewer.",
   "add.err.tooMany": "Please list at most {max} — you have {n}.",
-  "add.err.self": "Don't list your own shop as a competitor.",
+  "add.err.self": "Don't list your own brand as a competitor.",
   "add.err.duplicate": "“{item}” is listed twice.",
   // {message} is an English message from the server.
-  "add.err.server": "We couldn't add your shop. The reason: {message}",
-  "add.err.generic": "We couldn't add your shop. Please try again.",
+  "add.err.server": "Couldn't add the brand. The reason: {message}",
+  "add.err.generic": "Couldn't add the brand. Please try again.",
 
-  "add.done_one": "Done! We'll ask AI assistants **{n}** question about shops like **{shop}**.",
-  "add.done_other": "Done! We'll ask AI assistants **{n}** questions about shops like **{shop}**.",
-  "add.doneNoCount": "Done! **{shop}** has been added.",
-  "add.thin":
-    "That's only a few questions, so results will be rough. Tip: add what customers come to you for, or more nearby competitors.",
-  "add.checkNow": "Check my shop now",
+  // {brand} is the brand name the user just added.
+  "add.done_one": "Added **{brand}**. We'll ask AI assistants **{n}** question.",
+  "add.done_other": "Added **{brand}**. We'll ask AI assistants **{n}** questions.",
+  "add.doneNoCount": "Added **{brand}**.",
+  "add.thin": "That's only a few questions, so results will be rough. Tip: add customer needs or more competitors.",
+  "add.checkNow": "Check it now",
   "add.seeQuestions": "See the questions",
-  "add.another": "Add another shop",
+  "add.another": "Add another brand",
 
   // ---------------------------------------------------------------- Questions page
-  "q.back": "← Back to {shop}",
-  "q.backGeneric": "← Back to your shop",
-  "q.title": "Questions we ask the AI",
+  // {brand} is a brand name.
+  "q.back": "← Back to {brand}",
+  "q.backGeneric": "← Back to results",
+  "q.title": "Questions we ask AI",
   "q.lede":
-    "These are questions a real customer might type into an AI assistant. Each time we check your shop, we ask every question that is turned on and see if the answer names you.",
+    "Questions a real customer might ask an AI assistant. Each check asks every question that is on and looks for your brand in the answers.",
   "q.namedNote":
-    "Questions with your shop's name are still asked, but they don't count toward your score — the AI always mentions you when you are named.",
+    "Questions that name your brand are still asked but don't count toward the score — AI always mentions a brand you name.",
   "q.loading": "Loading the questions…",
   "q.loadError": "We couldn't load the questions.",
   "q.asked": "Asked",
@@ -141,9 +146,9 @@ export const pages = {
   "q.unsaved": "Unsaved changes",
   "q.customized": "Your own list",
   "q.suggested": "Suggested questions",
-  "q.unchecked_one": "{n} new or changed question will be checked for your shop's name when you save.",
-  "q.unchecked_other": "{n} new or changed questions will be checked for your shop's name when you save.",
-  "q.baseline": "If you change the questions, new results can't be compared with older ones.",
+  "q.unchecked_one": "{n} new or changed question will be checked for your brand name when you save.",
+  "q.unchecked_other": "{n} new or changed questions will be checked for your brand name when you save.",
+  "q.baseline": "Changing the questions means new results can't be compared with older ones.",
   // "{on} of {total}" questions in this group are turned on.
   "q.groupCount": "{on} of {total} on",
   "q.askedTitle": "Asked in every check",
@@ -152,14 +157,13 @@ export const pages = {
   "q.toggleLabel": "Ask this question: {text}",
   "q.textLabel": "Question text",
   "q.deleteLabel": "Delete this question: {text}",
-  "q.badgeNamed": "Not counted — has your shop's name",
+  "q.badgeNamed": "Not counted — names your brand",
   "q.badgeUnsaved": "Not saved yet",
   "q.badgeYours": "Added by you",
   "q.addTitle": "Add a question",
-  "q.addNote":
-    "Write it the way a customer would, without your shop's name, so it counts. You can write it in any language.",
+  "q.addNote": "Write it like a customer would, without your brand name, so it counts. Any language is fine.",
   "q.newLabel": "New question",
-  "q.newPlaceholder": "e.g. best vada pav near Dadar station",
+  "q.newPlaceholder": "e.g. best place to buy attar in Pune",
   "q.typeLabel": "Question type",
   "q.duplicate": "That question is already in the list.",
   "q.savedCustom": "Saved. The next check will use these questions.",
@@ -174,17 +178,16 @@ export const pages = {
   "q.save": "Save questions",
 
   // ---------------------------------------------------------------- AI answers (evidence) page
-  "answers.back": "← Back to {shop}",
-  "answers.backGeneric": "← Back to your shop",
+  "answers.back": "← Back to {brand}",
+  "answers.backGeneric": "← Back to results",
   "answers.title": "What the AI assistants said",
-  "answers.lede":
-    "These are the real answers the AI assistants gave. Shop names are coloured wherever they appear.",
+  "answers.lede": "The real answers AI assistants gave. Brand names are coloured wherever they appear.",
   "answers.refs_one": "Showing the **{n}** answer behind this suggestion.",
   "answers.refs_other": "Showing the **{n}** answers behind this suggestion.",
   "answers.refsFound": "{found} of them were found in this check.",
   "answers.showAll": "Show all answers",
   "answers.legendTitle": "Colours:",
-  "answers.legend.self": "Your shop",
+  "answers.legend.self": "Your brand",
   "answers.legend.competitor": "Competitors",
   "answers.legend.discovered": "Other names mentioned",
   // Explains the small numbered chips, e.g. "#1".
@@ -195,35 +198,34 @@ export const pages = {
   "answers.allTypes": "All types",
   "answers.ai": "AI assistant",
   "answers.allAis": "All AI assistants",
-  "answers.onlyMine": "Only answers that name your shop",
-  "answers.count_one": "Showing {shown} of {n} answer · {mentioning} name your shop",
-  "answers.count_other": "Showing {shown} of {n} answers · {mentioning} name your shop",
+  "answers.onlyMine": "Only answers that name your brand",
+  "answers.count_one": "Showing {shown} of {n} answer · {mentioning} name your brand",
+  "answers.count_other": "Showing {shown} of {n} answers · {mentioning} name your brand",
   "answers.loading": "Loading the answers…",
   "answers.loadError": "We couldn't load the answers.",
   "answers.empty": "No answers match these filters.",
   "answers.question": "Question",
-  "answers.named": "Names your shop",
-  "answers.notNamed": "Doesn't name your shop",
-  "answers.notCounted": "Not counted (has your shop's name)",
+  "answers.named": "Names your brand",
+  "answers.notNamed": "Doesn't name your brand",
+  "answers.notCounted": "Not counted (names your brand)",
   // Short position chip. Keep "#" or use a word that works for any number, e.g. "No. {n}".
   "answers.rank": "#{n}",
-  // Hover text for the chip / coloured name. {name} is a shop name, {kind} is "Your shop" / "Competitors" / …
+  // Hover text for the chip / coloured name. {name} is a brand name, {kind} is "Your brand" / "Competitors" / …
   "answers.rankTitle": "{name} — named at position {n}",
   "answers.markTitle": "{name} ({kind}) — position {n}",
   "answers.modelLabel": "Model",
   "answers.runLabel": "Check ID",
 
-  // ---------------------------------------------------------------- Connected AIs
-  "ais.title": "Connected AIs",
-  "ais.lede": "Your shop is checked by asking these AI assistants.",
+  // ---------------------------------------------------------------- Connections (AI assistants)
+  "ais.title": "Connections",
+  "ais.lede": "The AI assistants we ask when checking a brand.",
   "ais.loading": "Loading the AI assistants…",
   "ais.loadError": "We couldn't load the list of AI assistants.",
   "ais.connected": "Connected",
   "ais.notSetUp": "Not set up",
   "ais.model": "Model: {model}",
-  "ais.askToSetUp": "Ask the person who set up this app to add a key for it.",
-  "ais.noneConnected":
-    "No AI assistant is connected yet, so checks use practice data. Ask the person who set up this app to add a key.",
+  "ais.askToSetUp": "Ask whoever set up this app to add a key for it.",
+  "ais.noneConnected": "No AI assistant is connected yet, so checks use practice data. Ask whoever set up this app to add a key.",
   "ais.connectedCount": "{on} of {total} connected",
   "ais.detailsTitle": "Technical setup",
   "ais.detailsKeys":
@@ -240,20 +242,20 @@ export const pages = {
 
   // ---------------------------------------------------------------- Quick search (command palette)
   "palette.label": "Quick search",
-  "palette.placeholder": "Go to a shop or page…",
+  "palette.placeholder": "Go to a brand or page…",
   "palette.empty": "Nothing found",
-  "palette.group.shops": "Shops",
+  "palette.group.brands": "Brands",
   "palette.group.questions": "Questions",
   "palette.group.answers": "AI answers",
   "palette.group.pages": "Pages",
-  "palette.shopHint": "Open this shop",
-  "palette.shopHintNew": "No checks yet",
-  "palette.questionsFor": "Questions for {shop}",
+  "palette.brandHint": "Open this brand",
+  "palette.brandHintNew": "Not checked yet",
+  "palette.questionsFor": "Questions for {brand}",
   "palette.questionsHint": "See or change what the AI is asked",
-  "palette.answersFor": "AI answers for {shop}",
+  "palette.answersFor": "AI answers for {brand}",
   "palette.answersHint": "What the AI assistants said",
-  "palette.shopsHint": "All your shops",
-  "palette.aisHint": "Which AI assistants check your shop",
+  "palette.brandsHint": "All brands",
+  "palette.aisHint": "Which AI assistants we ask",
   "palette.navigate": "move",
   "palette.open": "open",
   "palette.close": "close",

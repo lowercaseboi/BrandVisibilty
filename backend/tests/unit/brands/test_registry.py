@@ -55,3 +55,6 @@ def test_devanagari_only_names_get_a_stable_ascii_key(tmp_data_dir):
     assert registry.slugify("शर्मा किराणा") == registry.slugify("  शर्मा   किराणा ")
     assert registry.slugify("Sharma Kirana") == "sharma_kirana"
     assert registry.slugify("!!!") == ""
+    # Accents fold to their base letters instead of being dropped.
+    assert registry.slugify("Café Mocha") == "cafe_mocha"
+    assert registry.slugify("Crème Brûlée Co.") == "creme_brulee_co"

@@ -194,7 +194,7 @@ export function QuestionsPage() {
     <div className="questions-page">
       <p className="crumbs">
         <Link to={dashboardHref}>
-          {brandName ? t("pages.q.back", { shop: brandName }) : t("pages.q.backGeneric")}
+          {brandName ? t("pages.q.back", { brand: brandName }) : t("pages.q.backGeneric")}
         </Link>
       </p>
       <div className="page-head">

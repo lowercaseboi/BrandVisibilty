@@ -121,7 +121,7 @@ export function BrandDashboardPage() {
   const snapshot = data?.latest ?? null;
   const history = data?.history ?? [];
   const title = data ? (data.brandName ?? brandKey) : " ";
-  const shopName = data?.brandName ?? brandKey;
+  const selfName = data?.brandName ?? brandKey;
 
   const idx = snapshot ? history.findIndex((s) => s.run_id === snapshot.run_id) : -1;
   const previous = idx > 0 ? history[idx - 1] : null;
@@ -196,7 +196,7 @@ export function BrandDashboardPage() {
             labelOf={labelOf}
           />
 
-          <CompetitorBars summary={snapshot.mention_summary} entities={snapshot.entities} shopName={shopName} />
+          <CompetitorBars summary={snapshot.mention_summary} entities={snapshot.entities} selfName={selfName} />
 
           <SampleAnswer brandKey={brandKey} runId={snapshot.run_id} labelOf={labelOf} />
 

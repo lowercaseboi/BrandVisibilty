@@ -1,18 +1,18 @@
 // English strings shared across the app (header, nav, footer, generic words).
-// Keys are flat; they are addressed as `common.<key>`, e.g. t("common.nav.shops").
+// Keys are flat; they are addressed as `common.<key>`, e.g. t("common.nav.brands").
 // Plural pairs use the `_one` / `_other` suffixes and are read with t.n("common.count.questions", n).
 export const common = {
   "app.name": "AI Visibility",
-  "app.tagline": "See whether AI assistants recommend your shop",
+  "app.tagline": "See whether AI assistants recommend your brand",
   "app.home": "AI Visibility home",
   "app.skipToContent": "Skip to main content",
 
   "nav.label": "Main",
-  "nav.shops": "Your shops",
-  "nav.providers": "Connected AIs",
+  "nav.brands": "Brands",
+  "nav.providers": "Connections",
 
   "search.button": "Search",
-  "search.label": "Search shops and pages (Ctrl K)",
+  "search.label": "Search brands and pages (Ctrl K)",
 
   "lang.label": "Language",
   "lang.button": "Change language (now {lang})",
@@ -25,14 +25,13 @@ export const common = {
   "theme.current": "Theme: {theme}",
 
   "details.label": "Show the numbers behind this",
-  "details.short": "Numbers",
-  "details.hint": "Shows the scores, confidence ranges and detailed tables",
+  "details.hint": "Scores, confidence ranges and detailed tables",
 
-  "footer.text": "Checks how often AI assistants name your shop when people ask them for suggestions.",
+  "footer.text": "Checks how often AI assistants name your brand when people ask them for suggestions.",
 
   "notFound.title": "Page not found",
   "notFound.body": "This page doesn't exist or has moved.",
-  "notFound.back": "Back to your shops",
+  "notFound.back": "Back to all brands",
 
   "loading": "Loading…",
   "error": "Something went wrong",
@@ -67,6 +66,6 @@ export const common = {
   "count.answers_other": "{n} answers",
   "count.ais_one": "{n} AI",
   "count.ais_other": "{n} AIs",
-  "count.shops_one": "{n} shop",
-  "count.shops_other": "{n} shops",
+  "count.brands_one": "{n} brand",
+  "count.brands_other": "{n} brands",
 } as const;

@@ -172,7 +172,7 @@ export function EvidencePage() {
     <div>
       <p className="crumbs">
         <Link to={`/brands/${encodeURIComponent(brandKey)}`}>
-          {selfName ? t("pages.answers.back", { shop: selfName }) : t("pages.answers.backGeneric")}
+          {selfName ? t("pages.answers.back", { brand: selfName }) : t("pages.answers.backGeneric")}
         </Link>
       </p>
       <div className="page-head">

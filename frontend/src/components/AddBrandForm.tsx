@@ -56,9 +56,12 @@ const clean = (s: string) => s.trim().replace(/\s+/g, " ");
 // they just need at least one letter or digit.
 const hasLetters = (s: string) => /[\p{L}\p{N}]/u.test(s);
 
-// Same as backend slugify() for Latin names, used to spot duplicate competitors.
+// Same as backend slugify() for Latin names (accents folded: "Café Mocha" -> "cafe_mocha"),
+// used to spot duplicate competitors.
 const slug = (s: string) =>
   s
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
@@ -100,7 +103,7 @@ function validateAll(values: Values): Errors {
   return errors;
 }
 
-// PRD AC-1: invalid shop details are rejected with a clear message (checked here first, 422 from the server as a backstop).
+// PRD AC-1: invalid brand details are rejected with a clear message (checked here first, 422 from the server as a backstop).
 export function AddBrandForm({ onCreated }: { onCreated: (brand: BrandSummary) => void }) {
   const t = useT();
   const [values, setValues] = useState<Values>(EMPTY);
@@ -164,9 +167,9 @@ export function AddBrandForm({ onCreated }: { onCreated: (brand: BrandSummary) =
       <div className="card pg-done" ref={doneRef} tabIndex={-1} role="status">
         <p className="pg-done-title">
           {typeof n === "number" ? (
-            <T k={n === 1 ? "pages.add.done_one" : "pages.add.done_other"} vars={{ n, shop: created.brand }} />
+            <T k={n === 1 ? "pages.add.done_one" : "pages.add.done_other"} vars={{ n, brand: created.brand }} />
           ) : (
-            <T k="pages.add.doneNoCount" vars={{ shop: created.brand }} />
+            <T k="pages.add.doneNoCount" vars={{ brand: created.brand }} />
           )}
         </p>
         {typeof n === "number" && n < THIN_QUESTIONS && <div className="alert alert-warn">{t("pages.add.thin")}</div>}

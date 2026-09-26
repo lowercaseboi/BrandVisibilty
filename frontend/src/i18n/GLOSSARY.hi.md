@@ -31,7 +31,8 @@ go in Devanagari: स्कोर, लिस्ट, पोस्ट, रिव�
 | likely range | संभावित रेंज / "शायद {lo} से {hi} के बीच" | "सीमा" felt formal on the simple view. |
 | confidence interval | भरोसे की रेंज (CI) | Used in the details view with "95%". |
 | rough (results) | मोटा अंदाज़ा | This is what people naturally say for a rough estimate. |
-| rating: Rarely / Sometimes / Often recommended / Top choice | कम ही सुझाते हैं / कभी-कभी सुझाते हैं / अक्सर सुझाते हैं / पहली पसंद | Identical in `dashboard.hero.rating.*` and `pages.rating.*`. |
+| rating: Rarely / Sometimes / Often recommended / Top choice | कम ही सुझाते हैं / कभी-कभी सुझाते हैं / अक्सर सुझाते हैं / पहली पसंद | Only in `pages.rating.*`. |
+| Could be “{rating}” — AI answers vary. | “{rating}” भी हो सकता है — AI के जवाब बदलते रहते हैं। | `pages.rating.couldBe`. |
 | competitor | मुकाबले वाली दुकान | "प्रतिस्पर्धी" is too formal. "कॉम्पिटिटर" was the second choice. |
 | practice data (synthetic) | डेमो डेटा | "अभ्यास डेटा" sounds bookish. "डेमो" is widely understood. |
 | saved answers (replay) | सेव किए हुए जवाब | |

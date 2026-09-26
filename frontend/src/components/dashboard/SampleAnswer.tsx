@@ -75,7 +75,7 @@ function cutPoint(text: string, mentions: Mention[]): number {
   return cut;
 }
 
-/** "What AI actually said": one real answer, with your shop and competitors highlighted. */
+/** "What AI actually said": one real answer, with your brand and competitors highlighted. */
 export function SampleAnswer({
   brandKey,
   runId,

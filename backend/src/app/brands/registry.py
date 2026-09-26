@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import unicodedata
 from dataclasses import dataclass
 from typing import Any
 
@@ -51,7 +52,10 @@ class BrandConfig:
 
 
 def slugify(text: str) -> str:
-    slug = re.sub(r"[^a-z0-9]+", "_", text.casefold()).strip("_")
+    # NFKD splits accented letters into base letter + mark, so "Café Mocha" -> "cafe_mocha"
+    # instead of "caf_mocha"; scripts with no ASCII equivalent fall through to the hash below.
+    ascii_text = unicodedata.normalize("NFKD", text.casefold()).encode("ascii", "ignore").decode("ascii")
+    slug = re.sub(r"[^a-z0-9]+", "_", ascii_text).strip("_")
     if not slug and any(ch.isalnum() for ch in text):
         # Names written only in Devanagari (or any non-Latin script) still need a stable,
         # URL- and filename-safe key: derive one from the name itself.

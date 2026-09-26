@@ -113,19 +113,31 @@ export function evidenceHref(brandKey: string, runId: string, refs?: string[]): 
 }
 
 // ---------------------------------------------------------------------------
-// Translated helpers (shop-owner view). The helpers above stay English-only for
+// Translated helpers (plain view). The helpers above stay English-only for
 // the technical "numbers behind this" panels.
 // ---------------------------------------------------------------------------
 
-/** Rating word band for a 0–1 score: 0–24 rarely, 25–49 sometimes, 50–74 often, 75–100 top. */
+/** Rating word band on the 0–100 scale: 0–24 rarely, 25–49 sometimes, 50–74 often, 75–100 top. */
 export type RatingBand = "rarely" | "sometimes" | "often" | "top";
 
-export function ratingKey(score0to1: number): RatingBand {
-  const s = Math.round(Math.min(1, Math.max(0, score0to1)) * 100);
+function bandOf(score: number): RatingBand {
+  const s = Math.round(Math.min(100, Math.max(0, score)));
   if (s >= 75) return "top";
   if (s >= 50) return "often";
   if (s >= 25) return "sometimes";
   return "rarely";
+}
+
+/**
+ * The rating word for a likely range [lo, hi] (both 0–100). `band` comes from the LOW end, so the
+ * headline never claims more than the data supports; `upper` is the high end's band when it differs
+ * ("Could be …"). Pass the point score as both ends when the range is missing.
+ */
+export function ratingFromRange(lo: number, hi: number): { band: RatingBand; upper?: RatingBand } {
+  const low = Math.min(lo, hi);
+  const band = bandOf(low);
+  const upper = bandOf(Math.max(lo, hi));
+  return upper === band ? { band } : { band, upper };
 }
 
 /** Translation key for each rating band ("Top choice", "Rarely recommended", …). */
@@ -136,9 +148,21 @@ export const RATING_KEY: Record<RatingBand, MessageKey> = {
   top: "pages.rating.top",
 };
 
-/** 0–1 score -> whole points out of 100, as shown to shop owners. */
+/** 0–1 score -> whole points out of 100, as shown in the plain view. */
 export function scoreOutOf100(score0to1: number): number {
   return Math.round(Math.min(1, Math.max(0, score0to1)) * 100);
+}
+
+/**
+ * Likely range of a snapshot's composite as whole points [lo, hi] out of 100, with the point score
+ * as a fallback for a missing or broken confidence interval.
+ */
+export function scoreRange(a: { composite_score: number; ci_low?: number | null; ci_high?: number | null }): [number, number] {
+  const ok = (x: number | null | undefined): x is number => typeof x === "number" && Number.isFinite(x);
+  const score = scoreOutOf100(ok(a.composite_score) ? a.composite_score : 0);
+  if (!ok(a.ci_low) || !ok(a.ci_high)) return [score, score];
+  const lo = scoreOutOf100(a.ci_low);
+  return [lo, Math.max(lo, scoreOutOf100(a.ci_high))];
 }
 
 /** Translated, plain group name for a question intent ("“How do I …” questions"). */

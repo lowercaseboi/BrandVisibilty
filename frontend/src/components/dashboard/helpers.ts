@@ -12,21 +12,6 @@ export function toScore(fraction: number | null | undefined): number {
   return Math.round(Math.max(0, Math.min(1, fraction)) * 100);
 }
 
-/** Rating word for a 0–100 score. Bands: 0–24, 25–49, 50–74, 75–100. */
-export function ratingKey(score: number): MessageKey {
-  if (score >= 75) return "dashboard.hero.rating.top";
-  if (score >= 50) return "dashboard.hero.rating.often";
-  if (score >= 25) return "dashboard.hero.rating.sometimes";
-  return "dashboard.hero.rating.rare";
-}
-
-export function ratingTone(score: number): "low" | "mid" | "good" | "top" {
-  if (score >= 75) return "top";
-  if (score >= 50) return "good";
-  if (score >= 25) return "mid";
-  return "low";
-}
-
 /** Effort chip: 1 -> quick, 3 -> some work, 5+ -> bigger change. */
 export function effortKey(effort: number | undefined): MessageKey {
   if (effort !== undefined && effort >= 5) return "dashboard.next.effort.big";

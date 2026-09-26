@@ -14,11 +14,11 @@ interface Row {
 export function CompetitorBars({
   summary,
   entities,
-  shopName,
+  selfName,
 }: {
   summary: MentionSummary | undefined;
   entities?: Record<string, string>;
-  shopName: string;
+  selfName: string;
 }) {
   const t = useT();
   if (!summary || !summary.entities || summary.total_answers <= 0) return null;
@@ -27,7 +27,7 @@ export function CompetitorBars({
   const rows: Row[] = Object.entries(summary.entities)
     .map(([id, c]) => ({
       id,
-      name: id === "self" ? (entities?.self ?? shopName) : (entities?.[id] ?? humanizeId(id)),
+      name: id === "self" ? (entities?.self ?? selfName) : (entities?.[id] ?? humanizeId(id)),
       isSelf: id === "self",
       mentioning: c.answers_mentioning ?? 0,
       first: c.answers_ranked_first ?? 0,
@@ -43,7 +43,7 @@ export function CompetitorBars({
   if (rows.length < 2) return null;
 
   const leader = rows[0];
-  // Only claim a leader when one shop is named strictly more often than the rest.
+  // Only claim a leader when one brand is named strictly more often than the rest.
   const clearLeader = leader.mentioning > 0 && leader.mentioning > rows[1].mentioning;
 
   return (

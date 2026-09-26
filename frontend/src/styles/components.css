@@ -181,10 +181,6 @@
     gap: 4px;
   }
 
-  .header-tools .icon-btn-label {
-    display: none;
-  }
-
   .header-tools .icon-btn {
     padding: 0 8px;
   }
@@ -1885,17 +1881,6 @@ a.card:hover {
 
 .q-delete:not(:disabled):hover {
   color: var(--err);
-}
-
-.q-add {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: var(--space-3);
-}
-
-.q-add input {
-  flex: 1 1 280px;
 }
 
 .q-actions {

@@ -25,7 +25,7 @@ export const LANGS: { code: Lang; label: string; short: string }[] = [
 
 type NsKeys<NS extends string, D> = `${NS}.${Extract<keyof D, string>}`;
 
-/** Every translatable string, e.g. "common.nav.shops". Built from the English dictionaries. */
+/** Every translatable string, e.g. "common.nav.brands". Built from the English dictionaries. */
 export type MessageKey =
   | NsKeys<"common", typeof enCommon>
   | NsKeys<"dashboard", typeof enDashboard>
@@ -141,7 +141,7 @@ export function useLang(): LangCtx {
   return useContext(LanguageContext);
 }
 
-/** Translate: `t("common.nav.shops")`, `t("pages.x", { name })`, `t.n("common.count.questions", 17)`. */
+/** Translate: `t("common.nav.brands")`, `t("pages.x", { name })`, `t.n("common.count.questions", 17)`. */
 export function useT(): TFunction {
   return getT(useLang().lang);
 }

@@ -91,12 +91,12 @@ export function CommandPalette() {
     const all: Item[] = [
       ...brands.map((b) => ({
         label: b.brand,
-        hint: b.has_data ? t("pages.palette.shopHint") : t("pages.palette.shopHintNew"),
+        hint: b.has_data ? t("pages.palette.brandHint") : t("pages.palette.brandHintNew"),
         to: `/brands/${encodeURIComponent(b.brand_key)}`,
-        group: t("pages.palette.group.shops"),
+        group: t("pages.palette.group.brands"),
       })),
       ...brands.map((b) => ({
-        label: t("pages.palette.questionsFor", { shop: b.brand }),
+        label: t("pages.palette.questionsFor", { brand: b.brand }),
         hint: t("pages.palette.questionsHint"),
         to: `/brands/${encodeURIComponent(b.brand_key)}/questions`,
         group: t("pages.palette.group.questions"),
@@ -104,12 +104,12 @@ export function CommandPalette() {
       ...brands
         .filter((b) => latestRuns[b.brand_key])
         .map((b) => ({
-          label: t("pages.palette.answersFor", { shop: b.brand }),
+          label: t("pages.palette.answersFor", { brand: b.brand }),
           hint: t("pages.palette.answersHint"),
           to: evidenceHref(b.brand_key, latestRuns[b.brand_key]),
           group: t("pages.palette.group.answers"),
         })),
-      { label: t("common.nav.shops"), hint: t("pages.palette.shopsHint"), to: "/", group: t("pages.palette.group.pages") },
+      { label: t("common.nav.brands"), hint: t("pages.palette.brandsHint"), to: "/", group: t("pages.palette.group.pages") },
       {
         label: t("common.nav.providers"),
         hint: t("pages.palette.aisHint"),

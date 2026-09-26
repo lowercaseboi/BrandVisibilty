@@ -181,7 +181,7 @@ export function AppHeader() {
         </Link>
         <nav className="app-nav" aria-label={t("common.nav.label")}>
           <NavLink to="/" end>
-            {t("common.nav.shops")}
+            {t("common.nav.brands")}
           </NavLink>
           <NavLink to="/providers">{t("common.nav.providers")}</NavLink>
         </nav>

@@ -1,17 +1,19 @@
 import type { Snapshot } from "../../api/types";
+import { RATING_KEY, ratingFromRange, scoreRange } from "../../format";
 import { T, useT } from "../../i18n";
-import { ratingKey, ratingTone, toScore } from "./helpers";
+import { toScore } from "./helpers";
 
 // A wide range means the score could move a lot by chance; suggest asking more times.
 const WIDE_RANGE = 0.25;
 
-/** "How visible is your shop?" — the 0–100 score, a rating word, plain counts and the honest range. */
+/** "How visible is your brand?" — the 0–100 score, a rating word, plain counts and the honest range. */
 export function ScoreHero({ snapshot, previous }: { snapshot: Snapshot; previous: Snapshot | null }) {
   const t = useT();
   const a = snapshot.analysis_result;
   const score = toScore(a.composite_score);
-  const lo = toScore(a.ci_low);
-  const hi = Math.max(lo, toScore(a.ci_high));
+  const [lo, hi] = scoreRange(a);
+  // The rating word follows the low end of the range, never the point estimate.
+  const rating = ratingFromRange(lo, hi);
 
   const summary = snapshot.mention_summary;
   const self = summary?.entities?.self;
@@ -19,7 +21,7 @@ export function ScoreHero({ snapshot, previous }: { snapshot: Snapshot; previous
   const mentioned = self?.answers_mentioning ?? snapshot.mentioned_count ?? 0;
   const first = self?.answers_ranked_first;
 
-  const wide = (a.ci_high ?? 0) - (a.ci_low ?? 0) > WIDE_RANGE;
+  const wide = hi - lo > WIDE_RANGE * 100;
   const samples = snapshot.sampling_config?.samples_per_query ?? 0;
 
   // Only compare with the previous check when it measured the same thing.
@@ -42,7 +44,10 @@ export function ScoreHero({ snapshot, previous }: { snapshot: Snapshot; previous
               <span className="score-outof">/100</span>
             </span>
           </p>
-          <p className={`score-rating score-rating-${ratingTone(score)}`}>{t(ratingKey(score))}</p>
+          <p className={`score-rating score-rating-${rating.band}`}>{t(RATING_KEY[rating.band])}</p>
+          {rating.upper && (
+            <p className="score-rating-upper">{t("pages.rating.couldBe", { rating: t(RATING_KEY[rating.upper]) })}</p>
+          )}
           {change !== null && (
             <p className={`score-change ${change > 0 ? "is-up" : change < 0 ? "is-down" : ""}`}>
               {change > 0
