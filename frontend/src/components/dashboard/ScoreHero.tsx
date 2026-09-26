@@ -1,6 +1,8 @@
 import type { Snapshot } from "../../api/types";
 import { RATING_KEY, ratingFromRange, scoreRange } from "../../format";
 import { T, useT } from "../../i18n";
+import { Details } from "../../settings/details";
+import { MetricStrip } from "../MetricStrip";
 import { toScore } from "./helpers";
 
 // A wide range means the score could move a lot by chance; suggest asking more times.
@@ -40,8 +42,8 @@ export function ScoreHero({ snapshot, previous }: { snapshot: Snapshot; previous
           <p className="score-hero-value">
             <span className="sr-only">{t("dashboard.hero.scoreAria", { score })}</span>
             <span aria-hidden="true">
-              <span className="score-big">{score}</span>
-              <span className="score-outof">/100</span>
+              <span className="score-big score-num">{score}</span>
+              <span className="score-outof score-of">/100</span>
             </span>
           </p>
           <p className={`score-rating score-rating-${rating.band}`}>{t(RATING_KEY[rating.band])}</p>
@@ -102,6 +104,11 @@ export function ScoreHero({ snapshot, previous }: { snapshot: Snapshot; previous
           </div>
         </div>
       </div>
+      <Details>
+        <div className="score-hero-metrics">
+          <MetricStrip analysis={a} />
+        </div>
+      </Details>
     </section>
   );
 }

@@ -1,6 +1,7 @@
 /* oxlint-disable react/only-export-components -- provider, hook and wrappers belong together */
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { toast } from "../components/Toaster";
 import { useT } from "../i18n";
 
 // "Show the numbers behind this": off by default, so brand owners get the simple view.
@@ -63,7 +64,11 @@ export function DetailsToggle({ variant = "inline" }: { variant?: "header" | "in
   const { showDetails, setShowDetails } = useDetails();
   const t = useT();
   const label = t("common.details.label");
-  const onClick = () => setShowDetails(!showDetails);
+  const onClick = () => {
+    setShowDetails(!showDetails);
+    // The extra panels are often below the fold, so confirm the switch where the user is looking.
+    toast(t(showDetails ? "common.details.off" : "common.details.on"));
+  };
 
   if (variant === "header") {
     return (

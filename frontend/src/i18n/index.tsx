@@ -84,7 +84,8 @@ function lookup(lang: Lang, key: string): string {
 
 const T_CACHE = new Map<Lang, TFunction>();
 
-function getT(lang: Lang): TFunction {
+/** Translator for a given language, outside React (e.g. to confirm a switch in the new language). */
+export function getT(lang: Lang): TFunction {
   const cached = T_CACHE.get(lang);
   if (cached) return cached;
   const t = ((key: MessageKey, vars?: Vars) => interpolate(lookup(lang, key), vars)) as TFunction;
@@ -141,7 +142,7 @@ export function useLang(): LangCtx {
   return useContext(LanguageContext);
 }
 
-/** Translate: `t("common.nav.brands")`, `t("pages.x", { name })`, `t.n("common.count.questions", 17)`. */
+/** Translate: `t("common.nav.providers")`, `t("pages.x", { name })`, `t.n("common.count.questions", 17)`. */
 export function useT(): TFunction {
   return getT(useLang().lang);
 }

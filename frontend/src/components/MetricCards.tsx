@@ -42,8 +42,8 @@ export function MetricCards({ analysis }: { analysis: AnalysisResult }) {
             {analysis.prominence === null && <span className="metric-note"> · {t("dashboard.metrics.renormalized")}</span>}
           </span>
           <span className="metric-value metric-value-hero">
-            {pts(score)}
-            <span className="metric-outof">/100</span>
+            <span className="score-num">{pts(score)}</span>
+            <span className="metric-outof score-of">/100</span>
           </span>
           <span className="metric-ci">
             {t("dashboard.metrics.ci", { lo: pts(lo), hi: pts(hi) })}{" "}

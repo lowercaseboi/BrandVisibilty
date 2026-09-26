@@ -44,10 +44,15 @@
   --shadow-accent: 0 8px 22px -8px rgb(208 62 21 / 0.55);
   --shadow-pop: 0 18px 44px -14px rgb(24 20 16 / 0.3), 0 2px 6px rgb(24 20 16 / 0.06);
 
-  /* page glow (behind everything) */
+  /* page glow + faint grid (behind everything) */
   --glow-1: rgb(255 122 69 / 0.2);
   --glow-2: rgb(255 196 120 / 0.2);
   --glow-3: rgb(120 140 255 / 0.12);
+  --grid-line: rgb(24 20 16 / 0.055);
+
+  /* scores out of 100: number fades from ink into a faint accent; "/100" is accent-tinted */
+  --score-ink: linear-gradient(170deg, var(--text-h) 35%, color-mix(in srgb, var(--accent) 62%, var(--text-h)));
+  --score-outof: color-mix(in srgb, var(--accent) 55%, var(--muted));
 
   /* status */
   --ok: #047857;
@@ -84,16 +89,18 @@
   --chart-grid: rgb(24 20 16 / 0.08);
 
   /* type */
-  --sans: "Source Sans 3", "Noto Sans Devanagari", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --display: "Manrope", "Noto Sans Devanagari", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Consolas, monospace;
-  --fs-xs: 12px;
-  --fs-sm: 13.5px;
-  --fs-md: 15.5px;
-  --fs-lg: 18px;
-  --fs-xl: 22px;
-  --fs-2xl: 28px;
-  --fs-hero: 44px;
+  /* One monospace family for the whole UI; Devanagari falls back to Noto Sans. */
+  --sans: "Geist Mono", "Noto Sans Devanagari", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --display: var(--sans);
+  --mono: var(--sans);
+  --fs-2xs: 10.5px; /* eyebrows, status labels */
+  --fs-xs: 11.5px;
+  --fs-sm: 12.5px;
+  --fs-md: 14px;
+  --fs-lg: 16.5px;
+  --fs-xl: 21px;
+  --fs-2xl: 30px;
+  --fs-hero: 64px;
 
   /* spacing scale */
   --space-1: 4px;
@@ -152,6 +159,9 @@
   --glow-1: rgb(255 106 61 / 0.16);
   --glow-2: rgb(255 170 90 / 0.07);
   --glow-3: rgb(110 120 255 / 0.13);
+  --grid-line: rgb(255 255 255 / 0.04);
+  --score-ink: linear-gradient(170deg, var(--text-h) 35%, color-mix(in srgb, var(--accent) 70%, var(--text-h)));
+  --score-outof: color-mix(in srgb, var(--accent) 60%, var(--muted));
   --ok: #6ee7b7;
   --ok-bg: #052e1f;
   --ok-border: #14532d;
@@ -212,6 +222,9 @@
     --glow-1: rgb(255 106 61 / 0.16);
     --glow-2: rgb(255 170 90 / 0.07);
     --glow-3: rgb(110 120 255 / 0.13);
+    --grid-line: rgb(255 255 255 / 0.04);
+    --score-ink: linear-gradient(170deg, var(--text-h) 35%, color-mix(in srgb, var(--accent) 70%, var(--text-h)));
+    --score-outof: color-mix(in srgb, var(--accent) 60%, var(--muted));
     --ok: #6ee7b7;
     --ok-bg: #052e1f;
     --ok-border: #14532d;

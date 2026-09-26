@@ -1,112 +1,60 @@
 # Marathi glossary (मराठी शब्दसूची)
 
-Used by `src/i18n/mr/*.ts`. The reader runs a brand of any size — a perfume label, an optician
-chain, a vada pav stall, a D2C brand — mostly in Mumbai or Pune, so the wording is spoken Marathi,
-not official Marathi. We always use **तुम्ही**. Verbs use the spoken `-ं` endings
-(झालं, घेतलं, ब्रँडचं). Plural nouns use `-े` (उत्तरे, ठिकाणे, पाने); `नावं` is the one spoken
-exception, kept because it is what people say. Buttons are short commands (आता तपासा, सेव्ह करा).
-Form labels are short nouns, like the English (ब्रँडचं नाव, कॅटेगरी, स्पर्धक).
+Used by `src/i18n/mr/*.ts`.
+
+**Register: professional written Marathi (प्रमाण मराठी).** The tone matches the English copy — an
+analytics product report. We use **तुम्ही**, the written `-े` endings (झाले, केले, ब्रँडचे) rather
+than the spoken `-ं` forms, and no chatty phrasing. Established business loanwords are kept where
+Marathi professionals use them (स्कोर, क्वेरी, बेंचमार्क, कॉन्फिडन्स). Buttons are short
+imperatives (विश्लेषण चालवा, सेव्ह करा).
 
 Kept in Latin script: AI, Google, Google Business Profile, Justdial, IndiaMART, Zomato, Amazon,
-Instagram, WhatsApp (Business), YouTube (Shorts), YouTuber, Reels, Quora, Reddit, Facebook, ChatGPT,
-Gemini, Groq, QR, ID, API key, and all brand names, question texts and AI answers. Numbers use
-Western digits. Form placeholders for fields that feed the English question templates (category,
-audience, customer needs) stay in English.
+Instagram, WhatsApp (Business), YouTube (Shorts), Reels, Quora, Reddit, Facebook, ChatGPT, Gemini,
+Groq, QR, ID, API key, the metric names Coverage / Prominence / Share of voice, the depth options
+Quick / Standard / Thorough (they must match `hero.rangeWide`), and all brand names, query texts
+and AI responses. Numbers use Western digits.
 
 Postpositions after a `{var}` are written as a separate word (`{ais} ला`, `{ai} ने`,
-`{competitor} पेक्षा`, `{brand} कडे`). Marathi apps commonly do this with Latin-script names. Where
-a sentence could be rebuilt so the name needs no ending, it was (`who.leader`, `palette.questionsFor`).
+`{competitor} सोबत`), as Marathi apps commonly do with Latin-script names.
 
 ## Core terms
 
-| English | Marathi | Notes / alternatives rejected |
+| English | Marathi | Notes |
 |---|---|---|
-| brand | ब्रँड (masc.: तुमचा ब्रँड, ब्रँडचं नाव; plural also ब्रँड) | replaces the old "shop" = दुकान everywhere; no दुकान is left in `mr/*.ts`. "ब्रॅंड" and "नाममुद्रा" rejected |
-| Brands (nav, list page) / All brands | ब्रँड / सर्व ब्रँड | |
-| Add a brand | ब्रँड जोडा | |
-| category | कॅटेगरी | "प्रकार" is reserved for "question type" (प्रश्नाचा प्रकार) |
-| Locations | ठिकाणे | |
-| Audience | ग्राहक वर्ग | "ऑडियन्स" rejected as less familiar |
-| Customer needs | ग्राहकांच्या गरजा | |
-| Other names | इतर नावं | same words as the "Other names" colour key |
-| alternatives to … | … ला पर्याय | |
-| marketplace / product / sample | मार्केटप्लेस / प्रॉडक्ट / सॅम्पल | |
-| AI assistant | AI असिस्टंट | "AI सहाय्यक" is too bookish. Often just "AI" |
-| question | प्रश्न | same form for singular and plural |
-| answer | उत्तर / उत्तरे | "उत्तरं" (spoken) rejected so the plural is written the same way everywhere |
-| check (noun) | तपासणी | "चेक" rejected |
-| check (verb / button) | तपासा — आता तपासा, पुन्हा तपासा | |
-| results | निकाल | "रिझल्ट" rejected |
-| score | स्कोर | "स्कोअर" and "गुण" rejected. स्कोर is the everyday spelling |
-| points (of score) | पॉइंट | "गुण" sounds like exam marks |
-| recommend / suggest | सुचवणे (सुचवतात, सुचवलं) | "शिफारस करणे" is too formal |
-| suggestion | सूचना | same form for singular and plural |
-| competitor | स्पर्धक | "प्रतिस्पर्धी" is too formal |
-| customer | ग्राहक | |
-| mentioned / named | नाव घेतलं / नाव आलं | "उल्लेख" is used only in the Details view |
-| named first | सगळ्यात आधी नाव | "पहिलं नाव" alone was ambiguous (first name) |
-| practice data (synthetic) | सराव डेटा | "डेमो डेटा" and "नमुना डेटा" were rejected. See the review list |
-| saved answers (replay) | सेव्ह केलेली उत्तरे | "जतन केलेली" is bookish; it also matches the "सेव्ह करा" button |
-| real AI answers | खरी AI उत्तरे | |
-| Connections (nav, page title) | कनेक्शन | short nav word; body text still says "जोडलेले AI" / "जोडलेला" |
-| not set up | सेट केलेला नाही | |
-| Options | पर्याय | |
-| Quick / Standard / Thorough | झटपट / नेहमीचं / बारकाईने | "सखोल" rejected as bookish. `hero.rangeWide` repeats **बारकाईने** word for word |
-| How thorough | किती बारकाईने | |
-| Why? | का? | |
-| What to do next | आता काय करायचं | |
-| effort (simple view) | थोडं काम / मोठं काम / झटपट होईल | |
-| effort (Details view) | मेहनत | |
-| priority | प्राधान्य | |
-| confidence | खात्री | |
-| likely range | अंदाजे रेंज | simple-view word for the CI band |
-| confidence interval | विश्वास मर्यादा (CI) | Details view only |
-| Coverage | कव्हरेज (Coverage) | |
-| Prominence | लिस्टमधलं स्थान (Prominence) | "ठळकपणा" is literal but meaningless here |
-| Share of voice | चर्चेतला वाटा (Share of voice) | |
-| composite score | एकूण स्कोर (composite) | |
-| admissible | तुलना करता येईल (admissible) | "ग्राह्य" is legal jargon |
-| gap / problem | अडचण / अडचणी (gaps) | "त्रुटी" is too formal; "समस्या" is fine but longer |
-| rating: rarely / sometimes / often / top | क्वचितच सुचवतात / कधीकधी सुचवतात / बऱ्याचदा सुचवतात / पहिली पसंती | only in `pages.rating.*`. The subject (AI) is left implied |
-| Could be “{rating}” — AI answers vary. | “{rating}” सुद्धा असू शकतं — AI ची उत्तरे बदलत राहतात. | `pages.rating.couldBe`; "बदलत राहतात" matches `run.depthHint` |
-| review (customer) | रिव्ह्यू | |
-| list / listing | लिस्ट / लिस्टिंग | "यादी" is also natural, but लिस्ट was chosen to match "लिस्ट करा" |
-| post / photo / website / online | पोस्ट / फोटो / वेबसाइट / ऑनलाइन | |
-| area / locality | भाग / परिसर | |
-| comma-separated | कॉमाने (,) वेगळं करा | "स्वल्पविराम" is bookish |
-| Details / numbers behind this | आकडे / यामागचे आकडे | |
-| Loading… | लोड होत आहे… | |
-| Save / Cancel / Delete / Edit | सेव्ह करा / रद्द करा / काढून टाका / बदला | |
-| Skip | वगळा (state: वगळलं) | |
-| rate limit (busy) | बिझी (rate limit) | the English term is kept in brackets |
+| brand | ब्रँड (masc.: तुमचा ब्रँड, ब्रँडचे नाव) | |
+| AI assistant | AI असिस्टंट | |
+| query (customer question) | क्वेरी (plural: क्वेरी / क्वेरींमध्ये) | |
+| query set | क्वेरी संच | |
+| response (AI answer) | प्रतिसाद (same form in the plural) | replaces the spoken "उत्तरे" |
+| analysis (one run) | विश्लेषण | Run analysis = "विश्लेषण चालवा" |
+| run (technical) | रन | Run ID = "रन ID" |
+| results / report | निकाल / अहवाल | |
+| visibility | दृश्यता | standard in Marathi business writing |
+| visibility tiers | कमी / मध्यम / भक्कम दृश्यता / कॅटेगरी लीडर | `pages.rating.*` |
+| score / points | स्कोर / गुण | |
+| likely range | संभाव्य श्रेणी | |
+| confidence interval | कॉन्फिडन्स इंटरव्हल (95% CI) | |
+| precision (low) | अचूकता (कमी) | |
+| recommend / recommendation | शिफारस करणे / शिफारस, शिफारसी | "Recommended actions" = "शिफारस केलेल्या कृती" |
+| rationale | कारण | |
+| effort / impact | प्रयत्न / अंदाजित परिणाम | effort levels: कमी / मध्यम / जास्त |
+| mention | उल्लेख | |
+| ranked first | पहिल्या स्थानावर | |
+| competitor | स्पर्धक | |
+| competitive landscape | स्पर्धात्मक चित्र | |
+| markets (locations) | बाजारपेठा | |
+| target audience | लक्ष्य ग्राहक | |
+| alternate names | पर्यायी नावे | |
+| comma-separated | स्वल्पविरामाने वेगळे करा | |
+| simulated data | सिम्युलेटेड डेटा | replaces the old "सराव डेटा" |
+| replayed responses | रीप्ले केलेले प्रतिसाद | |
+| gap | गॅप | details view |
+| admissible | स्वीकारार्ह | details view |
+| workspace / benchmarks | वर्कस्पेस / बेंचमार्क | home page eyebrows |
 
 ## Please review before the demo (native speaker)
 
-These are the strings I am least sure about. Please read them aloud in context:
-
-1. `origin.synthetic` / `banner.synthetic.title` — **सराव डेटा**. Will a shopkeeper understand
-   "सराव" as "made-up / demo"? The alternative is **डेमो डेटा**, which may be clearer to Mumbai users.
-2. `hero.first_*` / `who.first_*` — **सगळ्यात आधी नाव** for "named first". Check that it doesn't read
-   as "name came earliest in time".
-3. `run.plan_*` — **आम्ही {ais} ला {n} प्रश्न विचारू.** Here {ais} is "Google Gemini आणि Groq". Check
-   that the "ला" after a list of Latin names reads naturally.
-4. `why.presence.providerNone` — **{ai} ने त्याच्या उत्तरांमध्ये…** "त्याच्या" assumes the AI is
-   masculine. Is "त्याच्या" OK, or should it be dropped?
-5. `action.comparison_page.title` — **{competitor} पेक्षा तुमचं वेगळेपण दाखवा**. Check that
-   "वेगळेपण" is natural for "how you are different".
-6. `metrics.prominence` — **लिस्टमधलं स्थान (Prominence)**. Check that it is clear to an examiner.
-7. `metrics.sov` — **चर्चेतला वाटा (Share of voice)**. This is a coined term. Would a plain
-   **"उल्लेखांमधला वाटा"** be better?
-8. `admission.ok/no` — **जुन्या तपासण्यांशी तुलना करता येईल / येणार नाही**. Check that the meaning
-   ("statistically fit to compare over time") comes through.
-9. `add.jobs.hint` — this asks users to start each item with an **English** verb ("get …", "find …"),
-   because the question templates are English. Check that this instruction is clear, or whether the
-   team would rather accept Marathi input here.
-10. `add.aliases.placeholder` — **उदा. Patil Stores, Patil kakanche dukan**. This is a romanised
-    Marathi nickname adapted from the Hindi "Sharma ji ki dukaan". Check the spelling.
-11. `run.depth.standard` — **नेहमीचं** for "Standard". The alternative is "साधारण".
-12. `trend.title` — **वेळेनुसार बदल** for "Over time".
-13. `hero.change.*` — **{n} पॉइंट वाढ / घट**. Check whether "पॉइंट" or "गुण" is better.
-14. `recs.effortLabel.*` / `recs.class.*` — **लिस्टिंग / कंटेंट / पोझिशनिंग / प्रॉडक्ट / मेसेज**. These
-    are left as English loanwords on purpose (Details view only).
-15. `palette.navigate` — **निवडा** for the "↑↓ move" keyboard hint. This is a free translation.
+1. `rating.often` — **भक्कम दृश्यता** for "Strong visibility". "मजबूत" is the alternative.
+2. `why.presence.provider` — **{ai} ने त्याच्या…** assumes the AI is masculine. Drop "त्याच्या" if it reads oddly.
+3. `who.title` — **स्पर्धात्मक चित्र** for "Competitive landscape".
+4. `add.jobs.hint` asks for customer needs in **English**, because the query templates are English.

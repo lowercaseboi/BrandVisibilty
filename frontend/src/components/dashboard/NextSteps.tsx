@@ -4,7 +4,7 @@ import type { Gap, Recommendation } from "../../api/types";
 import { evidenceHref } from "../../format";
 import { T, useFormat, useT } from "../../i18n";
 import { actionCopy } from "./actions";
-import { effortKey, gapFinding, humanizeId, sortByPriority } from "./helpers";
+import { effortKey, effortLevel, gapFinding, humanizeId, sortByPriority } from "./helpers";
 
 const TOP = 3;
 
@@ -76,16 +76,27 @@ function SuggestionCard({
     <li className="card next-card">
       <div className="next-card-head">
         <span className="next-num" aria-hidden="true">
-          {index + 1}
+          {String(index + 1).padStart(2, "0")}
         </span>
         <h3 className="next-title">{title}</h3>
       </div>
-      <div className="next-chips">
-        <span className={`pill next-effort next-effort-${rec.effort >= 5 ? "big" : rec.effort >= 2 ? "some" : "quick"}`}>
-          {t(effortKey(rec.effort))}
-        </span>
-        {points > 0 && <span className="pill pill-accent">{t("dashboard.next.points", { n: fmt.number(points) })}</span>}
-      </div>
+      <dl className="next-meta">
+        <div>
+          <dt className="eyebrow">{t("dashboard.next.effortLabel")}</dt>
+          <dd>
+            <span className={`effort-meter effort-${effortLevel(rec.effort)}`} aria-hidden="true">
+              <i />
+              <i />
+              <i />
+            </span>
+            {t(effortKey(rec.effort))}
+          </dd>
+        </div>
+        <div>
+          <dt className="eyebrow">{t("dashboard.next.impactLabel")}</dt>
+          <dd className="next-impact">{points > 0 ? t("dashboard.next.points", { n: fmt.number(points) }) : "—"}</dd>
+        </div>
+      </dl>
 
       {copy ? (
         <ol className="next-steps" aria-label={t("dashboard.next.stepsLabel")}>

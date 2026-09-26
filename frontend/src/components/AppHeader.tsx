@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from "react";
-import type { KeyboardEvent as ReactKeyboardEvent } from "react";
-import { Link, NavLink } from "react-router-dom";
-import { LANGS, useLang, useT } from "../i18n";
-import type { Lang } from "../i18n";
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { getT, LANGS, useLang, useT } from "../i18n";
 import { DetailsToggle } from "../settings/details";
 import { useTheme } from "../settings/theme";
+import { toast } from "./Toaster";
 
 function Logo() {
   return (
@@ -57,9 +56,6 @@ function GearIcon() {
   );
 }
 
-const menuItems = (menu: HTMLElement | null) =>
-  Array.from(menu?.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]') ?? []);
-
 function ThemeButton() {
   const { resolved, toggle } = useTheme();
   const t = useT();
@@ -74,121 +70,84 @@ function ThemeButton() {
   );
 }
 
-function LanguageMenu() {
+/** One click moves to the next language (EN → हिंदी → मराठी → EN) and confirms it in that language. */
+function LanguageToggle() {
   const { lang, setLang } = useLang();
   const t = useT();
-  const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLUListElement>(null);
-  const current = LANGS.find((l) => l.code === lang) ?? LANGS[0];
+  const i = Math.max(0, LANGS.findIndex((l) => l.code === lang));
+  const current = LANGS[i];
+  const next = LANGS[(i + 1) % LANGS.length];
+  const label = t("common.lang.button", { lang: current.label, next: next.label });
 
-  useEffect(() => {
-    if (!open) return;
-    const idx = LANGS.findIndex((l) => l.code === lang);
-    menuItems(menuRef.current)[Math.max(0, idx)]?.focus();
-    const onPointer = (e: PointerEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("pointerdown", onPointer);
-    return () => document.removeEventListener("pointerdown", onPointer);
-  }, [open, lang]);
-
-  const close = (refocus: boolean) => {
-    setOpen(false);
-    if (refocus) buttonRef.current?.focus();
+  const onClick = () => {
+    setLang(next.code);
+    toast(getT(next.code)("common.lang.changed", { lang: next.label }));
   };
-
-  const choose = (code: Lang) => {
-    setLang(code);
-    close(true);
-  };
-
-  const onMenuKey = (e: ReactKeyboardEvent<HTMLUListElement>) => {
-    const list = menuItems(menuRef.current);
-    const i = list.indexOf(document.activeElement as HTMLButtonElement);
-    const focusAt = (n: number) => list[(n + list.length) % list.length]?.focus();
-    if (e.key === "ArrowDown") focusAt(i + 1);
-    else if (e.key === "ArrowUp") focusAt(i - 1);
-    else if (e.key === "Home") focusAt(0);
-    else if (e.key === "End") focusAt(list.length - 1);
-    else if (e.key === "Escape") {
-      e.stopPropagation();
-      close(true);
-    } else if (e.key === "Tab") {
-      close(false);
-      return;
-    } else return;
-    e.preventDefault();
-  };
-
-  const onButtonKey = (e: ReactKeyboardEvent<HTMLButtonElement>) => {
-    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-      e.preventDefault();
-      setOpen(true);
-    }
-  };
-
-  const label = t("common.lang.button", { lang: current.label });
 
   return (
-    <div className="menu-wrap" ref={wrapRef}>
-      <button
-        ref={buttonRef}
-        type="button"
-        className="icon-btn"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={label}
-        title={label}
-        onClick={() => setOpen((o) => !o)}
-        onKeyDown={onButtonKey}
-      >
+    <button type="button" className="icon-btn" onClick={onClick} aria-label={label} title={label}>
+      <span className="icon-swap" key={lang}>
         <GlobeIcon />
-      </button>
-      {open && (
-        <ul className="menu" role="menu" aria-label={t("common.lang.label")} ref={menuRef} onKeyDown={onMenuKey}>
-          {LANGS.map((l) => (
-            <li role="none" key={l.code}>
-              <button
-                type="button"
-                role="menuitemradio"
-                aria-checked={l.code === lang}
-                lang={l.code}
-                className="menu-item"
-                tabIndex={-1}
-                onClick={() => choose(l.code)}
-              >
-                <span>{l.label}</span>
-                <span className="menu-item-check" aria-hidden="true">
-                  ✓
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+      </span>
+    </button>
   );
+}
+
+/**
+ * Round Connections button. It toggles: from any page it opens Connections; on Connections it
+ * returns to the page you came from (carried in the link's state), or home.
+ */
+function ConnectionsToggle() {
+  const t = useT();
+  const location = useLocation();
+  const onConnections = location.pathname === "/providers";
+  const from = (location.state as { from?: string } | null)?.from;
+  const to = onConnections ? from || "/" : "/providers";
+  const label = onConnections ? t("common.nav.providersClose") : t("common.nav.providers");
+  return (
+    <Link
+      to={to}
+      state={onConnections ? undefined : { from: location.pathname + location.search + location.hash }}
+      className={`icon-btn icon-btn-round${onConnections ? " active" : ""}`}
+      aria-label={label}
+      aria-current={onConnections ? "page" : undefined}
+      title={label}
+    >
+      <GearIcon />
+    </Link>
+  );
+}
+
+/** True once the page is scrolled, so the header can frost only when content passes under it. */
+function useScrolled(): boolean {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  return scrolled;
 }
 
 export function AppHeader() {
   const t = useT();
-  const connections = t("common.nav.providers");
+  const scrolled = useScrolled();
   return (
-    <header className="app-header">
+    <header className={`app-header${scrolled ? " is-scrolled" : ""}`}>
       <div className="app-header-inner">
         <Link to="/" className="brand-mark" aria-label={t("common.app.home")}>
           <Logo />
-          <span className="brand-mark-name">{t("common.app.name")}</span>
+          <span className="brand-mark-text">
+            <span className="brand-mark-name">{t("common.app.name")}</span>
+            <span className="brand-mark-sub">{t("common.app.tagline")}</span>
+          </span>
         </Link>
         <div className="header-tools">
           <ThemeButton />
-          <LanguageMenu />
+          <LanguageToggle />
           <DetailsToggle variant="header" />
-          <NavLink to="/providers" className="icon-btn icon-btn-round" aria-label={connections} title={connections}>
-            <GearIcon />
-          </NavLink>
+          <ConnectionsToggle />
         </div>
       </div>
     </header>

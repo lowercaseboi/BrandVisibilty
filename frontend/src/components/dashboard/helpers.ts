@@ -12,7 +12,14 @@ export function toScore(fraction: number | null | undefined): number {
   return Math.round(Math.max(0, Math.min(1, fraction)) * 100);
 }
 
-/** Effort chip: 1 -> quick, 3 -> some work, 5+ -> bigger change. */
+/** Effort level for the three-step meter: 1 -> 1 (low), 2–4 -> 2 (medium), 5+ -> 3 (high). */
+export function effortLevel(effort: number | undefined): 1 | 2 | 3 {
+  if (effort !== undefined && effort >= 5) return 3;
+  if (effort !== undefined && effort >= 2) return 2;
+  return 1;
+}
+
+/** Effort word: 1 -> low, 3 -> medium, 5+ -> high. */
 export function effortKey(effort: number | undefined): MessageKey {
   if (effort !== undefined && effort >= 5) return "dashboard.next.effort.big";
   if (effort !== undefined && effort >= 2) return "dashboard.next.effort.some";

@@ -39,16 +39,29 @@
 
 /* ---------- Home: Samples / Your brands / Try your own ---------- */
 
-.home-section + .home-section {
-  margin-top: 40px;
+.home {
+  padding-top: var(--space-3);
 }
 
-.home-label {
-  margin: 0 0 14px;
-  font-family: var(--display);
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+.home-section + .home-section {
+  margin-top: 56px;
+}
+
+/* Section head: eyebrow, title, one line of context. */
+.home-head {
+  margin-bottom: 20px;
+}
+
+.home-title {
+  margin: 6px 0 4px;
+  font-size: var(--fs-xl);
+  letter-spacing: -0.05em;
+}
+
+.home-sub {
+  margin: 0;
+  max-width: 62ch;
+  font-size: var(--fs-sm);
   color: var(--muted);
 }
 
@@ -98,10 +111,21 @@
   gap: var(--space-2);
 }
 
+.sample-card-title {
+  min-width: 0;
+}
+
 .sample-card h3 {
-  font-size: 17px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
   overflow-wrap: anywhere;
+}
+
+.sample-card-sub {
+  margin: 3px 0 0;
+  font-size: var(--fs-xs);
+  color: var(--muted);
 }
 
 .sample-card-go {
@@ -183,13 +207,6 @@
 .score-ring-fill {
   stroke: currentColor;
   stroke-linecap: round;
-  animation: ring-fill 1.1s var(--ease) 0.15s backwards;
-}
-
-@keyframes ring-fill {
-  from {
-    stroke-dasharray: 0 100;
-  }
 }
 
 .score-ring-rarely {
@@ -211,54 +228,56 @@
   display: flex;
   align-items: baseline;
   justify-content: center;
-  padding-top: 44px;
+  padding-top: 45px;
   font-family: var(--display);
   font-variant-numeric: tabular-nums;
-  font-size: 36px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -0.07em;
   line-height: 1;
   color: var(--text-h);
 }
 
 .score-ring-value small {
-  margin-left: 2px;
-  font-size: 12px;
-  font-weight: 600;
+  margin-left: 3px;
+  font-size: 11px;
   letter-spacing: 0;
-  color: var(--muted);
 }
 
 .score-ring.is-empty .score-ring-value {
   color: var(--muted);
 }
 
+/* Rating as a status label (square + uppercase word), matching .badge. */
 .pg-rating {
-  font-size: var(--fs-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--fs-2xs);
   font-weight: 600;
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--border);
-  background: var(--surface-2);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--text-h);
 }
 
+.pg-rating::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 1.5px;
+  background: currentColor;
+}
+
 .pg-rating-rarely {
-  background: var(--err-bg);
-  border-color: var(--err-border);
   color: var(--err);
 }
 
 .pg-rating-sometimes {
-  background: var(--warn-bg);
-  border-color: var(--warn-border);
   color: var(--warn);
 }
 
 .pg-rating-often,
 .pg-rating-top {
-  background: var(--ok-bg);
-  border-color: var(--ok-border);
   color: var(--ok);
 }
 

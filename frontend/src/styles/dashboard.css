@@ -67,10 +67,12 @@
 }
 
 .score-hero-title {
-  margin: 0 0 var(--space-3);
-  font-size: var(--fs-md);
+  margin: 0 0 var(--space-4);
+  font-size: var(--fs-2xs);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--muted);
-  font-weight: 600;
 }
 
 .score-hero-grid {
@@ -88,46 +90,54 @@
 
 .score-big {
   font-family: var(--mono);
-  font-variant-numeric: tabular-nums;
-  font-size: 64px;
-  font-weight: 500;
-  letter-spacing: -0.03em;
+  font-size: var(--fs-hero);
+  font-weight: 600;
+  letter-spacing: -0.06em;
 }
 
 .score-outof {
   font-family: var(--mono);
   font-size: var(--fs-lg);
-  color: var(--muted);
-  margin-left: 4px;
+  margin-left: 6px;
 }
 
+/* Rating as a status label: coloured square + uppercase word, no pill. */
 .score-rating {
-  display: inline-block;
-  margin: var(--space-3) 0 0;
-  padding: 3px 10px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--border);
-  font-size: 14.5px;
-  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: var(--space-4) 0 0;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.score-rating::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: currentColor;
 }
 
 .score-rating-rarely {
-  background: var(--err-bg);
-  border-color: var(--err-border);
   color: var(--err);
 }
 
 .score-rating-sometimes {
-  background: var(--warn-bg);
-  border-color: var(--warn-border);
   color: var(--warn);
 }
 
 .score-rating-often,
 .score-rating-top {
-  background: var(--ok-bg);
-  border-color: var(--ok-border);
   color: var(--ok);
+}
+
+.score-hero-metrics {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
 }
 
 .score-rating-upper {
@@ -253,13 +263,15 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 
+/* Cards in a row share one height; "Details" sits on the bottom edge of each. */
 .next-card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4);
+  height: 100%;
 }
 
 .next-card-head {
@@ -270,55 +282,73 @@
 
 .next-num {
   flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--accent-soft);
-  color: var(--accent-text);
   font-family: var(--mono);
+  font-size: var(--fs-xs);
   font-weight: 600;
-  font-size: 14px;
+  letter-spacing: 0.04em;
+  color: var(--accent-text);
+  padding-top: 3px;
 }
 
 .next-title {
-  font-size: 17px;
-  line-height: 1.35;
-  padding-top: 2px;
+  font-size: 15.5px;
+  line-height: 1.4;
 }
 
-.next-chips {
+/* Effort and impact as a small spec table instead of coloured pills. */
+.next-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-3) 0;
+  border-block: 1px solid var(--border);
+}
+
+.next-meta dt {
+  margin-bottom: 4px;
+}
+
+.next-meta dd {
+  margin: 0;
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--text-h);
 }
 
-.next-effort-quick {
-  background: var(--ok-bg);
-  border-color: var(--ok-border);
-  color: var(--ok);
+/* Three-step bar: how much work a suggestion takes. */
+.effort-meter {
+  display: inline-flex;
+  gap: 2px;
 }
 
-.next-effort-some {
-  background: var(--info-bg);
-  border-color: var(--info-border);
-  color: var(--info);
+.effort-meter i {
+  width: 5px;
+  height: 11px;
+  border-radius: 1px;
+  background: var(--surface-3);
 }
 
-.next-effort-big {
-  background: var(--warn-bg);
-  border-color: var(--warn-border);
-  color: var(--warn);
+.effort-meter i:nth-child(1),
+.effort-2 i:nth-child(2),
+.effort-3 i:nth-child(-n + 3) {
+  background: var(--text-h);
+}
+
+.next-impact {
+  color: var(--accent-text) !important;
+  font-variant-numeric: tabular-nums;
 }
 
 .next-steps {
   margin: 0;
-  padding-left: 1.3em;
+  padding-left: 1.4em;
   display: grid;
-  gap: 6px;
-  font-size: 15px;
+  gap: 8px;
+  font-size: 13.5px;
 }
 
 .next-steps li::marker {
@@ -333,6 +363,7 @@
 }
 
 .next-why {
+  margin-top: auto;
   padding-top: var(--space-2);
   border-top: 1px dashed var(--border);
 }
@@ -373,7 +404,7 @@
 @media (min-width: 900px) {
   .next-list {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    align-items: start;
+    align-items: stretch;
   }
 }
 

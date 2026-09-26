@@ -1,5 +1,6 @@
 import { Link, Route, Routes, useLocation } from "react-router-dom";
 import { AppHeader } from "./components/AppHeader";
+import { Toaster } from "./components/Toaster";
 import { useT } from "./i18n";
 import { BrandListPage } from "./pages/BrandListPage";
 import { BrandDashboardPage } from "./pages/BrandDashboardPage";
@@ -43,6 +44,7 @@ export default function App() {
         </div>
       </main>
       <footer className="app-footer">{t("common.footer.text")}</footer>
+      <Toaster />
     </>
   );
 }

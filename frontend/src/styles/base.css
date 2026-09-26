@@ -7,7 +7,9 @@
 }
 
 html {
-  font: 400 var(--fs-md) / 1.55 var(--sans);
+  font: 400 var(--fs-md) / 1.6 var(--sans);
+  font-feature-settings: "ss01", "zero"; /* Geist Mono: rounder a/g, slashed zero */
+  letter-spacing: -0.01em;
   color: var(--text);
   background: var(--bg);
   -webkit-text-size-adjust: 100%;
@@ -25,6 +27,21 @@ body {
   overflow-wrap: break-word;
 }
 
+/* Devanagari has no monospace cut, so Hindi/Marathi text falls back to Noto Sans:
+   - nudge the size up (it reads small next to mono);
+   - pull word gaps in (spaces still come from the mono font, a full character wide);
+   - never letter-space it — tracking breaks the headline bar (शिरोरेखा) and conjuncts. */
+html:lang(hi),
+html:lang(mr) {
+  font-size: 15px;
+  word-spacing: -0.3em;
+}
+
+html:lang(hi) *,
+html:lang(mr) * {
+  letter-spacing: 0 !important;
+}
+
 /* Soft glow behind the whole app: gives the glass surfaces something to frost.
    Static on purpose — moving it would force every blurred card to re-render. */
 body::before {
@@ -37,6 +54,20 @@ body::before {
     radial-gradient(42% 38% at 8% 0%, var(--glow-1), transparent 70%),
     radial-gradient(38% 34% at 96% 6%, var(--glow-2), transparent 70%),
     radial-gradient(50% 44% at 78% 100%, var(--glow-3), transparent 72%);
+}
+
+/* Faint engineering grid on top of the glow, fading out towards the bottom and sides. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px) 0 0 / 48px 48px,
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px) 0 0 / 48px 48px;
+  mask-image: radial-gradient(ellipse 90% 75% at 50% 0%, #000 35%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 90% 75% at 50% 0%, #000 35%, transparent 100%);
 }
 
 #root {
@@ -63,15 +94,17 @@ h3,
 h4 {
   color: var(--text-h);
   font-family: var(--display);
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.25;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.03em;
   text-wrap: balance;
 }
 
 h1 {
   font-size: var(--fs-2xl);
-  margin: 4px 0 6px;
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  margin: 4px 0 8px;
 }
 
 h2 {
@@ -85,7 +118,7 @@ h2 {
 }
 
 h3 {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   margin: 0;
 }
@@ -117,7 +150,7 @@ a:hover {
 
 strong,
 b {
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-h);
 }
 
@@ -181,6 +214,30 @@ hr {
   font-family: var(--mono);
 }
 
+/* Small uppercase label above a heading or value ("SAMPLES", "EFFORT"). */
+.eyebrow {
+  display: block;
+  font-size: var(--fs-2xs);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* A score out of 100: the number carries a faint accent fade, "/100" a light accent tint. */
+.score-num {
+  background: var(--score-ink);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-variant-numeric: tabular-nums;
+}
+
+.score-of {
+  color: var(--score-outof);
+  font-weight: 500;
+}
+
 /* ---------- forms (base) ---------- */
 
 button,
@@ -194,7 +251,7 @@ textarea {
 input,
 select,
 textarea {
-  font-size: 14.5px;
+  font-size: 13.5px;
   padding: 8px 12px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-strong);
@@ -354,7 +411,7 @@ section > .metric-cards {
   :root {
     --gutter: 16px;
     --fs-2xl: 24px;
-    --fs-hero: 38px;
+    --fs-hero: 52px;
   }
 
   .app {

@@ -1,37 +1,47 @@
 // English strings shared across the app (header, nav, footer, generic words).
 // Keys are flat; they are addressed as `common.<key>`, e.g. t("common.nav.providers").
 // Plural pairs use the `_one` / `_other` suffixes and are read with t.n("common.count.questions", n).
+// Voice: clear, professional, product-report tone. No exclamation marks, no chatty asides.
 export const common = {
   "app.name": "BrandVisibility",
-  "app.tagline": "See whether AI assistants recommend your brand",
+  // Slogan under the name in the header.
+  "app.tagline": "Visibility intelligence for AI search",
   "app.home": "BrandVisibility home",
   "app.skipToContent": "Skip to main content",
 
   "nav.providers": "Connections",
+  // Same button while the Connections page is open: it takes you back.
+  "nav.providersClose": "Close connections",
 
   "lang.label": "Language",
-  "lang.button": "Change language (now {lang})",
+  // {lang} = current language, {next} = the one a click switches to (each in its own script).
+  "lang.button": "Language: {lang}. Switch to {next}",
+  // Confirmation after switching; shown in the new language.
+  "lang.changed": "Language set to {lang}",
 
   "theme.light": "Light",
   "theme.dark": "Dark",
-  "theme.system": "Same as device",
+  "theme.system": "System",
   "theme.toLight": "Switch to light theme",
   "theme.toDark": "Switch to dark theme",
   "theme.current": "Theme: {theme}",
 
-  "details.label": "Show the numbers behind this",
-  "details.hint": "Scores, confidence ranges and detailed tables",
+  "details.label": "Show detailed metrics",
+  "details.hint": "Component scores, confidence intervals and diagnostic tables",
+  // Confirmations after the header switch is pressed.
+  "details.on": "Detailed metrics shown",
+  "details.off": "Detailed metrics hidden",
 
-  "footer.text": "Checks how often AI assistants name your brand when people ask them for suggestions.",
+  "footer.text": "Measures how often AI assistants recommend your brand in response to real customer queries.",
 
   "notFound.title": "Page not found",
-  "notFound.body": "This page doesn't exist or has moved.",
-  "notFound.back": "Back to all brands",
+  "notFound.body": "The page you requested does not exist or has been moved.",
+  "notFound.back": "Return to overview",
 
   "loading": "Loading…",
   "error": "Something went wrong",
-  "error.network": "Couldn't reach the server. Check that it is running, then try again.",
-  "retry": "Try again",
+  "error.network": "Unable to reach the server. Confirm it is running and try again.",
+  "retry": "Retry",
   "back": "Back",
   "save": "Save",
   "saving": "Saving…",
@@ -50,15 +60,15 @@ export const common = {
   "required": "Required",
   "showMore": "Show more",
   "showLess": "Show less",
-  "seeAll": "See all",
+  "seeAll": "View all",
   "learnMore": "Learn more",
   "unknown": "Unknown",
   "none": "None",
 
-  "count.questions_one": "{n} question",
-  "count.questions_other": "{n} questions",
-  "count.answers_one": "{n} answer",
-  "count.answers_other": "{n} answers",
+  "count.questions_one": "{n} query",
+  "count.questions_other": "{n} queries",
+  "count.answers_one": "{n} response",
+  "count.answers_other": "{n} responses",
   "count.ais_one": "{n} AI",
   "count.ais_other": "{n} AIs",
   "count.brands_one": "{n} brand",
