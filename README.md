@@ -110,6 +110,7 @@ docker-compose.yml, Makefile, .env.example
 | [docs/CONTRACT.md](docs/CONTRACT.md) | Current module signatures, snapshot schema and HTTP API |
 | [RUNNING.md](RUNNING.md) | How to run, configure providers and use the CLI |
 | [frontend/README.md](frontend/README.md) | Frontend dev, checks and routes |
+| [DEPLOY.md](DEPLOY.md) | Hosting the backend (Render) and frontend (Vercel) for a live demo |
 
 ## Tests
 

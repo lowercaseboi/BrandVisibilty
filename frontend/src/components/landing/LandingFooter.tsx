@@ -8,9 +8,12 @@ export function LandingFooter() {
   return (
     <footer className="lp-band-dark lp-footer">
       <div className="lp-container lp-footer-inner">
-        <div className="lp-footer-word">
-          <Logo />
-          <span>BrandVisibility</span>
+        <div className="lp-footer-brand">
+          <div className="lp-footer-word">
+            <Logo />
+            <span>BrandVisibility</span>
+          </div>
+          <p className="lp-footer-tagline">{t("common.app.tagline")}</p>
         </div>
         <nav className="lp-footer-links">
           <a href="#context">{t("pages.landing.nav.why")}</a>

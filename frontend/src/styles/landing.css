@@ -11,7 +11,7 @@
   /* The whole page sits on the dark band so the transparent nav reads over the hero. */
   background: var(--band-dark);
   color: var(--band-dark-fg);
-  overflow-x: hidden;
+  overflow-x: clip; /* not hidden: hidden would make .lp the sticky container and unstick the header */
   min-height: 100vh;
   /* Numbers each section eyebrow in document order: "§ 01 Live check", "§ 02 Why this matters" … */
   counter-reset: lp-sec;
@@ -215,18 +215,97 @@
    this is only the responsive condensing that's specific to the landing page).
    ========================================================= */
 
-/* Below ~420px the CTA button plus four icon buttons crowd out the wordmark (it starts ellipsing
-   to a single letter). Drop the header's own "Try it out" there — the hero has an identical CTA
-   one scroll away — so the wordmark keeps its room. The section-anchor pill already hides itself
-   (components.css, 980px) well before this point. */
-@media (max-width: 420px) {
-  .app-header-landing .header-tools {
-    gap: 4px;
-  }
+/* Generous, uncluttered spacing: a wider minimum gap across the header row (space-between still
+   grows it further on wide screens), and roomier breathing room inside the anchor pill and around
+   the CTA. */
+.app-header-landing .app-header-inner {
+  gap: var(--space-6);
+}
 
-  .app-header-landing .header-cta {
+.app-header-landing .header-links {
+  gap: 6px;
+  padding: 7px;
+}
+
+.app-header-landing .header-links a {
+  padding: 9px 18px;
+}
+
+.app-header-landing .header-tools {
+  gap: 16px;
+}
+
+.app-header-landing .header-cta {
+  margin-left: 12px;
+}
+
+/* The slogan must always read in full on the landing header — never ellipsised, never hidden
+   (components.css truncates it and hides it below 480px for the app chrome; both overridden here
+   with the extra .app-header-landing specificity). Wrapping to a second line is fine. */
+.app-header-landing .brand-mark-sub {
+  display: block;
+  overflow: visible;
+  white-space: normal;
+  text-overflow: unset;
+  max-width: 46vw;
+}
+
+/* Section anchors are the first thing to go once the header gets tight — well before the pill's
+   own content would wrap or crowd the tools next to it. */
+@media (max-width: 1100px) {
+  .app-header-landing .header-links {
     display: none;
   }
+}
+
+@media (max-width: 480px) {
+  .app-header-landing .app-header-inner {
+    gap: var(--space-4);
+  }
+
+  .app-header-landing .header-tools {
+    gap: 8px;
+  }
+
+  .app-header-landing .brand-mark-sub {
+    max-width: 60vw;
+  }
+
+  /* Full CTA text no longer fits without crowding the wordmark and icon buttons. Keep the button
+     itself (unlike the old 420px cutoff, which hid it) and swap to a compact label: the real text
+     collapses to zero size (still the link's accessible name) while a short ::after — mirrors
+     pages.landing.ctaShort — carries the visible label. */
+  .app-header-landing .header-cta {
+    margin-left: 4px;
+    padding: 8px 12px;
+    font-size: 0;
+  }
+
+  .app-header-landing .header-cta::after {
+    content: "Try it →";
+    font-size: 13px;
+    font-weight: 600;
+  }
+}
+
+/* Sticky + scrolled: components.css already frosts the header's own background. On top of that,
+   give the CTA a distinct glass treatment here — translucent amber fill behind a crisp amber
+   frame — so it still reads as the primary action against the frosted band, not just another
+   solid button. */
+.app-header-landing.is-scrolled .header-cta {
+  background: color-mix(in srgb, var(--signal) 24%, transparent);
+  border-color: var(--signal);
+  color: var(--band-dark-fg);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  box-shadow:
+    0 0 0 calc(1px + var(--frame-gap-sm)) var(--band-dark),
+    0 0 0 calc(2px + var(--frame-gap-sm)) var(--signal);
+}
+
+.app-header-landing.is-scrolled .header-cta:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--signal) 34%, transparent);
+  color: var(--band-dark-fg);
 }
 
 /* =========================================================
@@ -627,6 +706,10 @@
   background: var(--signal);
 }
 
+/* Also carries .lp-reveal (see Workflow.tsx): both classes set the `transition` shorthand on the
+   same element, and with equal selector specificity the one later in this file would otherwise
+   win outright and drop the other's properties. Repeating opacity/transform here keeps the
+   fade/rise reveal working regardless of cascade order. */
 .lp-workflow-item {
   position: relative;
   z-index: 1;
@@ -635,7 +718,10 @@
   gap: 24px;
   padding: 12px 0;
   border-radius: var(--radius);
-  transition: background var(--dur) var(--ease);
+  transition:
+    background var(--dur) var(--ease),
+    opacity 0.6s var(--ease),
+    transform 0.6s var(--ease);
 }
 
 .lp-workflow-item:hover {
@@ -709,12 +795,14 @@
   margin: 0 0 32px;
   max-width: 62ch;
   font-size: 0.98rem;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
 }
 
 .lp-chip-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px 12px;
   margin-bottom: 28px;
 }
 
@@ -765,7 +853,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-2);
+  justify-content: center;
+  gap: var(--space-4);
   padding: 24px;
   height: 100%;
   border: 1px solid var(--line);
@@ -856,7 +945,11 @@
   font-size: var(--fs-sm);
 }
 
-@media (max-width: 720px) {
+/* Below ~900px the 240px score column gets too tight next to the answer card (long questions and
+   the chip row start crowding it), so the panel stacks above the card instead. Once stacked its
+   height should hug its own content — not stretch to match the taller card — with the ring, rating
+   and "Simulated data" label centred as a block. */
+@media (max-width: 900px) {
   .lp-sample-grid {
     grid-template-columns: 1fr;
   }
@@ -977,6 +1070,12 @@
   gap: 20px;
 }
 
+.lp-footer-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .lp-footer-word {
   display: flex;
   align-items: center;
@@ -986,6 +1085,12 @@
   font-weight: 600;
   letter-spacing: -0.03em;
   color: var(--band-dark-fg);
+}
+
+.lp-footer-tagline {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--band-dark-dim);
 }
 
 .lp-footer-links {

@@ -290,4 +290,6 @@ export const pages: Record<keyof typeof enPages, string> = {
 
   // English placeholders — translation pending.
   "landing.sample.simulatedTag": "Simulated data",
+  // English placeholders — translation pending.
+  "landing.ctaShort": "Try it →",
 };

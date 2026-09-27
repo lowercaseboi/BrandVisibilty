@@ -39,8 +39,8 @@ function ConnectionsToggle() {
 }
 
 /**
- * The one header for the whole product. `app`: logo → landing, then the tools. `landing`: the same
- * logo, slogan and tools, plus the section anchors and a "Try it out" CTA. On the landing it always
+ * The one header for the whole product. `app`: logo → landing, then all tools. `landing`: the same
+ * logo and slogan, the section anchors, theme + language only, and a "Try it out" CTA. On the landing it always
  * sits on the dark band; in the app it turns into a navy bar in light theme.
  */
 export function AppHeader({ variant = "app" }: { variant?: "app" | "landing" }) {
@@ -52,7 +52,7 @@ export function AppHeader({ variant = "app" }: { variant?: "app" | "landing" }) 
     "app-header",
     landing ? "app-header-landing on-band" : "app-header-app on-band-light",
     scrolled ? "is-scrolled" : "",
-    showDetails ? "is-analyst" : "",
+    !landing && showDetails ? "is-analyst" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -84,11 +84,12 @@ export function AppHeader({ variant = "app" }: { variant?: "app" | "landing" }) 
         )}
         <div className="header-tools">
           {/* Numbers view is a distinct mode: say so while it's on. */}
-          {showDetails && <span className="analyst-tag eyebrow">{t("common.details.analyst")}</span>}
+          {!landing && showDetails && <span className="analyst-tag eyebrow">{t("common.details.analyst")}</span>}
           <ThemeButton />
           <LanguageToggle />
-          <DetailsToggle variant="header" />
-          <ConnectionsToggle />
+          {/* The landing keeps only theme + language; numbers and connections belong to the app. */}
+          {!landing && <DetailsToggle variant="header" />}
+          {!landing && <ConnectionsToggle />}
           {landing && (
             <Link to="/app" className="btn btn-primary header-cta">
               {t("pages.landing.cta")}

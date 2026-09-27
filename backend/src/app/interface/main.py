@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import asdict
 from typing import Any
 
@@ -67,14 +68,44 @@ app = FastAPI(
     openapi_tags=TAGS,
 )
 
+# Always-allowed local dev origins (Vite dev server / docker-compose's nginx).
+_LOCAL_CORS_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:8080",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:8080",
+]
+
+
+def parse_cors_origins(raw: str | None) -> list[str]:
+    """Parse `CORS_ORIGINS` ("https://a.com, https://b.com,,") into exact origins.
+
+    Pure/deterministic: trims whitespace around each entry and drops empty ones
+    (from blank input, stray commas, or a trailing comma). `None`/"" -> [].
+    """
+    if not raw:
+        return []
+    origins: list[str] = []
+    for part in raw.split(","):
+        origin = part.strip()
+        if origin and origin not in origins:
+            origins.append(origin)
+    return origins
+
+
+def parse_cors_origin_regex(raw: str | None) -> str | None:
+    """Parse `CORS_ORIGIN_REGEX` (e.g. r"https://.*\\.vercel\\.app" for preview
+    deploys) into the pattern CORSMiddleware expects, or None when unset/blank."""
+    if raw is None:
+        return None
+    pattern = raw.strip()
+    return pattern or None
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:8080",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:8080",
-    ],
+    allow_origins=_LOCAL_CORS_ORIGINS + parse_cors_origins(os.environ.get("CORS_ORIGINS")),
+    allow_origin_regex=parse_cors_origin_regex(os.environ.get("CORS_ORIGIN_REGEX")),
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],

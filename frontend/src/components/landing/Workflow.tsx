@@ -16,9 +16,12 @@ const STEPS: { title: MessageKey; body: MessageKey }[] = [
 
 /**
  * "Workflow": six numbered steps, [01]–[06], with a connecting rail that draws in as the section
- * scrolls past — each number lights up amber once the rail reaches it. Progress is tracked with a
- * rAF-throttled scroll listener and written to a CSS var; under reduced motion the rail is simply
- * shown fully drawn.
+ * scrolls past — each number lights up amber once the rail reaches it. The same rail-progress
+ * threshold also drives each step's own reveal: a step fades/rises in once the rail reaches it,
+ * and fades back out if the user scrolls back up past it, so the sequence is fully reversible (not
+ * a "reveal once" observer). Progress is tracked with a rAF-throttled scroll listener, computed
+ * from each number's real offset within the rail, and written to a CSS var; under reduced motion
+ * every step starts (and stays) lit, so the section renders fully in place with no motion.
  */
 export function Workflow() {
   const t = useT();
@@ -47,11 +50,18 @@ export function Workflow() {
       const progress = Math.min(1, Math.max(0, total > 0 ? scrolled / total : 0));
       rail.style.setProperty("--lp-rail-progress", String(progress));
       const railHeight = rail.offsetHeight;
+      const railTop = rail.getBoundingClientRect().top;
       const fillPx = progress * railHeight;
       setLit((prev) => {
-        const next = numRefs.current.map((el) =>
-          el ? el.offsetTop - rail.offsetTop + el.offsetHeight / 2 <= fillPx : false,
-        );
+        // Real element offsets, measured viewport-relative (not offsetTop): each number's own
+        // offsetParent is its .lp-workflow-item (position: relative, for the z-index stack above
+        // the rail), not the shared list, so offsetTop alone would read ~0 for every step and
+        // light them all at once instead of one by one.
+        const next = numRefs.current.map((el) => {
+          if (!el) return false;
+          const elRect = el.getBoundingClientRect();
+          return elRect.top - railTop + elRect.height / 2 <= fillPx;
+        });
         return prev.some((v, i) => v !== next[i]) ? next : prev;
       });
     };
@@ -85,7 +95,10 @@ export function Workflow() {
             <div className="lp-workflow-rail-fill" />
           </div>
           {STEPS.map((step, i) => (
-            <Reveal key={step.title} delay={i * 60} className="lp-workflow-item">
+            // Not <Reveal>: that only ever reveals once (IntersectionObserver). Visibility here
+            // is driven directly by `lit`, the same rail-progress threshold used to light the
+            // number, so it re-evaluates — and can reverse — on every scroll tick.
+            <div key={step.title} className={`lp-workflow-item lp-reveal${lit[i] ? " is-visible" : ""}`}>
               <span
                 ref={(el) => {
                   numRefs.current[i] = el;
@@ -98,7 +111,7 @@ export function Workflow() {
                 <h3>{t(step.title)}</h3>
                 <p>{t(step.body)}</p>
               </div>
-            </Reveal>
+            </div>
           ))}
         </div>
       </div>

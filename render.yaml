@@ -1,0 +1,49 @@
+# Render Blueprint for the backend API (DEPLOY.md has the full walkthrough).
+# Deploy: Render dashboard -> New -> Blueprint -> point at this repo.
+#
+# The frontend is NOT deployed from this file — it goes to Vercel separately
+# (Root Directory "frontend", see DEPLOY.md), since Render Blueprints only
+# manage services Render itself runs.
+services:
+  - type: web
+    name: brand-visibility-backend
+    runtime: docker
+    plan: free
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /health
+    envVars:
+      # Ephemeral disk (default): data (brands/snapshots) lives under /data inside the
+      # container and is lost on every deploy/restart. That's fine for a demo — SEED_DEMO=1
+      # reseeds the 3 pilot brands' synthetic data on the next start. Uncomment the `disk:`
+      # block below (needs a paid plan) for data that survives restarts.
+      - key: DATA_DIR
+        value: /data
+      - key: SEED_DEMO
+        value: "1"
+      # Exact Vercel origin(s) allowed to call this API, comma-separated
+      # (e.g. https://brand-visibility.vercel.app). Set after the frontend is deployed.
+      - key: CORS_ORIGINS
+        sync: false
+      # Optional: regex for Vercel preview-deploy origins, e.g. https://.*\.vercel\.app
+      - key: CORS_ORIGIN_REGEX
+        sync: false
+      # Provider API keys (.env.example) — optional. Leave unset to run the fully
+      # offline synthetic demo; set any one to enable that provider for real runs.
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: CUSTOM_LLM_API_KEY
+        sync: false
+    # Persistent data (survives restarts/deploys) — paid plans only. Uncomment to use:
+    # disk:
+    #   name: brand-visibility-data
+    #   mountPath: /data
+    #   sizeGB: 1

@@ -248,13 +248,15 @@
   color: var(--ok);
 }
 
+/* Number dead-centre in the circle; "/100" sits small underneath so it never shifts the digits. */
 .score-ring-value {
   position: absolute;
   inset: 0;
   display: flex;
-  align-items: baseline;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  padding-top: 45px;
+  gap: 3px;
   font-family: var(--display);
   font-variant-numeric: tabular-nums;
   font-size: 34px;
@@ -265,9 +267,8 @@
 }
 
 .score-ring-value small {
-  margin-left: 3px;
   font-size: 11px;
-  letter-spacing: 0;
+  letter-spacing: 0.04em;
 }
 
 .score-ring.is-empty .score-ring-value {

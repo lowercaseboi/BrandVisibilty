@@ -253,6 +253,9 @@ export const pages = {
   "landing.nav.sample": "Sample",
   "landing.nav.features": "What it does",
   "landing.cta": "Try it out →",
+  // Shown in the header CTA below ~480px via CSS generated content (landing.css) — the real
+  // string above stays the link's accessible name; keep this in sync with that CSS by hand.
+  "landing.ctaShort": "Try it →",
 
   "landing.hero.eyebrow": "Brand intelligence",
   "landing.hero.line1": "AI assistants already recommend brands.",
