@@ -45,8 +45,10 @@ export function Workflow() {
       if (!list || !rail) return;
       const rect = list.getBoundingClientRect();
       const vh = window.innerHeight;
-      const total = rect.height + vh * 0.5;
-      const scrolled = vh * 0.75 - rect.top;
+      // Starts as the list enters (top at 90% of the viewport) and completes once its bottom is at
+      // 80%, so every step is lit while the whole section is still on screen.
+      const total = rect.height + vh * 0.1;
+      const scrolled = vh * 0.9 - rect.top;
       const progress = Math.min(1, Math.max(0, total > 0 ? scrolled / total : 0));
       rail.style.setProperty("--lp-rail-progress", String(progress));
       const railHeight = rail.offsetHeight;

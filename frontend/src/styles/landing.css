@@ -792,7 +792,7 @@
 }
 
 .lp-sample-note {
-  margin: 0 0 32px;
+  margin: 0 0 48px; /* clear breathing room before the brand chips */
   max-width: 62ch;
   font-size: 0.98rem;
   line-height: 1.65;
