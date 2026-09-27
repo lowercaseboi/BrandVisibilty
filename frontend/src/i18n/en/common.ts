@@ -6,9 +6,11 @@ export const common = {
   "app.name": "BrandVisibility",
   // Slogan under the name in the header.
   "app.tagline": "Visibility intelligence for AI search",
-  "app.home": "BrandVisibility home",
+  "app.home": "BrandVisibility home page",
   "app.skipToContent": "Skip to main content",
 
+  // Logo on the landing page: opens the app.
+  "nav.app": "Open the BrandVisibility app",
   "nav.providers": "Connections",
   // Same button while the Connections page is open: it takes you back.
   "nav.providersClose": "Close connections",

@@ -257,8 +257,7 @@ export const pages = {
   "landing.hero.eyebrow": "Brand intelligence",
   "landing.hero.line1": "AI assistants already recommend brands.",
   "landing.hero.line2": "BrandVisibility shows you which.",
-  "landing.hero.lede":
-    "When a customer asks ChatGPT or Gemini for a recommendation, the assistant answers from whatever it already believes about the category. BrandVisibility runs the questions real customers ask, records whether AI assistants name the brand, and turns the pattern into a score you can track over time.",
+  "landing.hero.lede": "We run the questions real customers ask AI assistants, and score whether the brand gets named.",
   "landing.hero.workflowCta": "See the workflow",
   "landing.hero.cardLabel": "AI assistant · illustrative example",
   "landing.hero.prompt": "best vada pav near Dadar station?",
@@ -302,6 +301,7 @@ export const pages = {
   "landing.sample.question": "Question",
   "landing.sample.answer": "Answer",
   "landing.sample.legend": "Legend:",
+  "landing.sample.simulatedTag": "Simulated data",
 
   "landing.features.eyebrow": "What it does",
   "landing.features.title": "Enough detail to act on, not a score out of ten.",
@@ -317,6 +317,4 @@ export const pages = {
   "landing.features.f5.body": "No suggestion is untraceable — each one points back to the exact gap and the answers behind it.",
   "landing.features.f6.title": "Track change over reruns",
   "landing.features.f6.body": "Run the same question set again and see whether visibility actually moved.",
-
-  "landing.footer.tagline": "A final-year engineering project: measuring how AI assistants recommend brands.",
 } as const;

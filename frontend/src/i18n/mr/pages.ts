@@ -288,5 +288,6 @@ export const pages: Record<keyof typeof enPages, string> = {
   "landing.features.f6.title": "प्रत्येक रीरनमधील बदल ट्रॅक करा",
   "landing.features.f6.body": "तोच प्रश्न संच पुन्हा चालवा आणि दृश्यता खरंच बदलली का ते पाहा.",
 
-  "landing.footer.tagline": "एक फायनल-इयर इंजिनिअरिंग प्रोजेक्ट, जो मोजतो की AI असिस्टंट ब्रँडची शिफारस कशी करतात.",
+  // English placeholders — translation pending.
+  "landing.sample.simulatedTag": "Simulated data",
 };

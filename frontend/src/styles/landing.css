@@ -79,6 +79,21 @@
   margin: 0 0 20px;
 }
 
+/* Each line of the hero heading rises in on load, staggered. Both end at their normal (fully
+   visible) style, so the heading reads fine even if the animation never runs. */
+.lp-h1-line {
+  display: block;
+  animation: rise 0.7s var(--ease) backwards;
+}
+
+.lp-h1-line-1 {
+  animation-delay: 60ms;
+}
+
+.lp-h1-line-2 {
+  animation-delay: 200ms;
+}
+
 .lp-h2 {
   font-family: var(--display);
   font-size: clamp(1.7rem, 3vw, 2.5rem);
@@ -162,121 +177,94 @@
   color: var(--band-dark-fg);
 }
 
-.lp-btn-nav {
-  padding: 8px 18px;
-  min-height: 34px;
-  font-size: 13.5px;
-}
-
 /* =========================================================
-   Nav
+   Header (AppHeader variant="landing" — see components.css/AppHeader.tsx for the shared chrome;
+   this is only the responsive condensing that's specific to the landing page).
    ========================================================= */
 
-.lp-nav {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  background: transparent;
-  border-bottom: 1px solid transparent;
-  transition:
-    background var(--dur-slow) var(--ease),
-    border-color var(--dur-slow) var(--ease),
-    box-shadow var(--dur-slow) var(--ease);
-}
+/* Below ~420px the CTA button plus four icon buttons crowd out the wordmark (it starts ellipsing
+   to a single letter). Drop the header's own "Try it out" there — the hero has an identical CTA
+   one scroll away — so the wordmark keeps its room. The section-anchor pill already hides itself
+   (components.css, 980px) well before this point. */
+@media (max-width: 420px) {
+  .app-header-landing .header-tools {
+    gap: 4px;
+  }
 
-.lp-nav.is-scrolled {
-  background: color-mix(in srgb, var(--band-dark) 74%, transparent);
-  backdrop-filter: var(--blur);
-  -webkit-backdrop-filter: var(--blur);
-  border-bottom-color: var(--band-dark-line);
-  box-shadow: 0 12px 32px -24px rgb(0 0 0 / 0.45);
-}
-
-.lp-nav-inner {
-  max-width: var(--maxw);
-  margin: 0 auto;
-  padding: 18px var(--gutter);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2) var(--space-4);
-  color: var(--band-dark-fg);
-}
-
-.lp-nav-brand {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-family: var(--display);
-  font-size: 17px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  color: var(--band-dark-fg);
-  text-decoration: none;
-}
-
-.lp-nav-links {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  margin: 0;
-  padding: 6px;
-  list-style: none;
-  border: 1px solid var(--band-dark-line);
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--band-dark-raised) 65%, transparent);
-}
-
-.lp-nav-links a {
-  display: block;
-  padding: 8px 16px;
-  border-radius: var(--radius-pill);
-  font-size: 13.5px;
-  color: var(--band-dark-dim);
-  text-decoration: none;
-  transition:
-    background var(--dur) var(--ease),
-    color var(--dur) var(--ease);
-}
-
-.lp-nav-links a:hover {
-  color: var(--band-dark-fg);
-  background: color-mix(in srgb, var(--band-dark-fg) 10%, transparent);
-}
-
-.lp-nav-tools {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-/* Theme/language buttons keep the nav's dark chrome regardless of the app's own light/dark toggle. */
-.lp-nav .icon-btn {
-  background: color-mix(in srgb, var(--band-dark-fg) 8%, transparent);
-  border-color: var(--band-dark-line);
-  color: var(--band-dark-fg);
-  box-shadow: none;
-}
-
-.lp-nav .icon-btn:hover {
-  background: color-mix(in srgb, var(--band-dark-fg) 15%, transparent);
-  border-color: var(--band-dark-line);
-  color: var(--band-dark-fg);
-  box-shadow: none;
-}
-
-@media (max-width: 760px) {
-  .lp-nav-links {
+  .app-header-landing .header-cta {
     display: none;
   }
 }
 
-@media (max-width: 420px) {
-  .lp-nav-inner {
-    padding: 12px var(--gutter);
+/* =========================================================
+   Perspective grid backdrop — every band gets a faint tilted-plane grid, in the band's own line
+   colour, fading out toward the section's edges. Pure background decoration behind the content.
+   ========================================================= */
+
+.lp-band-dark,
+.lp-band-light {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.lp-band-dark::before,
+.lp-band-light::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--lp-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--lp-grid-line) 1px, transparent 1px);
+  background-size: 64px 64px;
+  transform: perspective(600px) rotateX(58deg);
+  transform-origin: 50% 0%;
+  mask-image: linear-gradient(to bottom, black, transparent 65%);
+  -webkit-mask-image: linear-gradient(to bottom, black, transparent 65%);
+}
+
+.lp-band-dark::before {
+  --lp-grid-line: color-mix(in srgb, var(--band-dark-fg) 12%, transparent);
+}
+
+.lp-band-light::before {
+  --lp-grid-line: color-mix(in srgb, var(--band-light-fg) 9%, transparent);
+}
+
+.lp-band-dark > .lp-container,
+.lp-band-light > .lp-container {
+  position: relative;
+  z-index: 1;
+}
+
+/* =========================================================
+   Scroll progress
+   ========================================================= */
+
+.lp-scroll-progress {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 39;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--band-dark-fg) 8%, transparent);
+}
+
+.lp-scroll-progress-fill {
+  height: 100%;
+  width: 100%;
+  background: var(--signal);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-scroll-progress {
+    display: none;
   }
 }
 
@@ -296,9 +284,29 @@
   height: 620px;
   z-index: 0;
   pointer-events: none;
+  will-change: transform;
   background:
     radial-gradient(45% 60% at 20% 20%, color-mix(in srgb, var(--signal) 22%, transparent), transparent 70%),
     radial-gradient(35% 50% at 85% 10%, color-mix(in srgb, var(--detected) 16%, transparent), transparent 70%);
+}
+
+/* A steeper perspective "floor" grid at the very bottom of the hero, receding into the distance. */
+.lp-hero-floor {
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  bottom: 0;
+  height: 55%;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--band-dark-fg) 16%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--band-dark-fg) 16%, transparent) 1px, transparent 1px);
+  background-size: 46px 46px;
+  transform: perspective(500px) rotateX(72deg);
+  transform-origin: 50% 100%;
+  mask-image: linear-gradient(to top, black, transparent 85%);
+  -webkit-mask-image: linear-gradient(to top, black, transparent 85%);
 }
 
 .lp-hero-grid {
@@ -389,10 +397,29 @@
   overflow-wrap: anywhere;
 }
 
+/* Types out on load: the wrapper's own width is the resting (fully visible) state, so the prompt
+   reads fine even without the animation — the keyframe only clips it back during the delay. */
+@keyframes lp-type {
+  from {
+    width: 0;
+  }
+}
+
+.lp-hero-prompt-type {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  vertical-align: bottom;
+  width: 100%;
+  animation: lp-type 1.1s steps(32, end) 0.5s backwards;
+}
+
 .lp-hero-answer {
   margin: 0 0 var(--space-5);
   color: var(--band-dark-fg);
   font-size: 1rem;
+  animation: fade 0.5s var(--ease) 1.7s backwards;
 }
 
 .lp-hero-checks {
@@ -410,6 +437,19 @@
   gap: 10px;
   font-size: 0.95rem;
   color: var(--band-dark-fg);
+  animation: pop 0.4s var(--ease) backwards;
+}
+
+.lp-hero-checks li:nth-child(1) {
+  animation-delay: 2.1s;
+}
+
+.lp-hero-checks li:nth-child(2) {
+  animation-delay: 2.28s;
+}
+
+.lp-hero-checks li:nth-child(3) {
+  animation-delay: 2.46s;
 }
 
 .lp-check-icon {
@@ -430,6 +470,18 @@
 .lp-check-miss {
   background: color-mix(in srgb, var(--missing) 20%, transparent);
   color: var(--missing);
+}
+
+/* The global reduced-motion rule (base.css) zeroes animation *durations*, not *delays* — without
+   this, the typing → fade → pop sequence would still make someone wait ~2.9s staring at an empty
+   card before anything appears. Drop every delay in the sequence so it resolves immediately. */
+@media (prefers-reduced-motion: reduce) {
+  .lp-h1-line,
+  .lp-hero-prompt-type,
+  .lp-hero-answer,
+  .lp-hero-checks li {
+    animation-delay: 0s !important;
+  }
 }
 
 /* =========================================================
@@ -498,7 +550,16 @@
   bottom: 24px;
   left: 27px;
   width: 1px;
+  overflow: hidden;
   background: var(--band-dark-line);
+}
+
+/* Draws in as the section scrolls past — JS writes --lp-rail-progress (0–1) on this element. */
+.lp-workflow-rail-fill {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: calc(var(--lp-rail-progress, 0) * 100%);
+  background: var(--signal);
 }
 
 .lp-workflow-item {
@@ -527,6 +588,19 @@
   font-family: var(--sans);
   font-size: 0.85rem;
   color: var(--signal);
+  transition:
+    background var(--dur-slow) var(--ease),
+    color var(--dur-slow) var(--ease),
+    border-color var(--dur-slow) var(--ease),
+    box-shadow var(--dur-slow) var(--ease);
+}
+
+/* Lights up once the drawing rail reaches this step. */
+.lp-workflow-num.is-lit {
+  background: var(--signal);
+  border-color: var(--signal);
+  color: var(--signal-fg);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--signal) 20%, transparent);
 }
 
 .lp-workflow-body h3 {
@@ -565,39 +639,26 @@
 }
 
 .lp-sample-note {
-  margin: 0 0 40px;
+  margin: 0 0 32px;
   max-width: 62ch;
   font-size: 0.98rem;
-}
-
-.lp-sample-grid {
-  display: grid;
-  grid-template-columns: 220px 1fr;
-  gap: 32px;
-  align-items: start;
-}
-
-.lp-sample-grid > * {
-  min-width: 0;
-}
-
-.lp-sample-side {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
 }
 
 .lp-chip-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-bottom: 28px;
 }
 
+/* Glassy, not a solid fill: a translucent tint + hairline border for the active chip too. */
 .lp-chip {
   padding: 7px 14px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--border-strong);
   background: var(--surface);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
   color: var(--text);
   font-size: 0.85rem;
   cursor: pointer;
@@ -618,16 +679,51 @@
   font-weight: 600;
 }
 
-.lp-sample-score {
+.lp-sample-grid {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.lp-sample-grid > * {
+  min-width: 0;
+}
+
+/* Glass score panel: translucent surface + blur + hairline border, matching .card's padding
+   rhythm so its top aligns with the answer card next to it. */
+.lp-sample-panel {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-3) 0;
+  padding: 24px;
+  height: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  box-shadow: var(--shadow-1), inset 0 1px 0 var(--glass-highlight);
+}
+
+.lp-sample-simulated {
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-2xs);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .lp-sample-card {
+  padding: 24px;
   min-height: 220px;
+}
+
+/* Remounted (keyed by brand) each time the picked brand changes, so it cross-fades in. */
+.lp-sample-fade {
+  animation: fade 0.4s var(--ease);
 }
 
 .lp-sample-status {
@@ -680,12 +776,8 @@
     grid-template-columns: 1fr;
   }
 
-  .lp-sample-side {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 16px;
+  .lp-sample-panel {
+    height: auto;
   }
 }
 
@@ -715,10 +807,12 @@
   background: var(--band-dark-raised);
   border-radius: var(--radius-lg);
   transition:
-    transform var(--dur-slow) var(--ease),
+    transform 0.15s var(--ease-spring),
     border-color var(--dur-slow) var(--ease);
 }
 
+/* JS (pointermove) sets a per-card tilt as an inline transform; :hover is the fallback for touch,
+   where no pointermove fires. */
 .lp-feature-card:hover {
   transform: translateY(-3px);
   border-color: color-mix(in srgb, var(--signal) 40%, transparent);
@@ -766,7 +860,7 @@
 .lp-footer-inner {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 20px;
 }
@@ -782,10 +876,21 @@
   color: var(--band-dark-fg);
 }
 
-.lp-footer-tagline {
-  margin: 0;
-  max-width: 46ch;
+.lp-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.lp-footer-links a {
   font-size: 0.9rem;
+  color: var(--band-dark-dim);
+  text-decoration: none;
+  transition: color var(--dur) var(--ease);
+}
+
+.lp-footer-links a:hover {
+  color: var(--band-dark-fg);
 }
 
 .lp-footer-cta {

@@ -69,4 +69,6 @@ export const common: Record<keyof typeof enCommon, string> = {
   "count.ais_other": "{n} AI",
   "count.brands_one": "{n} ब्रँड",
   "count.brands_other": "{n} ब्रँड",
+  // English placeholders — translation pending.
+  "nav.app": "Open the BrandVisibility app",
 };

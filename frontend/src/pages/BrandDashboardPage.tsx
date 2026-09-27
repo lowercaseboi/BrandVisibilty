@@ -5,6 +5,7 @@ import { ApiError, getLatestSnapshot, getQuestions, getSnapshots, listBrands, li
 import type { Snapshot } from "../api/types";
 import { useAsync } from "../api/useAsync";
 import { AdmissionBanner } from "../components/AdmissionBanner";
+import { CollapsibleSection } from "../components/CollapsibleSection";
 import { GapList } from "../components/GapList";
 import { MetricCards } from "../components/MetricCards";
 import { ProviderTable } from "../components/ProviderTable";
@@ -16,7 +17,7 @@ import { CompetitorBars } from "../components/dashboard/CompetitorBars";
 import { NextSteps } from "../components/dashboard/NextSteps";
 import { SampleAnswer } from "../components/dashboard/SampleAnswer";
 import { ScoreHero } from "../components/dashboard/ScoreHero";
-import { useListFormat, useProviderLabel } from "../components/dashboard/helpers";
+import { competitiveLeaderName, useListFormat, useProviderLabel } from "../components/dashboard/helpers";
 import { evidenceHref } from "../format";
 import { useFormat, useT } from "../i18n";
 import { Details, DetailsToggle } from "../settings/details";
@@ -61,7 +62,11 @@ export function BrandDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   const [highlightedGap, setHighlightedGap] = useState<string | null>(null);
+  const [gapsForceOpen, setGapsForceOpen] = useState(false);
+  const [nextSummary, setNextSummary] = useState<{ done: number; total: number } | null>(null);
+  const [sampleAiName, setSampleAiName] = useState<string | null>(null);
   const clearTimer = useRef<number | undefined>(undefined);
+  const scrollTimer = useRef<number | undefined>(undefined);
   const handledHash = useRef<string | null>(null);
 
   // AI display names ("Google Gemini") and the current question set (for the
@@ -92,10 +97,20 @@ export function BrandDashboardPage() {
   }, [brandKey, reload]);
 
   const traceGap = useCallback((gapId: string) => {
+    // Force the Gaps section open first, then wait for it to expand before scrolling to the card
+    // — otherwise scrollIntoView measures a still-collapsed (zero-height) container.
+    setGapsForceOpen(true);
     setHighlightedGap(gapId);
-    document.getElementById(`gap-${gapId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.clearTimeout(scrollTimer.current);
+    scrollTimer.current = window.setTimeout(() => {
+      document.getElementById(`gap-${gapId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 260);
     window.clearTimeout(clearTimer.current);
     clearTimer.current = window.setTimeout(() => setHighlightedGap(null), 3500);
+  }, []);
+
+  const handleNextSummary = useCallback((done: number, total: number) => {
+    setNextSummary((prev) => (prev && prev.done === done && prev.total === total ? prev : { done, total }));
   }, []);
 
   // Deep link: /brands/x#gap-<id> scrolls to and highlights that gap once loaded (once per hash).
@@ -108,7 +123,13 @@ export function BrandDashboardPage() {
     return () => window.clearTimeout(timer);
   }, [hasData, location.hash, traceGap]);
 
-  useEffect(() => () => window.clearTimeout(clearTimer.current), []);
+  useEffect(
+    () => () => {
+      window.clearTimeout(clearTimer.current);
+      window.clearTimeout(scrollTimer.current);
+    },
+    [],
+  );
 
   const onRunComplete = useCallback(() => setReload((n) => n + 1), []);
 
@@ -123,61 +144,68 @@ export function BrandDashboardPage() {
     ? (snapshot.providers ?? snapshot.analysis_result.per_provider_coverage.map((p) => p.provider_id))
     : [];
   const unscoredCount = snapshot?.unscored_observation_count ?? 0;
+  const analysisCount = history.length > 0 ? history.length : snapshot ? 1 : 0;
+  const gapsCount = snapshot?.gaps?.length ?? 0;
+  const leaderName = snapshot ? competitiveLeaderName(snapshot.mention_summary, snapshot.entities, selfName) : null;
 
   return (
     <div className="dash">
-      <p className="crumbs">
-        <Link to="/app">{t("dashboard.crumbs.back")}</Link>
-      </p>
-      <div className="page-head dash-head">
-        <div>
-          <h1>{title}</h1>
-          {snapshot && (
-            <p className="run-meta">
-              {snapshot.data_origin === "synthetic"
-                ? t("dashboard.head.lastCheckedPractice", { when: fmt.relativeTime(snapshot.collection_completed_at) })
-                : t("dashboard.head.lastChecked", {
-                    when: fmt.relativeTime(snapshot.collection_completed_at),
-                    ais: list(askedIds.map(labelOf)),
-                  })}
-            </p>
-          )}
-        </div>
-        <div className="page-head-actions">
-          <Link to={`/brands/${encodeURIComponent(brandKey)}/questions`} className="btn btn-secondary">
-            {t("dashboard.head.questions")}
-          </Link>
-          {snapshot && (
-            <Link to={evidenceHref(brandKey, snapshot.run_id)} className="btn btn-secondary">
-              {t("dashboard.head.answers")}
+      {/* Navy top band, continuing seamlessly from the navy app header — light theme only; no
+          effect at all in dark theme (see .dash-band, dashboard.css). */}
+      <div className="on-band-light dash-band">
+        <p className="crumbs">
+          <Link to="/app">{t("dashboard.crumbs.back")}</Link>
+        </p>
+        <div className="page-head dash-head">
+          <div>
+            <h1>{title}</h1>
+            {snapshot && (
+              <p className="run-meta">
+                {snapshot.data_origin === "synthetic"
+                  ? t("dashboard.head.lastCheckedPractice", { when: fmt.relativeTime(snapshot.collection_completed_at) })
+                  : t("dashboard.head.lastChecked", {
+                      when: fmt.relativeTime(snapshot.collection_completed_at),
+                      ais: list(askedIds.map(labelOf)),
+                    })}
+              </p>
+            )}
+          </div>
+          <div className="page-head-actions">
+            <Link to={`/brands/${encodeURIComponent(brandKey)}/questions`} className="btn btn-secondary">
+              {t("dashboard.head.questions")}
             </Link>
-          )}
+            {snapshot && (
+              <Link to={evidenceHref(brandKey, snapshot.run_id)} className="btn btn-secondary">
+                {t("dashboard.head.answers")}
+              </Link>
+            )}
+          </div>
         </div>
+
+        {error && (
+          <div className="alert alert-error" role="alert">
+            {t("dashboard.error.load")}
+            <Details>
+              <p className="small" lang="en">
+                {error}
+              </p>
+            </Details>
+          </div>
+        )}
+        {!data && !error && <p className="status">{t("dashboard.loading")}</p>}
+
+        {data && <HonestyBanners snapshot={snapshot} questions={questions} brandKey={brandKey} labelOf={labelOf} />}
+
+        {data && !snapshot && (
+          <div className="card empty-state dash-empty">
+            <h2>{t("dashboard.empty.title")}</h2>
+            <p>{t("dashboard.empty.body")}</p>
+            <p className="muted">{t("dashboard.empty.body2")}</p>
+          </div>
+        )}
+
+        {snapshot && <ScoreHero snapshot={snapshot} previous={previous} />}
       </div>
-
-      {error && (
-        <div className="alert alert-error" role="alert">
-          {t("dashboard.error.load")}
-          <Details>
-            <p className="small" lang="en">
-              {error}
-            </p>
-          </Details>
-        </div>
-      )}
-      {!data && !error && <p className="status">{t("dashboard.loading")}</p>}
-
-      {data && <HonestyBanners snapshot={snapshot} questions={questions} brandKey={brandKey} labelOf={labelOf} />}
-
-      {data && !snapshot && (
-        <div className="card empty-state dash-empty">
-          <h2>{t("dashboard.empty.title")}</h2>
-          <p>{t("dashboard.empty.body")}</p>
-          <p className="muted">{t("dashboard.empty.body2")}</p>
-        </div>
-      )}
-
-      {snapshot && <ScoreHero snapshot={snapshot} previous={previous} />}
 
       {data && (
         <RunPanel
@@ -191,18 +219,19 @@ export function BrandDashboardPage() {
 
       {snapshot && (
         <>
-          <section className="dash-section" aria-labelledby="trend-title">
-            <h2 id="trend-title">{t("dashboard.trend.title")}</h2>
+          <CollapsibleSection id="trend" title={t("dashboard.trend.title")} summary={t.n("dashboard.trend.count", analysisCount)}>
             <div className="card">
               <TrendChart snapshots={history.length ? history : [snapshot]} currentRunId={snapshot.run_id} labelOf={labelOf} />
             </div>
-          </section>
+          </CollapsibleSection>
 
           {/* Gaps are found by deterministic rules (DESIGN §5.1); technical fields show in the numbers view. */}
-          <section className="dash-section" aria-labelledby="gaps-title">
-            <h2 id="gaps-title">
-              {t("dashboard.gaps.title")} <span className="count">{snapshot.gaps?.length ?? 0}</span>
-            </h2>
+          <CollapsibleSection
+            id="gaps"
+            title={t("dashboard.gaps.title")}
+            summary={t.n("dashboard.gaps.count", gapsCount)}
+            forceOpen={gapsForceOpen}
+          >
             <p className="section-note">{t("dashboard.gaps.intro")}</p>
             <GapList
               gaps={snapshot.gaps ?? []}
@@ -212,23 +241,29 @@ export function BrandDashboardPage() {
               highlightedGapId={highlightedGap}
               labelOf={labelOf}
             />
-          </section>
+          </CollapsibleSection>
 
-          <NextSteps
-            recommendations={snapshot.recommendations ?? []}
-            gaps={snapshot.gaps ?? []}
-            brandKey={brandKey}
-            runId={snapshot.run_id}
-            entities={snapshot.entities}
-            labelOf={labelOf}
-          />
+          <CollapsibleSection
+            id="next"
+            title={t("dashboard.next.title")}
+            summary={nextSummary && nextSummary.total > 0 ? t("dashboard.next.progress", nextSummary) : undefined}
+          >
+            <NextSteps
+              recommendations={snapshot.recommendations ?? []}
+              gaps={snapshot.gaps ?? []}
+              brandKey={brandKey}
+              runId={snapshot.run_id}
+              entities={snapshot.entities}
+              labelOf={labelOf}
+              onSummaryChange={handleNextSummary}
+            />
+          </CollapsibleSection>
 
           <div className="dash-details-switch">
             <DetailsToggle variant="inline" />
           </div>
           <Details>
-            <section className="dash-details" aria-labelledby="details-title">
-              <h2 id="details-title">{t("dashboard.details.title")}</h2>
+            <CollapsibleSection id="details" title={t("dashboard.details.title")}>
               <p className="section-note">{t("dashboard.details.intro")}</p>
 
               <dl className="card dash-facts">
@@ -269,12 +304,16 @@ export function BrandDashboardPage() {
                 onTraceGap={traceGap}
                 labelOf={labelOf}
               />
-            </section>
+            </CollapsibleSection>
           </Details>
 
-          <CompetitorBars summary={snapshot.mention_summary} entities={snapshot.entities} selfName={selfName} />
+          <CollapsibleSection id="landscape" title={t("dashboard.who.title")} summary={leaderName}>
+            <CompetitorBars summary={snapshot.mention_summary} entities={snapshot.entities} selfName={selfName} />
+          </CollapsibleSection>
 
-          <SampleAnswer brandKey={brandKey} runId={snapshot.run_id} labelOf={labelOf} />
+          <CollapsibleSection id="sample" title={t("dashboard.sample.title")} summary={sampleAiName}>
+            <SampleAnswer brandKey={brandKey} runId={snapshot.run_id} labelOf={labelOf} onSample={setSampleAiName} />
+          </CollapsibleSection>
         </>
       )}
     </div>

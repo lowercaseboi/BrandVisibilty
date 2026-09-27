@@ -38,20 +38,50 @@ function ConnectionsToggle() {
   );
 }
 
-export function AppHeader() {
+/**
+ * The one header for the whole product. `app`: logo → landing, then the tools. `landing`: the same
+ * logo, slogan and tools, plus the section anchors and a "Try it out" CTA. On the landing it always
+ * sits on the dark band; in the app it turns into a navy bar in light theme.
+ */
+export function AppHeader({ variant = "app" }: { variant?: "app" | "landing" }) {
   const t = useT();
   const scrolled = useScrolled();
   const { showDetails } = useDetails();
+  const landing = variant === "landing";
+  const cls = [
+    "app-header",
+    landing ? "app-header-landing on-band" : "app-header-app on-band-light",
+    scrolled ? "is-scrolled" : "",
+    showDetails ? "is-analyst" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
   return (
-    <header className={`app-header${scrolled ? " is-scrolled" : ""}${showDetails ? " is-analyst" : ""}`}>
+    <header className={cls}>
       <div className="app-header-inner">
-        <Link to="/app" className="brand-mark" aria-label={t("common.app.home")}>
+        <Link to={landing ? "/app" : "/"} className="brand-mark" aria-label={landing ? t("common.nav.app") : t("common.app.home")}>
           <Logo />
           <span className="brand-mark-text">
             <span className="brand-mark-name">{t("common.app.name")}</span>
             <span className="brand-mark-sub">{t("common.app.tagline")}</span>
           </span>
         </Link>
+        {landing && (
+          <ul className="header-links">
+            <li>
+              <a href="#context">{t("pages.landing.nav.why")}</a>
+            </li>
+            <li>
+              <a href="#how-it-works">{t("pages.landing.nav.workflow")}</a>
+            </li>
+            <li>
+              <a href="#demo">{t("pages.landing.nav.sample")}</a>
+            </li>
+            <li>
+              <a href="#features">{t("pages.landing.nav.features")}</a>
+            </li>
+          </ul>
+        )}
         <div className="header-tools">
           {/* Numbers view is a distinct mode: say so while it's on. */}
           {showDetails && <span className="analyst-tag eyebrow">{t("common.details.analyst")}</span>}
@@ -59,6 +89,11 @@ export function AppHeader() {
           <LanguageToggle />
           <DetailsToggle variant="header" />
           <ConnectionsToggle />
+          {landing && (
+            <Link to="/app" className="btn btn-primary header-cta">
+              {t("pages.landing.cta")}
+            </Link>
+          )}
         </div>
       </div>
     </header>

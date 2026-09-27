@@ -12,6 +12,7 @@ import { Reveal } from "./Reveal";
 /**
  * "Sample analysis": pick a pilot brand, show one real answer from its latest run (highlighted)
  * next to its score. All simulated/sample data — a link points at the live workspace for real runs.
+ * The answer card cross-fades (keyed by brand) whenever a different brand is picked.
  */
 export function Sample() {
   const t = useT();
@@ -60,54 +61,57 @@ export function Sample() {
             {t("pages.landing.sample.note")} <Link to="/app">{t("pages.landing.sample.liveCta")}</Link>
           </p>
         </Reveal>
-        <Reveal delay={80}>
+        {pilots.length > 0 && (
+          <Reveal delay={60}>
+            <div className="lp-chip-row" role="group" aria-label={t("pages.landing.sample.pickBrand")}>
+              {pilots.map((b) => (
+                <button
+                  key={b.brand_key}
+                  type="button"
+                  className={`lp-chip${b.brand_key === activeKey ? " is-active" : ""}`}
+                  aria-pressed={b.brand_key === activeKey}
+                  onClick={() => selectBrand(b.brand_key)}
+                >
+                  {b.brand}
+                </button>
+              ))}
+            </div>
+          </Reveal>
+        )}
+        <Reveal delay={100}>
           <div className="lp-sample-grid">
-            <div className="lp-sample-side">
-              {pilots.length > 0 && (
-                <div className="lp-chip-row" role="group" aria-label={t("pages.landing.sample.pickBrand")}>
-                  {pilots.map((b) => (
-                    <button
-                      key={b.brand_key}
-                      type="button"
-                      className={`lp-chip${b.brand_key === activeKey ? " is-active" : ""}`}
-                      aria-pressed={b.brand_key === activeKey}
-                      onClick={() => selectBrand(b.brand_key)}
-                    >
-                      {b.brand}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <div className="lp-sample-score">
-                <ScoreRing score={score} band={rating?.band} play={play} />
-                {rating && <span className={`pg-rating pg-rating-${rating.band}`}>{t(RATING_KEY[rating.band])}</span>}
-              </div>
+            <div className="lp-sample-panel">
+              <ScoreRing score={score} band={rating?.band} play={play} />
+              {rating && <span className={`pg-rating pg-rating-${rating.band}`}>{t(RATING_KEY[rating.band])}</span>}
+              <p className="lp-sample-simulated">{t("pages.landing.sample.simulatedTag")}</p>
             </div>
             <div className="card lp-sample-card">
-              {noPilots || failed ? (
-                <p className="muted lp-sample-status">{t("pages.landing.sample.unavailable")}</p>
-              ) : loading || !obs ? (
-                <p className="muted lp-sample-status">{loading ? t("pages.landing.sample.loading") : t("pages.landing.sample.unavailable")}</p>
-              ) : (
-                <>
-                  <p className="lp-sample-label">{t("pages.landing.sample.question")}</p>
-                  <blockquote className="lp-sample-question">{obs.query_text}</blockquote>
-                  <p className="lp-sample-label">{t("pages.landing.sample.answer")}</p>
-                  <div className="lp-sample-answer">{highlight(text, mentions, cutPoint(text, mentions), kindLabel)}</div>
-                  {kinds.size > 0 && (
-                    <p className="lp-sample-legend">
-                      <span className="muted">{t("pages.landing.sample.legend")}</span>
-                      {(["self", "competitor", "discovered"] as const)
-                        .filter((k) => kinds.has(k))
-                        .map((k) => (
-                          <mark key={k} className={`hl hl-${k}`}>
-                            {kindLabel(k)}
-                          </mark>
-                        ))}
-                    </p>
-                  )}
-                </>
-              )}
+              <div key={activeKey ?? "none"} className="lp-sample-fade">
+                {noPilots || failed ? (
+                  <p className="muted lp-sample-status">{t("pages.landing.sample.unavailable")}</p>
+                ) : loading || !obs ? (
+                  <p className="muted lp-sample-status">{loading ? t("pages.landing.sample.loading") : t("pages.landing.sample.unavailable")}</p>
+                ) : (
+                  <>
+                    <p className="lp-sample-label">{t("pages.landing.sample.question")}</p>
+                    <blockquote className="lp-sample-question">{obs.query_text}</blockquote>
+                    <p className="lp-sample-label">{t("pages.landing.sample.answer")}</p>
+                    <div className="lp-sample-answer">{highlight(text, mentions, cutPoint(text, mentions), kindLabel)}</div>
+                    {kinds.size > 0 && (
+                      <p className="lp-sample-legend">
+                        <span className="muted">{t("pages.landing.sample.legend")}</span>
+                        {(["self", "competitor", "discovered"] as const)
+                          .filter((k) => kinds.has(k))
+                          .map((k) => (
+                            <mark key={k} className={`hl hl-${k}`}>
+                              {kindLabel(k)}
+                            </mark>
+                          ))}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </Reveal>

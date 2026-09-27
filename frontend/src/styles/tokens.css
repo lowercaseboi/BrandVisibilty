@@ -56,8 +56,8 @@
   --score-outof: color-mix(in srgb, var(--accent-text) 75%, var(--muted));
 
   /* Glass score numbers: see-through fill + crisp edge (darker amber so it reads on cream). */
-  --score-glass-fill: color-mix(in srgb, var(--accent-text) 52%, transparent);
-  --score-glass-edge: var(--accent-text);
+  --score-glass-fill: color-mix(in srgb, var(--accent-text) 34%, transparent);
+  --score-glass-edge: color-mix(in srgb, var(--accent-text) 88%, transparent);
 
   /* Landing bands (alternating sections). Light: navy ink + cream paper, as designed. */
   --band-dark: oklch(22.3% 0.049 274.6);
@@ -150,37 +150,37 @@
   --gutter: 20px;
 }
 
-/* Dark: near-black with a warm glow. Keep this block and the one below identical. */
+/* Dark: warm grey-brown (Claude/Discord-like), cards a shade darker than the page. Keep this block and the one below identical. */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --score-glass-fill: color-mix(in srgb, var(--accent) 42%, transparent);
-  --score-glass-edge: color-mix(in srgb, var(--accent) 78%, transparent);
-  --band-dark: #090c13;
-  --band-dark-raised: #121826;
-  --band-dark-fg: #f9fafb;
-  --band-dark-dim: rgb(249 250 251 / 0.66);
-  --band-dark-line: rgb(255 255 255 / 0.1);
-  --band-light: #0f1420;
-  --band-light-raised: #161d2c;
-  --band-light-fg: #f3f4f6;
-  --band-light-dim: rgb(243 244 246 / 0.64);
-  --band-light-line: rgb(255 255 255 / 0.09);
-  --signal: #ff6a3d;
-  --signal-fg: #0b0f19;
-  --detected: #4fd1b5;
-  --missing: #fca5a5;
-  --bg: #090c13;
-  --surface: rgb(20 26 40 / 0.62);
-  --surface-solid: #121826;
-  --surface-2: #161d2c;
-  --surface-3: #1f2839;
-  --border: rgb(255 255 255 / 0.08);
-  --border-strong: rgb(255 255 255 / 0.17);
-  --field-bg: rgb(9 12 19 / 0.55);
-  --popover: #141a28;
-  --text: #d1d5db;
-  --text-h: #f9fafb;
-  --muted: #9ca3af;
+  --score-glass-fill: color-mix(in srgb, var(--accent) 32%, transparent);
+  --score-glass-edge: color-mix(in srgb, var(--accent) 85%, transparent);
+  --band-dark: #1f1e1c;
+  --band-dark-raised: #2a2926;
+  --band-dark-fg: #f5f3ec;
+  --band-dark-dim: rgb(245 243 236 / 0.66);
+  --band-dark-line: rgb(236 230 215 / 0.12);
+  --band-light: #262624;
+  --band-light-raised: #302f2b;
+  --band-light-fg: #f5f3ec;
+  --band-light-dim: rgb(245 243 236 / 0.64);
+  --band-light-line: rgb(236 230 215 / 0.1);
+  --signal: oklch(77.5% 0.135 76.5);
+  --signal-fg: oklch(21% 0.045 60);
+  --detected: oklch(68.8% 0.079 183.5);
+  --missing: #f2a58e;
+  --bg: #262624;
+  --surface: rgb(31 30 28 / 0.72);
+  --surface-solid: #1f1e1c;
+  --surface-2: #2c2b28;
+  --surface-3: #36352f;
+  --border: rgb(236 230 215 / 0.1);
+  --border-strong: rgb(236 230 215 / 0.18);
+  --field-bg: rgb(24 23 21 / 0.6);
+  --popover: #2c2b28;
+  --text: #e8e5dc;
+  --text-h: #f5f3ec;
+  --muted: #b5b0a3;
   --accent: #ff6a3d;
   --accent-hover: #ff8a63;
   --accent-soft: rgb(255 106 61 / 0.14);
@@ -189,14 +189,14 @@
   --accent-grad-hover: #ff8a63;
   --on-accent: #0b0f19;
   --focus: #ff8a63;
-  --glass-highlight: rgb(255 255 255 / 0.06);
-  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px -14px rgb(0 0 0 / 0.65);
-  --shadow-2: 0 2px 6px rgb(0 0 0 / 0.35), 0 26px 50px -20px rgb(0 0 0 / 0.8);
+  --glass-highlight: rgb(255 250 240 / 0.05);
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px -14px rgb(0 0 0 / 0.6);
+  --shadow-2: 0 2px 6px rgb(0 0 0 / 0.35), 0 26px 50px -20px rgb(0 0 0 / 0.75);
   --shadow-accent: 0 10px 26px -10px rgb(255 106 61 / 0.55);
-  --glow-1: rgb(255 106 61 / 0.16);
-  --glow-2: rgb(255 170 90 / 0.07);
-  --glow-3: rgb(110 120 255 / 0.13);
-  --grid-line: rgb(255 255 255 / 0.044);
+  --glow-1: rgb(255 106 61 / 0.12);
+  --glow-2: rgb(217 160 90 / 0.08);
+  --glow-3: rgb(170 150 120 / 0.07);
+  --grid-line: rgb(236 230 215 / 0.04);
   --score-ink: color-mix(in srgb, var(--accent) 85%, transparent);
   --score-outof: color-mix(in srgb, var(--accent) 60%, var(--muted));
   --ok: #6ee7b7;
@@ -222,44 +222,44 @@
   --hl-comp-line: #fb923c;
   --hl-disc: rgb(168 85 247 / 0.3);
   --hl-disc-line: #c084fc;
-  --chart-other: #6b7280;
-  --chart-line: #f9fafb;
+  --chart-other: #8a857a;
+  --chart-line: #f5f3ec;
   --chart-band: rgb(255 106 61 / 0.2);
-  --chart-grid: rgb(255 255 255 / 0.08);
-  --shadow-pop: 0 18px 44px -12px rgb(0 0 0 / 0.75), 0 0 0 1px rgb(255 255 255 / 0.05);
+  --chart-grid: rgb(236 230 215 / 0.08);
+  --shadow-pop: 0 18px 44px -12px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 250 240 / 0.05);
 }
 
 @media (prefers-color-scheme: dark) {
   :root[data-theme="system"] {
     color-scheme: dark;
-    --score-glass-fill: color-mix(in srgb, var(--accent) 42%, transparent);
-    --score-glass-edge: color-mix(in srgb, var(--accent) 78%, transparent);
-    --band-dark: #090c13;
-    --band-dark-raised: #121826;
-    --band-dark-fg: #f9fafb;
-    --band-dark-dim: rgb(249 250 251 / 0.66);
-    --band-dark-line: rgb(255 255 255 / 0.1);
-    --band-light: #0f1420;
-    --band-light-raised: #161d2c;
-    --band-light-fg: #f3f4f6;
-    --band-light-dim: rgb(243 244 246 / 0.64);
-    --band-light-line: rgb(255 255 255 / 0.09);
-    --signal: #ff6a3d;
-    --signal-fg: #0b0f19;
-    --detected: #4fd1b5;
-    --missing: #fca5a5;
-    --bg: #090c13;
-    --surface: rgb(20 26 40 / 0.62);
-    --surface-solid: #121826;
-    --surface-2: #161d2c;
-    --surface-3: #1f2839;
-    --border: rgb(255 255 255 / 0.08);
-    --border-strong: rgb(255 255 255 / 0.17);
-    --field-bg: rgb(9 12 19 / 0.55);
-    --popover: #141a28;
-    --text: #d1d5db;
-    --text-h: #f9fafb;
-    --muted: #9ca3af;
+    --score-glass-fill: color-mix(in srgb, var(--accent) 32%, transparent);
+    --score-glass-edge: color-mix(in srgb, var(--accent) 85%, transparent);
+    --band-dark: #1f1e1c;
+    --band-dark-raised: #2a2926;
+    --band-dark-fg: #f5f3ec;
+    --band-dark-dim: rgb(245 243 236 / 0.66);
+    --band-dark-line: rgb(236 230 215 / 0.12);
+    --band-light: #262624;
+    --band-light-raised: #302f2b;
+    --band-light-fg: #f5f3ec;
+    --band-light-dim: rgb(245 243 236 / 0.64);
+    --band-light-line: rgb(236 230 215 / 0.1);
+    --signal: oklch(77.5% 0.135 76.5);
+    --signal-fg: oklch(21% 0.045 60);
+    --detected: oklch(68.8% 0.079 183.5);
+    --missing: #f2a58e;
+    --bg: #262624;
+    --surface: rgb(31 30 28 / 0.72);
+    --surface-solid: #1f1e1c;
+    --surface-2: #2c2b28;
+    --surface-3: #36352f;
+    --border: rgb(236 230 215 / 0.1);
+    --border-strong: rgb(236 230 215 / 0.18);
+    --field-bg: rgb(24 23 21 / 0.6);
+    --popover: #2c2b28;
+    --text: #e8e5dc;
+    --text-h: #f5f3ec;
+    --muted: #b5b0a3;
     --accent: #ff6a3d;
     --accent-hover: #ff8a63;
     --accent-soft: rgb(255 106 61 / 0.14);
@@ -268,14 +268,14 @@
     --accent-grad-hover: #ff8a63;
     --on-accent: #0b0f19;
     --focus: #ff8a63;
-    --glass-highlight: rgb(255 255 255 / 0.06);
-    --shadow-1: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px -14px rgb(0 0 0 / 0.65);
-    --shadow-2: 0 2px 6px rgb(0 0 0 / 0.35), 0 26px 50px -20px rgb(0 0 0 / 0.8);
+    --glass-highlight: rgb(255 250 240 / 0.05);
+    --shadow-1: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px -14px rgb(0 0 0 / 0.6);
+    --shadow-2: 0 2px 6px rgb(0 0 0 / 0.35), 0 26px 50px -20px rgb(0 0 0 / 0.75);
     --shadow-accent: 0 10px 26px -10px rgb(255 106 61 / 0.55);
-    --glow-1: rgb(255 106 61 / 0.16);
-    --glow-2: rgb(255 170 90 / 0.07);
-    --glow-3: rgb(110 120 255 / 0.13);
-    --grid-line: rgb(255 255 255 / 0.044);
+    --glow-1: rgb(255 106 61 / 0.12);
+    --glow-2: rgb(217 160 90 / 0.08);
+    --glow-3: rgb(170 150 120 / 0.07);
+    --grid-line: rgb(236 230 215 / 0.04);
     --score-ink: color-mix(in srgb, var(--accent) 85%, transparent);
     --score-outof: color-mix(in srgb, var(--accent) 60%, var(--muted));
     --ok: #6ee7b7;
@@ -301,10 +301,76 @@
     --hl-comp-line: #fb923c;
     --hl-disc: rgb(168 85 247 / 0.3);
     --hl-disc-line: #c084fc;
-    --chart-other: #6b7280;
-    --chart-line: #f9fafb;
+    --chart-other: #8a857a;
+    --chart-line: #f5f3ec;
     --chart-band: rgb(255 106 61 / 0.2);
-    --chart-grid: rgb(255 255 255 / 0.08);
-    --shadow-pop: 0 18px 44px -12px rgb(0 0 0 / 0.75), 0 0 0 1px rgb(255 255 255 / 0.05);
+    --chart-grid: rgb(236 230 215 / 0.08);
+    --shadow-pop: 0 18px 44px -12px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 250 240 / 0.05);
   }
+}
+
+/* On the dark band (landing header/bands, the dashboard's navy top band in light mode): remap the
+   app tokens so every shared component renders correctly without per-component overrides.
+   Derived tokens are redeclared here because custom properties resolve where they're declared.
+   .on-band always; .on-band-light only in light theme; .on-band-dark only in dark theme. */
+.on-band,
+:root[data-theme="light"] .on-band-light,
+:root[data-theme="dark"] .on-band-dark {
+  color-scheme: dark;
+  --bg: var(--band-dark);
+  --surface: color-mix(in srgb, var(--band-dark-raised) 80%, transparent);
+  --surface-solid: var(--band-dark-raised);
+  --surface-2: color-mix(in srgb, var(--band-dark-fg) 6%, var(--band-dark));
+  --surface-3: color-mix(in srgb, var(--band-dark-fg) 12%, var(--band-dark));
+  --border: var(--band-dark-line);
+  --border-strong: color-mix(in srgb, var(--band-dark-fg) 26%, transparent);
+  --field-bg: color-mix(in srgb, var(--band-dark) 60%, transparent);
+  --popover: var(--band-dark-raised);
+  --text: color-mix(in srgb, var(--band-dark-fg) 88%, transparent);
+  --text-h: var(--band-dark-fg);
+  --muted: var(--band-dark-dim);
+  --accent: var(--signal);
+  --accent-hover: color-mix(in srgb, var(--signal) 82%, white);
+  --accent-soft: color-mix(in srgb, var(--signal) 18%, transparent);
+  --accent-text: var(--signal);
+  --accent-grad: var(--signal);
+  --accent-grad-hover: color-mix(in srgb, var(--signal) 82%, white);
+  --on-accent: var(--signal-fg);
+  --focus: var(--signal);
+  --glass-highlight: rgb(255 255 255 / 0.06);
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px -14px rgb(0 0 0 / 0.6);
+  --shadow-2: 0 2px 6px rgb(0 0 0 / 0.35), 0 26px 50px -20px rgb(0 0 0 / 0.75);
+  --shadow-accent: 0 8px 22px -8px color-mix(in srgb, var(--signal) 55%, transparent);
+  --grid-line: color-mix(in srgb, var(--band-dark-fg) 6%, transparent);
+  --ok: #6ee7b7;
+  --ok-bg: #052e1f;
+  --ok-border: #14532d;
+  --ok-dot: #22c55e;
+  --warn: #fcd34d;
+  --warn-bg: #2d2305;
+  --warn-border: #713f12;
+  --err: #fca5a5;
+  --err-bg: #2c0b0b;
+  --err-border: #7f1d1d;
+  --info: #93c5fd;
+  --info-bg: #0b1a33;
+  --info-border: #1e3a8a;
+  --synthetic-bg: #3a3005;
+  --synthetic-border: #a16207;
+  --synthetic-text: #fde68a;
+  --hl-self: rgb(34 197 94 / 0.28);
+  --hl-self-line: #4ade80;
+  --hl-comp: rgb(249 115 22 / 0.28);
+  --hl-comp-line: #fb923c;
+  --hl-disc: rgb(168 85 247 / 0.3);
+  --hl-disc-line: #c084fc;
+  --chart-self: var(--signal);
+  --chart-other: color-mix(in srgb, var(--band-dark-fg) 45%, transparent);
+  --chart-line: var(--band-dark-fg);
+  --chart-band: color-mix(in srgb, var(--signal) 22%, transparent);
+  --chart-grid: var(--band-dark-line);
+  --score-glass-fill: color-mix(in srgb, var(--signal) 32%, transparent);
+  --score-glass-edge: color-mix(in srgb, var(--signal) 85%, transparent);
+  --score-outof: color-mix(in srgb, var(--signal) 65%, var(--band-dark-dim));
+  color: var(--text);
 }

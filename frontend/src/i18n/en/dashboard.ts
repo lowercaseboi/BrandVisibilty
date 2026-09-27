@@ -26,6 +26,14 @@ export const dashboard = {
   // Button: opens every AI response.
   "head.answers": "AI responses",
 
+  // ================================================================ collapsible sections
+  // Accessible label for the round toggle button when the section's title isn't plain text.
+  "collapsible.show": "Show this section",
+  "collapsible.hide": "Hide this section",
+  // {title} is the section's own heading, e.g. "Show Score history" / "Hide Gaps".
+  "collapsible.showNamed": "Show {title}",
+  "collapsible.hideNamed": "Hide {title}",
+
   // ================================================================ data-quality banners
   "banner.synthetic.title": "Simulated data — not a live measurement",
   "banner.synthetic.body": "These responses are generated for demonstration. Connect an AI assistant for live results.",
@@ -197,6 +205,7 @@ export const dashboard = {
   "who.first_other": "Ranked first {n} times",
   "who.leader": "**{name}** leads on mention frequency.",
   "who.youLead": "**Your brand** leads every listed competitor on mention frequency.",
+  "who.empty": "No competitors have been listed for this brand yet.",
 
   // ================================================================ sample response
   "sample.title": "Sample AI response",
@@ -212,9 +221,13 @@ export const dashboard = {
   "sample.markCompetitor": "Listed competitors",
   "sample.markOther": "Other brands",
   "sample.legend": "Legend:",
+  "sample.empty": "No AI response is available to sample yet.",
 
   // ================================================================ trend
   "trend.title": "Score history",
+  // Collapsed summary for the section, e.g. "3 analyses".
+  "trend.count_one": "{n} analysis",
+  "trend.count_other": "{n} analyses",
   "trend.single": "This is the first analysis. Run another later to establish a trend.",
   // Screen-reader summary of the chart.
   "trend.aria": "Score history: {first} on {firstDate}, now {last} on {lastDate}.",
@@ -367,6 +380,9 @@ export const dashboard = {
 
   // Main "Gaps" section on the brand page.
   "gaps.title": "Gaps",
+  // Collapsed summary for the section, e.g. "3 gaps".
+  "gaps.count_one": "{n} gap",
+  "gaps.count_other": "{n} gaps",
   "gaps.intro": "Where the brand is losing visibility, detected by fixed rules over the responses.",
   "gaps.type.presence": "Low presence",
   "gaps.type.prominence": "Low prominence",

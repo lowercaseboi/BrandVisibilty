@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Link } from "react-router-dom";
 import { Details } from "../../settings/details";
 import { getObservations } from "../../api/client";
@@ -8,23 +8,33 @@ import { useAsync } from "../../api/useAsync";
 import { evidenceHref } from "../../format";
 import { useT } from "../../i18n";
 
-/** "What AI actually said": one real answer, with your brand and competitors highlighted. */
+/**
+ * "What AI actually said": one real answer, with your brand and competitors highlighted. Body
+ * only — the caller (BrandDashboardPage) supplies the heading via CollapsibleSection.
+ * `onSample` reports the responding AI's name upward once loaded, for the section's summary.
+ */
 export function SampleAnswer({
   brandKey,
   runId,
   labelOf,
+  onSample,
 }: {
   brandKey: string;
   runId: string;
   labelOf: (id: string) => string;
+  onSample?: (aiName: string) => void;
 }) {
   const t = useT();
   const [expanded, setExpanded] = useState(false);
   const bodyId = useId();
   const state = useAsync(() => getObservations(brandKey, runId), [brandKey, runId]);
-  if (state.status !== "ready") return null;
-  const obs = pickSample(state.data.observations);
-  if (!obs) return null;
+  const obs = state.status === "ready" ? pickSample(state.data.observations) : null;
+
+  useEffect(() => {
+    if (obs) onSample?.(labelOf(obs.provider_id));
+  }, [obs, labelOf, onSample]);
+
+  if (!obs) return <p className="muted">{t("dashboard.sample.empty")}</p>;
 
   const text = obs.response_text ?? "";
   const mentions = obs.mentions ?? [];
@@ -34,8 +44,7 @@ export function SampleAnswer({
   const kinds = new Set(mentions.map((m) => m.entity_kind));
 
   return (
-    <section className="dash-section" aria-labelledby="sample-title">
-      <h2 id="sample-title">{t("dashboard.sample.title")}</h2>
+    <>
       <p className="section-note">{t("dashboard.sample.caption")}</p>
       <figure className="card answer-card">
         {/* Source strip: which AI and model produced this exact response. */}
@@ -80,6 +89,6 @@ export function SampleAnswer({
           </Link>
         </figcaption>
       </figure>
-    </section>
+    </>
   );
 }

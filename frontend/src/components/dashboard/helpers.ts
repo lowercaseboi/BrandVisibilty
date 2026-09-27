@@ -1,6 +1,6 @@
 // Small, pure helpers shared by the dashboard components (agent D).
 import { useCallback, useMemo } from "react";
-import type { Gap, ProviderInfo, Recommendation } from "../../api/types";
+import type { Gap, MentionSummary, ProviderInfo, Recommendation } from "../../api/types";
 import { useLang, useT } from "../../i18n";
 import type { Formatter, Lang, MessageKey, TFunction, Vars } from "../../i18n";
 
@@ -219,5 +219,58 @@ const GAP_TYPE_KEY: Record<string, MessageKey> = {
 export function gapTypeText(gapType: string, t: TFunction): string {
   const key = GAP_TYPE_KEY[gapType];
   return key ? t(key) : humanizeId(gapType);
+}
+
+export interface MentionRow {
+  id: string;
+  name: string;
+  isSelf: boolean;
+  mentioning: number;
+  first: number;
+}
+
+/** Mention-frequency rows for "Competitive landscape" (CompetitorBars), most-named first;
+ * null when there is nothing to compare (no summary, or fewer than two entities). */
+export function mentionRows(
+  summary: MentionSummary | undefined,
+  entities: Record<string, string> | undefined,
+  selfName: string,
+): MentionRow[] | null {
+  if (!summary || !summary.entities || summary.total_answers <= 0) return null;
+  const rows: MentionRow[] = Object.entries(summary.entities)
+    .map(([id, c]) => ({
+      id,
+      name: id === "self" ? (entities?.self ?? selfName) : (entities?.[id] ?? humanizeId(id)),
+      isSelf: id === "self",
+      mentioning: c.answers_mentioning ?? 0,
+      first: c.answers_ranked_first ?? 0,
+    }))
+    // Most-named first; ties keep "you" on top, then by name, so the order never jumps.
+    .sort(
+      (a, b) =>
+        b.mentioning - a.mentioning ||
+        b.first - a.first ||
+        Number(b.isSelf) - Number(a.isSelf) ||
+        a.name.localeCompare(b.name),
+    );
+  return rows.length < 2 ? null : rows;
+}
+
+/**
+ * The leading brand's display name, for the "Competitive landscape" section's collapsed
+ * summary — null when there is nothing to compare, no brand is strictly ahead of the rest, or
+ * the brand itself leads (there is no competitor name to show in that case).
+ */
+export function competitiveLeaderName(
+  summary: MentionSummary | undefined,
+  entities: Record<string, string> | undefined,
+  selfName: string,
+): string | null {
+  const rows = mentionRows(summary, entities, selfName);
+  if (!rows) return null;
+  const leader = rows[0];
+  const clearLeader = leader.mentioning > 0 && leader.mentioning > rows[1].mentioning;
+  if (!clearLeader || leader.isSelf) return null;
+  return leader.name;
 }
 

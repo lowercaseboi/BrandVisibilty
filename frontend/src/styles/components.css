@@ -40,7 +40,7 @@
 }
 
 .app-header.is-scrolled {
-  background: color-mix(in srgb, var(--bg) 62%, transparent);
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
   box-shadow: 0 12px 32px -24px rgb(0 0 0 / 0.35);
@@ -111,6 +111,61 @@
   align-items: center;
   gap: 12px;
   flex: none;
+}
+
+/* Navy bar in light theme (app pages): solid band colour; frosted once scrolled. */
+:root[data-theme="light"] .app-header-app {
+  background: var(--band-dark);
+}
+
+:root[data-theme="light"] .app-header-app.is-scrolled,
+.app-header-landing.is-scrolled {
+  background: color-mix(in srgb, var(--band-dark) 82%, transparent);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+}
+
+/* Landing: section anchors in a pill between the logo and the tools. */
+.header-links {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 5px;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--surface-solid) 60%, transparent);
+}
+
+.header-links a {
+  display: block;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    color var(--dur) var(--ease),
+    background var(--dur) var(--ease);
+}
+
+.header-links a:hover {
+  color: var(--text-h);
+  background: color-mix(in srgb, var(--text-h) 10%, transparent);
+}
+
+.header-cta {
+  margin-left: 6px;
+  min-height: 38px;
+  padding: 8px 16px;
+}
+
+@media (max-width: 980px) {
+  .header-links {
+    display: none;
+  }
 }
 
 /* Rounded-square glass control (theme, language, numbers). */

@@ -354,4 +354,15 @@ export const dashboard: Record<keyof typeof enDashboard, string> = {
   "recs.draftedTemplate": "तय नियमों से तैयार — कोई AI शामिल नहीं",
   "recs.draftedOther": "तैयारकर्ता: {by}",
   "recs.reasoning": "सर्वर का तर्क (अंग्रेज़ी):",
+  // English placeholders — translation pending.
+  "collapsible.show": "Show this section",
+  "collapsible.hide": "Hide this section",
+  "collapsible.showNamed": "Show {title}",
+  "collapsible.hideNamed": "Hide {title}",
+  "who.empty": "No competitors have been listed for this brand yet.",
+  "sample.empty": "No AI response is available to sample yet.",
+  "trend.count_one": "{n} analysis",
+  "trend.count_other": "{n} analyses",
+  "gaps.count_one": "{n} gap",
+  "gaps.count_other": "{n} gaps",
 };

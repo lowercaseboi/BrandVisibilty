@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Link } from "react-router-dom";
 import type { Gap, Recommendation } from "../../api/types";
 import { evidenceHref } from "../../format";
@@ -174,7 +174,12 @@ function SuggestionCard({
   );
 }
 
-/** "What to do next": the top suggestions as plain, local steps; the rest behind a button. */
+/**
+ * "What to do next": the top suggestions as plain, local steps; the rest behind a button.
+ * Renders only its body — the caller (BrandDashboardPage) supplies the heading via
+ * CollapsibleSection. `onSummaryChange` reports the live "done of total" count upward so the
+ * caller can show it in the section's collapsed summary.
+ */
 export function NextSteps({
   recommendations,
   gaps,
@@ -182,6 +187,7 @@ export function NextSteps({
   runId,
   entities,
   labelOf,
+  onSummaryChange,
 }: {
   recommendations: Recommendation[];
   gaps: Gap[];
@@ -189,6 +195,7 @@ export function NextSteps({
   runId: string;
   entities?: Record<string, string>;
   labelOf: (id: string) => string;
+  onSummaryChange?: (done: number, total: number) => void;
 }) {
   const t = useT();
   const [showAll, setShowAll] = useState(false);
@@ -207,48 +214,49 @@ export function NextSteps({
   const visible = showAll ? suggestions : suggestions.slice(0, TOP);
   const doneCount = suggestions.filter((s) => done.has(s.key)).length;
 
+  useEffect(() => {
+    onSummaryChange?.(doneCount, suggestions.length);
+  }, [doneCount, suggestions.length, onSummaryChange]);
+
+  if (suggestions.length === 0) {
+    return <p className="muted">{t("dashboard.next.empty")}</p>;
+  }
+
   return (
-    <section className="dash-section" aria-labelledby="next-title">
-      <h2 id="next-title">{t("dashboard.next.title")}</h2>
-      {suggestions.length === 0 ? (
-        <p className="muted">{t("dashboard.next.empty")}</p>
-      ) : (
-        <>
-          <p className="section-note">{t("dashboard.next.intro")}</p>
-          <div className="next-progress">
-            <span>{t("dashboard.next.progress", { done: doneCount, total: suggestions.length })}</span>
-            <div className="progress progress-mini" aria-hidden="true">
-              <div className="progress-bar" style={{ width: `${(doneCount / suggestions.length) * 100}%` }} />
-            </div>
-          </div>
-          <ol className="next-list" id={listId}>
-            {visible.map((s, i) => (
-              <SuggestionCard
-                key={s.key}
-                s={s}
-                index={i}
-                brandKey={brandKey}
-                runId={runId}
-                entities={entities}
-                labelOf={labelOf}
-                done={done.has(s.key)}
-                onToggleDone={() => toggleDone(s.key)}
-              />
-            ))}
-          </ol>
-          {suggestions.length > TOP && (
-            <button
-              type="button"
-              className="btn btn-secondary next-more"
-              aria-expanded={showAll}
-              aria-controls={listId}
-              onClick={() => setShowAll((v) => !v)}
-            >
-              {showAll ? t("dashboard.next.showFewer") : t.n("dashboard.next.showAll", suggestions.length)}
-            </button>
-          )}
-        </>
+    <>
+      <p className="section-note">{t("dashboard.next.intro")}</p>
+      <div className="next-progress">
+        <span>{t("dashboard.next.progress", { done: doneCount, total: suggestions.length })}</span>
+        <div className="progress progress-mini" aria-hidden="true">
+          <div className="progress-bar" style={{ width: `${(doneCount / suggestions.length) * 100}%` }} />
+        </div>
+      </div>
+      <ol className="next-list" id={listId}>
+        {visible.map((s, i) => (
+          <SuggestionCard
+            key={s.key}
+            s={s}
+            index={i}
+            brandKey={brandKey}
+            runId={runId}
+            entities={entities}
+            labelOf={labelOf}
+            done={done.has(s.key)}
+            onToggleDone={() => toggleDone(s.key)}
+          />
+        ))}
+      </ol>
+      {suggestions.length > TOP && (
+        <button
+          type="button"
+          className="btn btn-secondary next-more"
+          aria-expanded={showAll}
+          aria-controls={listId}
+          onClick={() => setShowAll((v) => !v)}
+        >
+          {showAll ? t("dashboard.next.showFewer") : t.n("dashboard.next.showAll", suggestions.length)}
+        </button>
       )}
-    </section>
+    </>
   );
 }

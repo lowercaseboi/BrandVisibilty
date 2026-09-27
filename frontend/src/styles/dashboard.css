@@ -972,3 +972,135 @@
 .answer-card .sample-answer {
   border-left: 2px solid var(--accent);
 }
+
+/* =========================================================
+   Navy top band (light theme only)
+   ========================================================= */
+
+/* Crumbs, page head, banners and the score card sit on a full-bleed navy band that continues
+   seamlessly from the navy app header (.app-header-app, components.css). Every rule below is
+   scoped to :root[data-theme="light"] so the wrapper has no visual effect at all in dark theme —
+   no background, no margins, no grid. Token remapping for the content itself comes from the
+   shared `.on-band-light` class (tokens.css); this block only adds the band's own look. */
+:root[data-theme="light"] .dash-band {
+  position: relative;
+  overflow: hidden;
+  /* Cancel main.app's top padding so the band touches the header, then re-pad inside it. */
+  margin-top: calc(-1 * var(--space-5));
+  padding: var(--space-5) 0 40px;
+  background: var(--band-dark);
+  /* Full-bleed without widening the page: paint past the container, then clip back to it. */
+  box-shadow: 0 0 0 100vmax var(--band-dark);
+  clip-path: inset(0 -100vmax);
+}
+
+/* Faint tilted 3D grid inside the band, fading out towards its edges. */
+:root[data-theme="light"] .dash-band::before {
+  content: "";
+  position: absolute;
+  inset: -10% -20% 0;
+  z-index: -1;
+  pointer-events: none;
+  transform: perspective(900px) rotateX(12deg);
+  transform-origin: 50% 0;
+  background:
+    linear-gradient(to right, var(--band-dark-line) 1px, transparent 1px) 0 0 / 40px 40px,
+    linear-gradient(to bottom, var(--band-dark-line) 1px, transparent 1px) 0 0 / 40px 40px;
+  mask-image: radial-gradient(ellipse 85% 70% at 50% 0%, #000 30%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 85% 70% at 50% 0%, #000 30%, transparent 100%);
+}
+
+/* =========================================================
+   Collapsible sections
+   ========================================================= */
+
+.collapsible-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  cursor: pointer;
+}
+
+.collapsible-head .collapsible-title {
+  margin: 0;
+}
+
+.collapsible-summary {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--fs-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collapsible-toggle {
+  flex: none;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition:
+    background var(--dur) var(--ease),
+    border-color var(--dur) var(--ease),
+    color var(--dur) var(--ease),
+    transform var(--dur) var(--ease);
+}
+
+.collapsible-toggle:hover {
+  color: var(--text-h);
+  border-color: var(--border-strong);
+}
+
+.collapsible-toggle:active {
+  transform: scale(0.92);
+}
+
+.collapsible-toggle svg {
+  transition: transform var(--dur-slow) var(--ease);
+}
+
+.collapsible-toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+/* grid-template-rows 0fr -> 1fr is the standard height-auto-animatable collapse technique;
+   the inner wrapper needs min-height: 0 so the outer row can actually shrink to 0. */
+.collapsible-body-outer {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--dur-slow) var(--ease);
+}
+
+.collapsible-body-outer.is-open {
+  grid-template-rows: 1fr;
+}
+
+.collapsible-body-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.collapsible-body-outer.is-open .collapsible-body-inner {
+  padding-top: var(--space-4);
+}
+
+/* First scroll into view: a light rise-in, once (prefers-reduced-motion is handled globally in
+   base.css, which forces every animation/transition duration to ~0). */
+.collapsible:not(.is-revealed) {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.collapsible.is-revealed {
+  animation: rise var(--dur-slow) var(--ease) backwards;
+}

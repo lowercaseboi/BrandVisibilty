@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import type { MessageKey } from "../../i18n";
 import { useT } from "../../i18n";
 import { Reveal } from "./Reveal";
@@ -80,6 +80,25 @@ const CARDS: { icon: ReactNode; title: MessageKey; body: MessageKey }[] = [
   { icon: <TrendIcon />, title: "pages.landing.features.f6.title", body: "pages.landing.features.f6.body" },
 ];
 
+const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+
+/** Tilts the card slightly towards the pointer on hover; a no-op under reduced motion. */
+function tiltHandlers() {
+  if (prefersReducedMotion()) return {};
+  return {
+    onMouseMove: (e: MouseEvent<HTMLDivElement>) => {
+      const el = e.currentTarget;
+      const rect = el.getBoundingClientRect();
+      const px = (e.clientX - rect.left) / rect.width - 0.5;
+      const py = (e.clientY - rect.top) / rect.height - 0.5;
+      el.style.transform = `perspective(700px) rotateX(${(-py * 6).toFixed(2)}deg) rotateY(${(px * 8).toFixed(2)}deg) translateY(-3px)`;
+    },
+    onMouseLeave: (e: MouseEvent<HTMLDivElement>) => {
+      e.currentTarget.style.transform = "";
+    },
+  };
+}
+
 /** "What it does": six feature cards. */
 export function Features() {
   const t = useT();
@@ -96,7 +115,7 @@ export function Features() {
         <div className="lp-feature-grid">
           {CARDS.map((card, i) => (
             <Reveal key={card.title} delay={(i % 3) * 60}>
-              <div className="lp-feature-card">
+              <div className="lp-feature-card" {...tiltHandlers()}>
                 <div className="lp-feature-icon">{card.icon}</div>
                 <h3>{t(card.title)}</h3>
                 <p>{t(card.body)}</p>

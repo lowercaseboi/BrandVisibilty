@@ -1,16 +1,10 @@
 import type { MentionSummary } from "../../api/types";
 import { T, useT } from "../../i18n";
-import { humanizeId } from "./helpers";
+import { mentionRows } from "./helpers";
 
-interface Row {
-  id: string;
-  name: string;
-  isSelf: boolean;
-  mentioning: number;
-  first: number;
-}
-
-/** "Who AI recommends": how many answers named you and each competitor you listed. */
+/** "Who AI recommends": how many answers named you and each competitor you listed. Body only — the
+ * caller (BrandDashboardPage) supplies the heading via CollapsibleSection (its collapsed summary
+ * uses the `competitiveLeaderName` helper from ./helpers, computed straight from the same props). */
 export function CompetitorBars({
   summary,
   entities,
@@ -21,34 +15,16 @@ export function CompetitorBars({
   selfName: string;
 }) {
   const t = useT();
-  if (!summary || !summary.entities || summary.total_answers <= 0) return null;
+  const rows = mentionRows(summary, entities, selfName);
+  if (!rows || !summary) return <p className="muted">{t("dashboard.who.empty")}</p>;
   const total = summary.total_answers;
-
-  const rows: Row[] = Object.entries(summary.entities)
-    .map(([id, c]) => ({
-      id,
-      name: id === "self" ? (entities?.self ?? selfName) : (entities?.[id] ?? humanizeId(id)),
-      isSelf: id === "self",
-      mentioning: c.answers_mentioning ?? 0,
-      first: c.answers_ranked_first ?? 0,
-    }))
-    // Most-named first; ties keep "you" on top, then by name, so the order never jumps.
-    .sort(
-      (a, b) =>
-        b.mentioning - a.mentioning ||
-        b.first - a.first ||
-        Number(b.isSelf) - Number(a.isSelf) ||
-        a.name.localeCompare(b.name),
-    );
-  if (rows.length < 2) return null;
 
   const leader = rows[0];
   // Only claim a leader when one brand is named strictly more often than the rest.
   const clearLeader = leader.mentioning > 0 && leader.mentioning > rows[1].mentioning;
 
   return (
-    <section className="dash-section" aria-labelledby="who-title">
-      <h2 id="who-title">{t("dashboard.who.title")}</h2>
+    <>
       <p className="section-note">{t.n("dashboard.who.intro", total)}</p>
       <div className="card who-card">
         {clearLeader && (
@@ -80,6 +56,6 @@ export function CompetitorBars({
           })}
         </ul>
       </div>
-    </section>
+    </>
   );
 }

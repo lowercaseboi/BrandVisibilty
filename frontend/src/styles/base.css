@@ -234,8 +234,8 @@ hr {
   color: var(--score-glass-fill);
   -webkit-text-stroke: 1px var(--score-glass-edge);
   text-shadow:
-    0 1px 0 rgb(255 255 255 / 0.35),
-    0 10px 28px color-mix(in srgb, var(--accent) 28%, transparent);
+    0 1px 0 rgb(255 255 255 / 0.28),
+    0 0 18px color-mix(in srgb, var(--score-glass-edge) 22%, transparent);
   font-variant-numeric: tabular-nums;
 }
 
