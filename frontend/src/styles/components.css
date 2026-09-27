@@ -134,14 +134,14 @@
   padding: 5px;
   list-style: none;
   border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--surface-solid) 60%, transparent);
 }
 
 .header-links a {
   display: block;
   padding: 6px 14px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-xs);
   color: var(--muted);
   font-size: var(--fs-sm);
   text-decoration: none;
@@ -168,7 +168,8 @@
   }
 }
 
-/* Rounded-square glass control (theme, language, numbers). */
+/* Square glass control (theme, language, numbers), double-framed like a drafted instrument panel
+   button: its own hairline border, then a --bg-coloured gap, then a second hairline (--frame-ring). */
 .icon-btn {
   position: relative;
   display: inline-flex;
@@ -179,9 +180,10 @@
   padding: 0;
   color: var(--text);
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   box-shadow:
+    var(--frame-ring-sm),
     var(--shadow-1),
     inset 0 1px 0 var(--glass-highlight);
   cursor: pointer;
@@ -196,8 +198,9 @@
 
 .icon-btn:hover {
   color: var(--text-h);
-  border-color: var(--border-strong);
+  border-color: var(--line-strong);
   box-shadow:
+    var(--frame-ring-sm),
     var(--shadow-2),
     inset 0 1px 0 var(--glass-highlight);
   transform: translateY(-1px);
@@ -226,9 +229,9 @@
   animation: spin-in 0.4s var(--ease-spring);
 }
 
-/* The round one: Connections. A little apart from the three settings. */
+/* The Connections toggle: square, like the other icon buttons, just set apart from them. */
 .icon-btn-round {
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
   margin-left: 12px;
 }
 
@@ -448,15 +451,33 @@
    ========================================================= */
 
 .card {
+  position: relative;
   background: var(--surface);
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow:
+    var(--frame-ring),
     var(--shadow-1),
     inset 0 1px 0 var(--glass-highlight);
   padding: 18px 20px;
+}
+
+/* Registration-mark corner ticks — a drafting-table detail on every card, kept subtle (::after is
+   free: ::before is used by a few cards, e.g. .sample-card, for their own hover glow). */
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.6;
+  background:
+    linear-gradient(to right, var(--accent) 0 var(--mark-size), transparent 0) top left / var(--mark-size) 2px no-repeat,
+    linear-gradient(to bottom, var(--accent) 0 var(--mark-size), transparent 0) top left / 2px var(--mark-size) no-repeat,
+    linear-gradient(to left, var(--accent) 0 var(--mark-size), transparent 0) bottom right / var(--mark-size) 2px no-repeat,
+    linear-gradient(to top, var(--accent) 0 var(--mark-size), transparent 0) bottom right / 2px var(--mark-size) no-repeat;
 }
 
 .card-flush {
@@ -466,7 +487,7 @@
 
 .panel {
   background: var(--surface-2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   padding: var(--space-4);
 }
@@ -481,10 +502,11 @@ a.card {
 }
 
 a.card:hover {
-  border-color: var(--border-strong);
+  border-color: var(--line-strong);
   color: inherit;
   transform: translateY(-3px);
   box-shadow:
+    var(--frame-ring),
     var(--shadow-2),
     inset 0 1px 0 var(--glass-highlight);
 }
@@ -677,28 +699,27 @@ a.card:active {
 
 .btn-primary {
   background: var(--accent-grad);
-  border-color: transparent;
+  border: 1px solid var(--accent);
   color: var(--on-accent);
-  box-shadow:
-    var(--shadow-accent),
-    inset 0 1px 0 rgb(255 255 255 / 0.22);
+  box-shadow: var(--frame-ring-accent), var(--shadow-accent);
 }
 
+/* Fill <-> outline invert: on hover the accent fill drops out to the page background and the
+   border/text pick up the accent colour, so the button reads as its own crisp outline. */
 .btn-primary:hover,
 .btn-primary:not(:disabled):hover {
-  background: var(--accent-grad-hover);
-  color: var(--on-accent);
+  background: var(--bg);
+  color: var(--accent-text);
   transform: translateY(-1px);
-  box-shadow:
-    0 14px 30px -10px color-mix(in srgb, var(--accent) 70%, transparent),
-    inset 0 1px 0 rgb(255 255 255 / 0.22);
+  box-shadow: var(--frame-ring-accent), var(--shadow-accent-hover);
 }
 
 .btn-secondary {
   background: var(--surface);
-  border-color: var(--border-strong);
+  border-color: var(--line);
   color: var(--text-h);
   box-shadow:
+    var(--frame-ring-sm),
     var(--shadow-1),
     inset 0 1px 0 var(--glass-highlight);
 }
@@ -706,8 +727,10 @@ a.card:active {
 .btn-secondary:not(:disabled):hover {
   background: var(--surface-solid);
   color: var(--text-h);
+  border-color: var(--line-strong);
   transform: translateY(-1px);
   box-shadow:
+    var(--frame-ring-sm),
     var(--shadow-2),
     inset 0 1px 0 var(--glass-highlight);
 }
@@ -745,10 +768,16 @@ a.card:active {
   text-decoration: underline;
 }
 
-.btn-small {
+/* Compact buttons (table rows, inline actions): keep the crisp border, drop the offset frame and
+   pencil shadow so rows of them don't collide into a cluttered stack of double edges. */
+.btn-small,
+.btn-small:hover,
+.btn-small:not(:disabled):hover {
   font-size: 13px;
   padding: 4px 10px;
   min-height: 28px;
+  box-shadow: none;
+  transform: none;
 }
 
 .btn-large {
@@ -1201,7 +1230,7 @@ a.card:active {
 
 .metric-card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: var(--space-4) 18px;
   display: flex;

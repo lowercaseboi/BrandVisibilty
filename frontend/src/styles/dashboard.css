@@ -8,6 +8,12 @@
   margin-top: 2px;
 }
 
+/* Numbers every collapsible section in document order ("§ 01 Gaps", "§ 02 Recommended actions", …),
+   independent of which sections actually render for a given brand/run. */
+.app {
+  counter-reset: dash-sec;
+}
+
 .dash-section {
   margin-top: var(--space-6);
 }
@@ -512,17 +518,30 @@
 
 .who-row-top {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
+  flex-wrap: nowrap;
   align-items: baseline;
-  gap: 2px var(--space-3);
+  gap: var(--space-2);
   margin-bottom: 4px;
 }
 
 .who-name {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   font-weight: 600;
   color: var(--text-h);
   min-width: 0;
+  flex: 1 1 auto;
+}
+
+/* Dotted leader filling the space between the name and its count, like a printed spec sheet. */
+.who-name::after {
+  content: "";
+  flex: 1 1 12px;
+  align-self: flex-end;
+  min-width: 12px;
+  margin-bottom: 4px;
+  border-bottom: 1px dotted var(--line);
 }
 
 .who-row.is-self .who-name {
@@ -994,7 +1013,8 @@
   clip-path: inset(0 -100vmax);
 }
 
-/* Faint tilted 3D grid inside the band, fading out towards its edges. */
+/* Faint tilted 3D grid inside the band, fading out towards its edges: minor lines every 40px, a
+   stronger major line every 4th (160px), matching the page-wide blueprint grid in base.css. */
 :root[data-theme="light"] .dash-band::before {
   content: "";
   position: absolute;
@@ -1004,6 +1024,10 @@
   transform: perspective(900px) rotateX(12deg);
   transform-origin: 50% 0;
   background:
+    linear-gradient(to right, color-mix(in srgb, var(--band-dark-fg) 10%, transparent) 1px, transparent 1px) 0 0 / 160px
+      160px,
+    linear-gradient(to bottom, color-mix(in srgb, var(--band-dark-fg) 10%, transparent) 1px, transparent 1px) 0 0 / 160px
+      160px,
     linear-gradient(to right, var(--band-dark-line) 1px, transparent 1px) 0 0 / 40px 40px,
     linear-gradient(to bottom, var(--band-dark-line) 1px, transparent 1px) 0 0 / 40px 40px;
   mask-image: radial-gradient(ellipse 85% 70% at 50% 0%, #000 30%, transparent 100%);
@@ -1015,15 +1039,42 @@
    ========================================================= */
 
 .collapsible-head {
+  position: relative;
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
   gap: var(--space-2) var(--space-4);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--line);
   cursor: pointer;
+}
+
+/* A small ruled tick sitting on the hairline, like a drawing's index mark. */
+.collapsible-head::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 16px;
+  height: 3px;
+  background: var(--accent);
 }
 
 .collapsible-head .collapsible-title {
   margin: 0;
+  counter-increment: dash-sec;
+}
+
+/* "§ 01 Gaps", "§ 02 Recommended actions" — numbered in document order, not by which sections a
+   given brand/run happens to render. */
+.collapsible-head .collapsible-title::before {
+  content: "§ " counter(dash-sec, decimal-leading-zero) "  ";
+  color: var(--accent-text);
+  font-family: var(--sans);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
 }
 
 .collapsible-summary {
@@ -1044,8 +1095,8 @@
   width: 30px;
   height: 30px;
   padding: 0;
-  border-radius: 50%;
-  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--line);
   background: var(--surface);
   color: var(--text);
   cursor: pointer;
@@ -1058,7 +1109,7 @@
 
 .collapsible-toggle:hover {
   color: var(--text-h);
-  border-color: var(--border-strong);
+  border-color: var(--line-strong);
 }
 
 .collapsible-toggle:active {

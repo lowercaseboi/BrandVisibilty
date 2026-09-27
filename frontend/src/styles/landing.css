@@ -13,6 +13,8 @@
   color: var(--band-dark-fg);
   overflow-x: hidden;
   min-height: 100vh;
+  /* Numbers each section eyebrow in document order: "§ 01 Live check", "§ 02 Why this matters" … */
+  counter-reset: lp-sec;
 }
 
 .lp-container {
@@ -109,11 +111,24 @@
   align-items: center;
   gap: 8px;
   margin: 0 0 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--band-dark-line);
   font-family: var(--sans);
   font-size: var(--fs-2xs);
   font-weight: 500;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+  counter-increment: lp-sec;
+}
+
+.lp-band-light .lp-eyebrow {
+  border-bottom-color: var(--band-light-line);
+}
+
+.lp-eyebrow::before {
+  content: "§ " counter(lp-sec, decimal-leading-zero);
+  color: var(--detected);
+  font-weight: 600;
 }
 
 .lp-band-dark .lp-eyebrow {
@@ -156,25 +171,43 @@
 .lp-btn-signal {
   background: var(--signal);
   color: var(--signal-fg);
-  border-color: transparent;
-  box-shadow: 0 12px 26px -12px color-mix(in srgb, var(--signal) 65%, transparent);
+  border: 1px solid var(--signal);
+  box-shadow:
+    0 0 0 calc(1px + var(--frame-gap-sm)) var(--band-dark),
+    0 0 0 calc(2px + var(--frame-gap-sm)) var(--signal),
+    4px 4px 0 -1px var(--band-dark),
+    4px 4px 0 0 var(--signal);
 }
 
+/* Fill <-> outline invert on hover, same language as .btn-primary. */
 .lp-btn-signal:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--signal) 90%, black 4%);
-  color: var(--signal-fg);
+  background: var(--band-dark);
+  color: var(--signal);
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 calc(1px + var(--frame-gap-sm)) var(--band-dark),
+    0 0 0 calc(2px + var(--frame-gap-sm)) var(--signal),
+    6px 6px 0 -1px var(--band-dark),
+    6px 6px 0 0 var(--signal);
 }
 
 .lp-btn-ghost {
   background: transparent;
   border-color: var(--band-dark-line);
   color: var(--band-dark-fg);
+  box-shadow:
+    4px 4px 0 -1px var(--band-dark),
+    4px 4px 0 0 var(--band-dark-line);
 }
 
 .lp-btn-ghost:hover:not(:disabled) {
   border-color: var(--signal);
   background: color-mix(in srgb, var(--band-dark-fg) 6%, transparent);
   color: var(--band-dark-fg);
+  transform: translateY(-1px);
+  box-shadow:
+    6px 6px 0 -1px var(--band-dark),
+    6px 6px 0 0 var(--signal);
 }
 
 /* =========================================================
@@ -216,9 +249,15 @@
   z-index: 0;
   pointer-events: none;
   background-image:
+    linear-gradient(var(--lp-grid-line-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--lp-grid-line-major) 1px, transparent 1px),
     linear-gradient(var(--lp-grid-line) 1px, transparent 1px),
     linear-gradient(90deg, var(--lp-grid-line) 1px, transparent 1px);
-  background-size: 64px 64px;
+  background-size:
+    256px 256px,
+    256px 256px,
+    64px 64px,
+    64px 64px;
   transform: perspective(600px) rotateX(58deg);
   transform-origin: 50% 0%;
   mask-image: linear-gradient(to bottom, black, transparent 65%);
@@ -227,10 +266,12 @@
 
 .lp-band-dark::before {
   --lp-grid-line: color-mix(in srgb, var(--band-dark-fg) 12%, transparent);
+  --lp-grid-line-major: color-mix(in srgb, var(--band-dark-fg) 22%, transparent);
 }
 
 .lp-band-light::before {
   --lp-grid-line: color-mix(in srgb, var(--band-light-fg) 9%, transparent);
+  --lp-grid-line-major: color-mix(in srgb, var(--band-light-fg) 17%, transparent);
 }
 
 .lp-band-dark > .lp-container,
@@ -341,12 +382,36 @@
   gap: var(--space-3);
 }
 
+/* Dark-band cards always spell out --band-dark-* explicitly (never the generic --bg/--line/
+   --shadow-* tokens): .lp-band-dark isn't remapped by .on-band in light theme, so the generic
+   tokens would still be light-theme cream/ink there. See the file banner comment above. */
 .lp-hero-card {
+  position: relative;
   border: 1px solid var(--band-dark-line);
   background: var(--band-dark-raised);
   border-radius: var(--radius-lg);
   padding: 26px;
-  box-shadow: var(--shadow-2);
+  box-shadow:
+    0 0 0 calc(1px + var(--frame-gap)) var(--band-dark),
+    0 0 0 calc(2px + var(--frame-gap)) var(--band-dark-line),
+    6px 6px 0 -1px var(--band-dark),
+    6px 6px 0 0 var(--band-dark-line);
+}
+
+.lp-hero-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.7;
+  background:
+    linear-gradient(to right, var(--signal) 0 var(--mark-size), transparent 0) top left / var(--mark-size) 2px no-repeat,
+    linear-gradient(to bottom, var(--signal) 0 var(--mark-size), transparent 0) top left / 2px var(--mark-size) no-repeat,
+    linear-gradient(to left, var(--signal) 0 var(--mark-size), transparent 0) bottom right / var(--mark-size) 2px
+      no-repeat,
+    linear-gradient(to top, var(--signal) 0 var(--mark-size), transparent 0) bottom right / 2px var(--mark-size)
+      no-repeat;
 }
 
 .lp-hero-card-head {
@@ -595,12 +660,14 @@
     box-shadow var(--dur-slow) var(--ease);
 }
 
-/* Lights up once the drawing rail reaches this step. */
+/* Lights up once the drawing rail reaches this step: a crisp double ring, not a soft glow. */
 .lp-workflow-num.is-lit {
   background: var(--signal);
   border-color: var(--signal);
   color: var(--signal-fg);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--signal) 20%, transparent);
+  box-shadow:
+    0 0 0 3px var(--band-dark),
+    0 0 0 4px var(--signal);
 }
 
 .lp-workflow-body h3 {
@@ -651,10 +718,11 @@
   margin-bottom: 28px;
 }
 
-/* Glassy, not a solid fill: a translucent tint + hairline border for the active chip too. */
+/* Glassy, not a solid fill: a translucent tint + hairline border for the active chip too. A filter
+   chip, not a toggle track, so it keeps the sharp geometry rather than a pill. */
 .lp-chip {
   padding: 7px 14px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border-strong);
   background: var(--surface);
   backdrop-filter: var(--blur);
@@ -693,18 +761,35 @@
 /* Glass score panel: translucent surface + blur + hairline border, matching .card's padding
    rhythm so its top aligns with the answer card next to it. */
 .lp-sample-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-2);
   padding: 24px;
   height: 100%;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--surface);
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
-  box-shadow: var(--shadow-1), inset 0 1px 0 var(--glass-highlight);
+  box-shadow: var(--frame-ring), var(--shadow-1), inset 0 1px 0 var(--glass-highlight);
+}
+
+.lp-sample-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.6;
+  background:
+    linear-gradient(to right, var(--accent) 0 var(--mark-size), transparent 0) top left / var(--mark-size) 2px no-repeat,
+    linear-gradient(to bottom, var(--accent) 0 var(--mark-size), transparent 0) top left / 2px var(--mark-size) no-repeat,
+    linear-gradient(to left, var(--accent) 0 var(--mark-size), transparent 0) bottom right / var(--mark-size) 2px
+      no-repeat,
+    linear-gradient(to top, var(--accent) 0 var(--mark-size), transparent 0) bottom right / 2px var(--mark-size)
+      no-repeat;
 }
 
 .lp-sample-simulated {
@@ -801,22 +886,49 @@
 }
 
 .lp-feature-card {
+  position: relative;
   height: 100%;
   padding: 26px;
   border: 1px solid var(--band-dark-line);
   background: var(--band-dark-raised);
   border-radius: var(--radius-lg);
+  box-shadow:
+    0 0 0 calc(1px + var(--frame-gap)) var(--band-dark),
+    0 0 0 calc(2px + var(--frame-gap)) var(--band-dark-line),
+    4px 4px 0 -1px var(--band-dark),
+    4px 4px 0 0 var(--band-dark-line);
   transition:
     transform 0.15s var(--ease-spring),
-    border-color var(--dur-slow) var(--ease);
+    border-color var(--dur-slow) var(--ease),
+    box-shadow var(--dur-slow) var(--ease);
+}
+
+.lp-feature-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.6;
+  background:
+    linear-gradient(to right, var(--signal) 0 var(--mark-size), transparent 0) top left / var(--mark-size) 2px no-repeat,
+    linear-gradient(to bottom, var(--signal) 0 var(--mark-size), transparent 0) top left / 2px var(--mark-size) no-repeat,
+    linear-gradient(to left, var(--signal) 0 var(--mark-size), transparent 0) bottom right / var(--mark-size) 2px
+      no-repeat,
+    linear-gradient(to top, var(--signal) 0 var(--mark-size), transparent 0) bottom right / 2px var(--mark-size)
+      no-repeat;
 }
 
 /* JS (pointermove) sets a per-card tilt as an inline transform; :hover is the fallback for touch,
-   where no pointermove fires. */
+   where no pointermove fires. The pencil shadow's offset grows on lift, same as .card. */
 .lp-feature-card:hover {
   transform: translateY(-3px);
   border-color: color-mix(in srgb, var(--signal) 40%, transparent);
-  box-shadow: var(--shadow-2);
+  box-shadow:
+    0 0 0 calc(1px + var(--frame-gap)) var(--band-dark),
+    0 0 0 calc(2px + var(--frame-gap)) color-mix(in srgb, var(--signal) 45%, var(--band-dark-line)),
+    6px 6px 0 -1px var(--band-dark),
+    6px 6px 0 0 color-mix(in srgb, var(--signal) 45%, var(--band-dark-line));
 }
 
 .lp-feature-icon {

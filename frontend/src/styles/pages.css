@@ -41,15 +41,39 @@
 
 .home {
   padding-top: var(--space-3);
+  counter-reset: home-sec;
 }
 
 .home-section + .home-section {
   margin-top: 56px;
 }
 
-/* Section head: eyebrow, title, one line of context. */
+/* Section head: eyebrow, title, one line of context — a hairline + index tick under the eyebrow,
+   numbered in document order ("§ 01 Samples", "§ 02 Your brands", "§ 03 Try your own"). */
 .home-head {
+  position: relative;
   margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.home-head::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 16px;
+  height: 3px;
+  background: var(--accent);
+}
+
+.home-head .eyebrow {
+  counter-increment: home-sec;
+}
+
+.home-head .eyebrow::before {
+  content: "§ " counter(home-sec, decimal-leading-zero) "  ";
+  color: var(--accent-text);
 }
 
 .home-title {

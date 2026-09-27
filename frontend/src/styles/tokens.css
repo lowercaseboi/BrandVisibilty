@@ -22,6 +22,12 @@
   --field-bg: oklch(99% 0.006 90 / 0.8);
   --popover: oklch(99.2% 0.005 90); /* menus: opaque, since blur can't see past the header */
 
+  /* Neo-futurist drafting lines: crisper than --border, used for double frames, crop marks,
+     dotted leaders and hairline rules. Kept separate from --border so glass edges can stay soft
+     while these read as drawn ink. */
+  --line: oklch(22.3% 0.049 274.6 / 0.38);
+  --line-strong: oklch(22.3% 0.049 274.6 / 0.65);
+
   /* text */
   --text: oklch(31% 0.045 274.6);
   --text-h: oklch(24.3% 0.045 274.6);
@@ -40,16 +46,34 @@
   /* depth */
   --glass-highlight: rgb(255 255 255 / 0.85); /* 1px inner top edge on glass */
   --blur: blur(18px) saturate(170%);
-  --shadow-1: 0 1px 2px oklch(22.3% 0.049 274.6 / 0.05), 0 8px 24px -12px oklch(22.3% 0.049 274.6 / 0.16);
-  --shadow-2: 0 2px 6px oklch(22.3% 0.049 274.6 / 0.06), 0 24px 48px -20px oklch(22.3% 0.049 274.6 / 0.3);
-  --shadow-accent: 0 8px 22px -8px oklch(72% 0.14 74 / 0.6);
+  /* Pencil-line shadows: a hard, offset hollow-outline frame (no blur) instead of a soft drop
+     shadow — layer 1 (--bg, spread -1) sits on top of layer 2 (--line, spread 0), leaving a 1px
+     inked line showing around the offset silhouette. --shadow-2/--shadow-accent-hover are the
+     "lifted" (hover) versions: bigger offset, stronger line. Written once in terms of --bg/--line/
+     --accent so every theme and the on-band scope (below) recompute them automatically. */
+  --shadow-1: 4px 4px 0 -1px var(--bg), 4px 4px 0 0 var(--line);
+  --shadow-2: 6px 6px 0 -1px var(--bg), 6px 6px 0 0 var(--line-strong);
+  --shadow-accent: 4px 4px 0 -1px var(--bg), 4px 4px 0 0 var(--accent);
+  --shadow-accent-hover: 6px 6px 0 -1px var(--bg), 6px 6px 0 0 var(--accent);
   --shadow-pop: 0 18px 44px -14px oklch(22.3% 0.049 274.6 / 0.3), 0 2px 6px oklch(22.3% 0.049 274.6 / 0.06);
+
+  /* Double-border frame: a box-shadow ring outside the element's own 1px border — a 1px line,
+     a small --bg-coloured gap, then a second 1px line. -sm is for compact controls (icon buttons). */
+  --frame-gap: 3px;
+  --frame-gap-sm: 2px;
+  --frame-ring: 0 0 0 calc(1px + var(--frame-gap)) var(--bg), 0 0 0 calc(2px + var(--frame-gap)) var(--line);
+  --frame-ring-sm: 0 0 0 calc(1px + var(--frame-gap-sm)) var(--bg), 0 0 0 calc(2px + var(--frame-gap-sm)) var(--line);
+  --frame-ring-accent: 0 0 0 calc(1px + var(--frame-gap-sm)) var(--bg), 0 0 0 calc(2px + var(--frame-gap-sm)) var(--accent);
+
+  /* Crop-mark corner ticks (::after on key frames). */
+  --mark-size: 9px;
 
   /* page glow + faint grid (behind everything) */
   --glow-1: oklch(77.5% 0.135 76.5 / 0.22);
   --glow-2: oklch(68.8% 0.079 183.5 / 0.16);
   --glow-3: oklch(40% 0.08 274.6 / 0.1);
   --grid-line: oklch(22.3% 0.049 274.6 / 0.05);
+  --grid-line-major: oklch(22.3% 0.049 274.6 / 0.12);
 
   /* scores out of 100: a solid, slightly translucent accent (no gradient); "/100" is accent-tinted */
   --score-ink: color-mix(in srgb, var(--accent) 80%, transparent);
@@ -132,11 +156,11 @@
   --space-6: 32px;
   --space-7: 48px;
 
-  /* shape */
-  --radius-lg: 20px; /* big feature cards */
-  --radius: 14px; /* cards */
-  --radius-sm: 10px; /* buttons, inputs, panels */
-  --radius-xs: 6px;
+  /* shape: sharp, drafted geometry. --radius-pill survives only for actual toggle tracks. */
+  --radius-lg: 4px; /* big feature cards */
+  --radius: 3px; /* cards */
+  --radius-sm: 3px; /* buttons, inputs, panels */
+  --radius-xs: 2px;
   --radius-pill: 999px;
 
   /* motion */
@@ -176,6 +200,8 @@
   --surface-3: #36352f;
   --border: rgb(236 230 215 / 0.1);
   --border-strong: rgb(236 230 215 / 0.18);
+  --line: rgb(236 230 215 / 0.26);
+  --line-strong: rgb(236 230 215 / 0.48);
   --field-bg: rgb(24 23 21 / 0.6);
   --popover: #2c2b28;
   --text: #e8e5dc;
@@ -190,13 +216,11 @@
   --on-accent: #0b0f19;
   --focus: #ff8a63;
   --glass-highlight: rgb(255 250 240 / 0.05);
-  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px -14px rgb(0 0 0 / 0.6);
-  --shadow-2: 0 2px 6px rgb(0 0 0 / 0.35), 0 26px 50px -20px rgb(0 0 0 / 0.75);
-  --shadow-accent: 0 10px 26px -10px rgb(255 106 61 / 0.55);
   --glow-1: rgb(255 106 61 / 0.12);
   --glow-2: rgb(217 160 90 / 0.08);
   --glow-3: rgb(170 150 120 / 0.07);
   --grid-line: rgb(236 230 215 / 0.04);
+  --grid-line-major: rgb(236 230 215 / 0.09);
   --score-ink: color-mix(in srgb, var(--accent) 85%, transparent);
   --score-outof: color-mix(in srgb, var(--accent) 60%, var(--muted));
   --ok: #6ee7b7;
@@ -255,6 +279,8 @@
     --surface-3: #36352f;
     --border: rgb(236 230 215 / 0.1);
     --border-strong: rgb(236 230 215 / 0.18);
+    --line: rgb(236 230 215 / 0.26);
+    --line-strong: rgb(236 230 215 / 0.48);
     --field-bg: rgb(24 23 21 / 0.6);
     --popover: #2c2b28;
     --text: #e8e5dc;
@@ -269,13 +295,11 @@
     --on-accent: #0b0f19;
     --focus: #ff8a63;
     --glass-highlight: rgb(255 250 240 / 0.05);
-    --shadow-1: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px -14px rgb(0 0 0 / 0.6);
-    --shadow-2: 0 2px 6px rgb(0 0 0 / 0.35), 0 26px 50px -20px rgb(0 0 0 / 0.75);
-    --shadow-accent: 0 10px 26px -10px rgb(255 106 61 / 0.55);
     --glow-1: rgb(255 106 61 / 0.12);
     --glow-2: rgb(217 160 90 / 0.08);
     --glow-3: rgb(170 150 120 / 0.07);
     --grid-line: rgb(236 230 215 / 0.04);
+    --grid-line-major: rgb(236 230 215 / 0.09);
     --score-ink: color-mix(in srgb, var(--accent) 85%, transparent);
     --score-outof: color-mix(in srgb, var(--accent) 60%, var(--muted));
     --ok: #6ee7b7;
@@ -324,6 +348,8 @@
   --surface-3: color-mix(in srgb, var(--band-dark-fg) 12%, var(--band-dark));
   --border: var(--band-dark-line);
   --border-strong: color-mix(in srgb, var(--band-dark-fg) 26%, transparent);
+  --line: color-mix(in srgb, var(--band-dark-fg) 26%, transparent);
+  --line-strong: color-mix(in srgb, var(--band-dark-fg) 48%, transparent);
   --field-bg: color-mix(in srgb, var(--band-dark) 60%, transparent);
   --popover: var(--band-dark-raised);
   --text: color-mix(in srgb, var(--band-dark-fg) 88%, transparent);
@@ -338,10 +364,8 @@
   --on-accent: var(--signal-fg);
   --focus: var(--signal);
   --glass-highlight: rgb(255 255 255 / 0.06);
-  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px -14px rgb(0 0 0 / 0.6);
-  --shadow-2: 0 2px 6px rgb(0 0 0 / 0.35), 0 26px 50px -20px rgb(0 0 0 / 0.75);
-  --shadow-accent: 0 8px 22px -8px color-mix(in srgb, var(--signal) 55%, transparent);
   --grid-line: color-mix(in srgb, var(--band-dark-fg) 6%, transparent);
+  --grid-line-major: color-mix(in srgb, var(--band-dark-fg) 13%, transparent);
   --ok: #6ee7b7;
   --ok-bg: #052e1f;
   --ok-border: #14532d;
