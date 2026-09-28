@@ -138,7 +138,9 @@ function BrandCard({ brand, onDeleted }: { brand: BrandSummary; onDeleted?: () =
 
   // A user's own brand: the same card, but wrapped so a delete button can sit beside the
   // link instead of nested inside it (`.sample-card-link` is `display: contents`, so the
-  // link itself stays invisible to layout and the subgrid rows still line up).
+  // link itself stays invisible to layout and the subgrid rows still line up). The delete
+  // control is its own footer row (the card's 7th subgrid row) so it's always visible instead
+  // of a hover-only corner button.
   return (
     <div className={`card sample-card sample-card-user${deleting ? " is-deleting" : ""}`}>
       <Link
@@ -149,16 +151,18 @@ function BrandCard({ brand, onDeleted }: { brand: BrandSummary; onDeleted?: () =
       >
         {body}
       </Link>
-      <button
-        type="button"
-        className="sample-card-delete"
-        onClick={handleDelete}
-        disabled={deleting}
-        aria-label={t("pages.brands.deleteAriaLabel", { brand: brand.brand })}
-        title={t("pages.brands.deleteLabel")}
-      >
-        <TrashIcon />
-      </button>
+      <div className="sample-card-footer">
+        <button
+          type="button"
+          className="sample-card-delete"
+          onClick={handleDelete}
+          disabled={deleting}
+          aria-label={t("pages.brands.deleteAriaLabel", { brand: brand.brand })}
+        >
+          <TrashIcon />
+          <span aria-hidden="true">{t("pages.brands.deleteLabel")}</span>
+        </button>
+      </div>
     </div>
   );
 }

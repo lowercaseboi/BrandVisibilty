@@ -1,4 +1,5 @@
 import type { AnalysisResult } from "../api/types";
+import { ratingFromRange, scoreBandClass, scoreRange } from "../format";
 import { useFormat, useT } from "../i18n";
 import { InfoTip } from "./InfoTip";
 
@@ -35,10 +36,14 @@ export function MetricCards({ analysis }: { analysis: AnalysisResult }) {
   const score = analysis.composite_score ?? 0;
   const pts = (x: number) => fmt.number(x * 100, 1);
   const pct = (x: number | null | undefined) => (x === null || x === undefined ? "—" : fmt.percent(x, 1));
+  // Same band the rating word elsewhere uses (from the low end of the range), so this number's
+  // colour always agrees with it.
+  const [rangeLo, rangeHi] = scoreRange(analysis);
+  const band = scoreBandClass(ratingFromRange(rangeLo, rangeHi).band);
 
   return (
     <div className="metric-cards">
-      <div className="metric-card metric-card-composite">
+      <div className={`metric-card metric-card-composite score-band-${band}`}>
         <div>
           <span className="metric-label">
             {t("dashboard.metrics.composite")}

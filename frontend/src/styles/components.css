@@ -2099,3 +2099,19 @@ a.card:active {
     transform: translateY(10px) scale(0.96);
   }
 }
+
+/* Trend verdict (AC-8): one plain-language line above the score-history chart. */
+.trend-verdict {
+  margin: 0 0 var(--space-3);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.trend-verdict-up strong {
+  color: var(--ok);
+}
+
+.trend-verdict-down strong {
+  color: var(--warn);
+}

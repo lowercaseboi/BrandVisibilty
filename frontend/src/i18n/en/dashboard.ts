@@ -238,6 +238,29 @@ export const dashboard = {
   "trend.legendScore": "Score",
   "trend.legendBand": "Likely range",
   "trend.legendBreak": "Methodology change (question set or AI sources) — scores on either side are not comparable.",
+  // Trend verdict (AC-8), one line above the chart. Only analyses since the last methodology change
+  // count. {delta}, {slope}, {lo}, {hi} are points out of 100; {slope}/{lo}/{hi} carry a sign ("+3.2").
+  "trend.verdict.insufficient":
+    "Not enough comparable analyses yet to judge a trend: at least 2 are needed since the last methodology change.",
+  "trend.verdict.noChange":
+    "No clear change between the last two analyses: their likely ranges overlap, so the difference may just be normal variation in AI answers.",
+  "trend.verdict.changeUp":
+    "**Change detected:** up {delta} points since the previous analysis (their likely ranges don't overlap).",
+  "trend.verdict.changeDown":
+    "**Change detected:** down {delta} points since the previous analysis (their likely ranges don't overlap).",
+  "trend.verdict.improvingWeek":
+    "**Score is improving:** about {slope} points/week (95% range {lo} to {hi}) across {n} comparable analyses.",
+  "trend.verdict.decliningWeek":
+    "**Score is declining:** about {slope} points/week (95% range {lo} to {hi}) across {n} comparable analyses.",
+  // Used when the analyses ran less than a day apart, so a per-week rate would be meaningless.
+  "trend.verdict.improvingRun":
+    "**Score is improving:** about {slope} points per analysis (95% range {lo} to {hi}) across {n} comparable analyses.",
+  "trend.verdict.decliningRun":
+    "**Score is declining:** about {slope} points per analysis (95% range {lo} to {hi}) across {n} comparable analyses.",
+  "trend.verdict.noTrend":
+    "No clear trend across {n} comparable analyses: the score's movement is within the normal variation of AI answers.",
+  "trend.verdict.excluded_one": "({n} incomplete analysis left out.)",
+  "trend.verdict.excluded_other": "({n} incomplete analyses left out.)",
   "origin.live": "Live AI responses",
   "origin.synthetic": "Simulated data",
   "origin.replay": "Replayed responses",

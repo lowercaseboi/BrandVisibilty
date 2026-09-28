@@ -1,8 +1,8 @@
 import { useCallback, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
-import type { Snapshot } from "../api/types";
+import type { Snapshot, TrendVerdict } from "../api/types";
 import { T, useFormat, useT } from "../i18n";
-import type { MessageKey } from "../i18n";
+import type { Formatter, MessageKey, Vars } from "../i18n";
 import { useDetails } from "../settings/details";
 import { toScore, useListFormat, useShortDate, useShortTime } from "./dashboard/helpers";
 
@@ -15,6 +15,59 @@ const ORIGIN_KEY: Record<string, MessageKey> = {
   synthetic: "dashboard.origin.synthetic",
   replay: "dashboard.origin.replay",
 };
+
+// AC-8 (PRD §11.6): which plain-language sentence the backend's verdict maps to. Slopes and
+// deltas are already in points (0–100); the backend decides significance, the UI only words it.
+function verdictMessage(v: TrendVerdict, fmt: Formatter): { key: MessageKey; vars?: Vars } {
+  const signed = (x: number | null | undefined) => {
+    const s = fmt.number(x ?? 0, 1);
+    return (x ?? 0) > 0 ? `+${s}` : s;
+  };
+  switch (v.status) {
+    case "no_change_detected":
+      return { key: "dashboard.trend.verdict.noChange" };
+    case "change_detected":
+      return {
+        key: v.direction === "down" ? "dashboard.trend.verdict.changeDown" : "dashboard.trend.verdict.changeUp",
+        vars: { delta: fmt.number(Math.abs(v.delta ?? 0), 0) },
+      };
+    case "improving":
+    case "declining": {
+      const weekly = v.x_unit === "day" && v.slope_per_week != null;
+      const up = v.status === "improving";
+      const key: MessageKey = weekly
+        ? up ? "dashboard.trend.verdict.improvingWeek" : "dashboard.trend.verdict.decliningWeek"
+        : up ? "dashboard.trend.verdict.improvingRun" : "dashboard.trend.verdict.decliningRun";
+      return {
+        key,
+        vars: {
+          slope: signed(weekly ? v.slope_per_week : v.slope),
+          lo: signed(weekly ? v.slope_per_week_ci_low : v.slope_ci_low),
+          hi: signed(weekly ? v.slope_per_week_ci_high : v.slope_ci_high),
+          n: v.n_points,
+        },
+      };
+    }
+    case "no_clear_trend":
+      return { key: "dashboard.trend.verdict.noTrend", vars: { n: v.n_points } };
+    default:
+      return { key: "dashboard.trend.verdict.insufficient" };
+  }
+}
+
+function TrendVerdictLine({ verdict }: { verdict: TrendVerdict }) {
+  const t = useT();
+  const fmt = useFormat();
+  const { key, vars } = verdictMessage(verdict, fmt);
+  return (
+    <p className={`trend-verdict trend-verdict-${verdict.direction ?? "flat"}`}>
+      <T k={key} vars={vars} />
+      {verdict.n_excluded > 0 && (
+        <span className="muted"> {t.n("dashboard.trend.verdict.excluded", verdict.n_excluded)}</span>
+      )}
+    </p>
+  );
+}
 
 // The score (0–100) over checks, with its likely range as a band (PRD: trend claims always
 // carry their CI). A change in comparability_key means the questions, sampling or AIs changed,
@@ -136,9 +189,12 @@ export function TrendChart({
   };
 
   const origin = ap ? (ORIGIN_KEY[ap.s.data_origin ?? "live"] ?? "dashboard.origin.live") : null;
+  // Only the newest snapshot carries the verdict (it describes the history as of that run).
+  const verdict = last.trend_verdict;
 
   return (
     <div className="trend" ref={measureRef}>
+      {verdict && <TrendVerdictLine verdict={verdict} />}
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className="trend-svg"

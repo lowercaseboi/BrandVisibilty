@@ -23,8 +23,13 @@ from app.interface.schemas import (
     RunRequest,
     SaveQuestionsRequest,
     SkipRequest,
+    TrendVerdict,
 )
-from app.interface.snapshots import normalize_snapshot
+from app.interface.snapshots import (
+    normalize_snapshot,
+    trend_verdict,
+    with_trend_verdict,
+)
 from app.tracking import store
 
 DESCRIPTION = """
@@ -247,22 +252,32 @@ def reset_questions(brand_key: str) -> dict[str, Any]:
 @app.get("/brands/{brand_key}/snapshots/latest", tags=["snapshots"])
 def latest_snapshot(brand_key: str) -> dict[str, Any]:
     """Most recent snapshot (without raw observations). 404 if the brand has no data yet."""
-    records = store.load_snapshots(brand_key)
-    if not records:
+    snapshots = _normalized_snapshots(brand_key)
+    if not snapshots:
         raise HTTPException(status_code=404, detail=f"No snapshots for brand '{brand_key}'")
-    return normalize_snapshot(records[-1])
+    # `trend_verdict` (AC-8) is additive: the history's verdict as of this run.
+    return with_trend_verdict(snapshots)[-1]
 
 
 @app.get("/brands/{brand_key}/snapshots", tags=["snapshots"])
 def list_snapshots(brand_key: str) -> list[dict[str, Any]]:
-    """All snapshots, oldest first, without raw observations (for trend charts)."""
-    return _normalized_snapshots(brand_key)
+    """All snapshots, oldest first, without raw observations (for trend charts). The newest one
+    also carries `trend_verdict` (AC-8, see `GET /brands/{brand_key}/trend`)."""
+    return with_trend_verdict(_normalized_snapshots(brand_key))
+
+
+@app.get("/brands/{brand_key}/trend", tags=["snapshots"], response_model=TrendVerdict)
+def get_trend(brand_key: str) -> dict[str, Any]:
+    """Is the score really moving? (PRD §11.6 / AC-8.) Uses only the latest comparable segment:
+    2–3 runs compare the last two by CI overlap; 4+ runs use a Theil–Sen slope whose bootstrap CI
+    must exclude 0 before a direction is claimed. `insufficient_data` when there are < 2 runs."""
+    return trend_verdict(_normalized_snapshots(brand_key))
 
 
 @app.get("/brands/{brand_key}/runs", tags=["snapshots"], include_in_schema=False)
 def list_runs_alias(brand_key: str) -> list[dict[str, Any]]:
     # Alias kept for frontend/src/api/client.ts `getRuns`.
-    return _normalized_snapshots(brand_key)
+    return with_trend_verdict(_normalized_snapshots(brand_key))
 
 
 @app.get("/brands/{brand_key}/snapshots/{run_id}/observations", tags=["snapshots"])

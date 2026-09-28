@@ -227,6 +227,49 @@ export interface Snapshot {
   unscored_observation_count?: number;
   /** Scored answers only; keys are exactly the `entities` keys ("self" + competitors). */
   mention_summary?: MentionSummary;
+  /** AC-8 verdict on the history as of this run; only the newest snapshot carries it. */
+  trend_verdict?: TrendVerdict;
+}
+
+export type TrendStatus =
+  | "insufficient_data"
+  | "no_change_detected"
+  | "change_detected"
+  | "no_clear_trend"
+  | "improving"
+  | "declining";
+
+/** PRD §11.6 / AC-8 trend statistics over the latest comparable segment (same comparability_key,
+ * admissible runs only). Scores and slopes are on the 0–100 scale — `toFractions` leaves them alone.
+ * 2–3 runs: last two compared by CI overlap; 4+: Theil–Sen slope with a bootstrap CI. */
+export interface TrendVerdict {
+  status: TrendStatus;
+  method: "none" | "ci_overlap" | "theil_sen";
+  direction: "up" | "down" | null;
+  n_points: number;
+  n_excluded: number;
+  comparability_key: string | null;
+  first_run_id?: string | null;
+  last_run_id?: string | null;
+  previous_score?: number | null;
+  previous_ci_low?: number | null;
+  previous_ci_high?: number | null;
+  latest_score?: number | null;
+  latest_ci_low?: number | null;
+  latest_ci_high?: number | null;
+  delta?: number | null;
+  /** "day": x = days since the first run; "run": x = run index (runs < 1 day apart). */
+  x_unit?: "day" | "run" | null;
+  /** Points per x_unit. */
+  slope?: number | null;
+  slope_ci_low?: number | null;
+  slope_ci_high?: number | null;
+  slope_per_week?: number | null;
+  slope_per_week_ci_low?: number | null;
+  slope_per_week_ci_high?: number | null;
+  span_days?: number | null;
+  bootstrap_iterations?: number | null;
+  valid_resamples?: number | null;
 }
 
 export interface MentionSummary {

@@ -45,6 +45,11 @@ export const common = {
   "notFound.body": "The page you requested does not exist or has been moved.",
   "notFound.back": "Return to overview",
 
+  "errorBoundary.title": "Something went wrong",
+  "errorBoundary.body": "This page ran into an unexpected error. Reloading usually fixes it.",
+  "errorBoundary.reload": "Reload page",
+  "errorBoundary.goToDashboard": "Go to dashboard",
+
   "loading": "Loading…",
   "error": "Something went wrong",
   "error.network": "Unable to reach the server. Confirm it is running and try again.",

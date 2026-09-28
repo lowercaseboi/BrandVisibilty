@@ -197,39 +197,42 @@
   text-decoration: none;
 }
 
-.sample-card-delete {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border: none;
-  border-radius: 50%;
-  color: var(--muted);
-  background: var(--surface-3);
-  opacity: 0;
-  transform: translateY(-2px);
-  transition:
-    opacity 0.2s var(--ease),
-    transform 0.2s var(--ease),
-    background 0.2s var(--ease),
-    color 0.2s var(--ease);
+/* One extra subgrid row versus the plain sample card (7 instead of 6), so the always-visible
+   delete footer still lines up across every card in the "yours" grid. */
+.sample-card-user {
+  grid-row: span 7;
+  grid-template-rows: subgrid;
 }
 
-.sample-card-user:hover .sample-card-delete,
-.sample-card-user:focus-within .sample-card-delete,
-.sample-card-delete:focus-visible {
-  opacity: 1;
-  transform: translateY(0);
+/* Always-visible footer row, not a hover-reveal corner button — easy to find, including on touch. */
+.sample-card-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding-top: var(--space-2);
+  border-top: 1px dashed var(--border);
+}
+
+.sample-card-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 7px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  transition:
+    color 0.2s var(--ease),
+    background 0.2s var(--ease);
 }
 
 .sample-card-delete:hover:not(:disabled),
 .sample-card-delete:focus-visible {
-  color: var(--on-accent);
-  background: var(--err);
+  color: var(--rate-low);
+  background: var(--rate-low-bg);
 }
 
 .sample-card-delete:disabled {
@@ -240,10 +243,6 @@
 .sample-card-user.is-deleting {
   pointer-events: none;
   opacity: 0.55;
-}
-
-.sample-card-user.is-deleting .sample-card-delete {
-  opacity: 1;
 }
 
 .sample-card.is-skeleton {
@@ -294,16 +293,16 @@
 }
 
 .score-ring-rarely {
-  color: var(--err);
+  color: var(--rate-low);
 }
 
 .score-ring-sometimes {
-  color: var(--warn);
+  color: var(--rate-mid);
 }
 
 .score-ring-often,
 .score-ring-top {
-  color: var(--ok);
+  color: var(--rate-high);
 }
 
 /* Number dead-centre in the circle; "/100" sits small underneath so it never shifts the digits. */
@@ -354,16 +353,16 @@
 }
 
 .pg-rating-rarely {
-  color: var(--err);
+  color: var(--rate-low);
 }
 
 .pg-rating-sometimes {
-  color: var(--warn);
+  color: var(--rate-mid);
 }
 
 .pg-rating-often,
 .pg-rating-top {
-  color: var(--ok);
+  color: var(--rate-high);
 }
 
 .pg-rating-upper {

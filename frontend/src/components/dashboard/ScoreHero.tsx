@@ -1,5 +1,5 @@
 import type { Snapshot } from "../../api/types";
-import { RATING_KEY, ratingFromRange, scoreRange } from "../../format";
+import { RATING_KEY, ratingFromRange, scoreBandClass, scoreRange } from "../../format";
 import { T, useFormat, useT } from "../../i18n";
 import { Details } from "../../settings/details";
 import { MetricStrip } from "../MetricStrip";
@@ -73,7 +73,7 @@ export function ScoreHero({ snapshot, previous }: { snapshot: Snapshot; previous
         {t("dashboard.hero.title")}
       </h2>
       <div className="score-hero-grid">
-        <div className="score-hero-number">
+        <div className={`score-hero-number score-band-${scoreBandClass(rating.band)}`}>
           <p className="score-hero-value">
             <span className="sr-only">{t("dashboard.hero.scoreAria", { score })}</span>
             <span aria-hidden="true">

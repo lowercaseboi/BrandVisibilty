@@ -190,3 +190,48 @@ class ProviderInfoOut(BaseModel):
     configured: bool
     model: str | None
     kind: Literal["live", "offline"]
+
+
+TrendStatus = Literal[
+    "insufficient_data", "no_change_detected", "change_detected", "no_clear_trend", "improving", "declining"
+]
+
+
+class TrendVerdict(BaseModel):
+    """AC-8 / PRD §11.6: what may honestly be said about the score's movement, computed only
+    over the latest comparable segment (same comparability key), admissible runs only.
+    All scores and slopes are on the 0–100 composite scale."""
+
+    status: TrendStatus = Field(
+        description='"insufficient_data" (<2 comparable runs); 2–3 runs: "change_detected" / '
+        '"no_change_detected" by CI overlap of the last two; 4+ runs: "improving" / "declining" only when '
+        'the Theil–Sen slope\'s bootstrap CI excludes 0, else "no_clear_trend"'
+    )
+    method: Literal["none", "ci_overlap", "theil_sen"]
+    direction: Literal["up", "down"] | None
+    n_points: int = Field(description="Admissible runs in the latest comparable segment (the ones analysed)")
+    n_excluded: int = Field(description="Inadmissible runs in that segment, left out")
+    comparability_key: str | None
+    first_run_id: str | None = None
+    last_run_id: str | None = None
+    previous_score: float | None = None
+    previous_ci_low: float | None = None
+    previous_ci_high: float | None = None
+    latest_score: float | None = None
+    latest_ci_low: float | None = None
+    latest_ci_high: float | None = None
+    delta: float | None = Field(default=None, description="latest_score - previous_score (ci_overlap only)")
+    x_unit: Literal["day", "run"] | None = Field(
+        default=None,
+        description='"day" = days since the segment\'s first run; "run" = run index, used when runs are '
+        "packed less than a day apart",
+    )
+    slope: float | None = Field(default=None, description="Theil–Sen slope, points per x_unit")
+    slope_ci_low: float | None = None
+    slope_ci_high: float | None = None
+    slope_per_week: float | None = Field(default=None, description='slope × 7 (x_unit "day" only)')
+    slope_per_week_ci_low: float | None = None
+    slope_per_week_ci_high: float | None = None
+    span_days: float | None = None
+    bootstrap_iterations: int | None = None
+    valid_resamples: int | None = None

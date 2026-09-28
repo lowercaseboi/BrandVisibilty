@@ -36,6 +36,11 @@ export const common: Record<keyof typeof enCommon, string> = {
   "notFound.body": "विनंती केलेले पान अस्तित्वात नाही किंवा हलवले गेले आहे.",
   "notFound.back": "ओव्हरव्ह्यूकडे परत जा",
 
+  "errorBoundary.title": "त्रुटी आली",
+  "errorBoundary.body": "या पानावर एक अनपेक्षित त्रुटी आली. पान रीलोड केल्याने सहसा ही समस्या दूर होते.",
+  "errorBoundary.reload": "पान रीलोड करा",
+  "errorBoundary.goToDashboard": "ओव्हरव्ह्यूकडे जा",
+
   "loading": "लोड होत आहे…",
   "error": "त्रुटी आली",
   "error.network": "सर्व्हरशी संपर्क होऊ शकला नाही. सर्व्हर सुरू असल्याची खात्री करून पुन्हा प्रयत्न करा.",

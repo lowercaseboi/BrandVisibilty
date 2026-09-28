@@ -12,6 +12,7 @@ import threading
 import time
 import types
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -511,3 +512,55 @@ def test_legacy_mention_summary_counts_scored_raw_observations() -> None:
     assert normalize_snapshot(LEGACY_RECORD)["mention_summary"] == {
         "total_answers": 1, "entities": {"self": {"answers_mentioning": 0, "answers_ranked_first": 0}},
     }
+
+
+def _tracked(i: int, score: float, *, key: str = "abc", half: float = 4.0) -> dict:
+    day = (datetime(2026, 8, 1, 10, tzinfo=UTC) + timedelta(days=7 * i)).isoformat()
+    return {
+        **NEW_RECORD,
+        "run_id": f"run-{key}-{i}",
+        "comparability_key": key,
+        "collection_started_at": day,
+        "collection_completed_at": day,
+        "analysis_result": {
+            **NEW_RECORD["analysis_result"],
+            "composite_score": score, "ci_low": score - half, "ci_high": score + half,
+        },
+    }
+
+
+def test_trend_verdict_on_newest_snapshot_and_trend_endpoint(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """AC-8: the history carries a statistical verdict, computed over the latest comparable
+    segment only (the old-key runs, which fall steeply, are ignored)."""
+    from app.interface.schemas import TrendVerdict
+
+    history = [_tracked(0, 90, key="old"), _tracked(1, 10, key="old")] + [
+        _tracked(i, s) for i, s in enumerate([20, 28, 35, 44], start=2)
+    ]
+    monkeypatch.setattr(sys.modules["app.tracking.store"], "load_snapshots", lambda key: list(history))
+
+    snaps = client.get("/brands/gajanan_vada_pav/snapshots").json()
+    assert all("trend_verdict" not in s for s in snaps[:-1])
+    verdict = TrendVerdict.model_validate(snaps[-1]["trend_verdict"])
+    assert verdict.status == "improving"
+    assert verdict.method == "theil_sen"
+    assert verdict.n_points == 4
+    assert verdict.comparability_key == "abc"
+    assert verdict.x_unit == "day"
+    assert verdict.slope_per_week is not None and verdict.slope_per_week > 0
+
+    latest = client.get("/brands/gajanan_vada_pav/snapshots/latest").json()
+    assert latest["run_id"] == "run-abc-5"
+    assert latest["trend_verdict"] == snaps[-1]["trend_verdict"]
+    assert client.get("/brands/gajanan_vada_pav/trend").json() == snaps[-1]["trend_verdict"]
+
+
+def test_trend_verdict_single_run_is_insufficient(client: TestClient) -> None:
+    body = client.get("/brands/gajanan_vada_pav/trend").json()
+    assert body["status"] == "insufficient_data"
+    assert body["n_points"] == 1
+    assert client.get("/brands/gajanan_vada_pav/snapshots/latest").json()["trend_verdict"]["status"] == (
+        "insufficient_data"
+    )

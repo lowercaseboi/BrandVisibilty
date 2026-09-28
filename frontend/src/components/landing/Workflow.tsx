@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { MessageKey } from "../../i18n";
 import { useT } from "../../i18n";
 import { Reveal } from "./Reveal";
@@ -30,6 +30,33 @@ export function Workflow() {
   const numRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const reduced = prefersReducedMotion();
   const [lit, setLit] = useState<boolean[]>(() => STEPS.map(() => reduced));
+
+  // The rail must stop at the [06] marker's center, not run on past it. Its `top` is fixed by CSS
+  // (24px), so the marker's offset from that fixed point is also the rail's total length; written
+  // to a CSS var the stylesheet uses in place of a `bottom` offset. Re-measured on resize and via
+  // ResizeObserver (covers reflow from a language switch or font load changing step heights), and
+  // with useLayoutEffect so the rail never flashes full-length before its first measurement.
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    const rail = railRef.current;
+    if (!list || !rail) return;
+    const measure = () => {
+      const lastEl = numRefs.current[STEPS.length - 1];
+      if (!lastEl) return;
+      const railTop = rail.getBoundingClientRect().top;
+      const lastRect = lastEl.getBoundingClientRect();
+      const length = lastRect.top - railTop + lastRect.height / 2;
+      rail.style.setProperty("--lp-rail-length", `${Math.max(0, length)}px`);
+    };
+    measure();
+    window.addEventListener("resize", measure, { passive: true });
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+    ro?.observe(list);
+    return () => {
+      window.removeEventListener("resize", measure);
+      ro?.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     if (reduced) {

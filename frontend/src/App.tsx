@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { Link, Route, Routes, useLocation } from "react-router-dom";
 import { AppHeader } from "./components/AppHeader";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Toaster } from "./components/Toaster";
 import { useT } from "./i18n";
 import { BrandListPage } from "./pages/BrandListPage";
@@ -50,16 +51,20 @@ export default function App() {
       <main className="app" id="main" tabIndex={-1}>
         {/* Keyed on the path so each page plays its entrance once. */}
         <div className="page-enter" key={pathname}>
-          <Suspense fallback={<p className="status">{t("common.loading")}</p>}>
-            <Routes>
-              <Route path="/app" element={<BrandListPage />} />
-              <Route path="/providers" element={<ProvidersPage />} />
-              <Route path="/brands/:brandKey" element={<BrandDashboardPage />} />
-              <Route path="/brands/:brandKey/questions" element={<QuestionsPage />} />
-              <Route path="/brands/:brandKey/runs/:runId/evidence" element={<EvidencePage />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
+          {/* A crash in one page falls back to a friendly message instead of blanking the app;
+              resetKey clears it automatically once the user navigates elsewhere. */}
+          <ErrorBoundary resetKey={pathname}>
+            <Suspense fallback={<p className="status">{t("common.loading")}</p>}>
+              <Routes>
+                <Route path="/app" element={<BrandListPage />} />
+                <Route path="/providers" element={<ProvidersPage />} />
+                <Route path="/brands/:brandKey" element={<BrandDashboardPage />} />
+                <Route path="/brands/:brandKey/questions" element={<QuestionsPage />} />
+                <Route path="/brands/:brandKey/runs/:runId/evidence" element={<EvidencePage />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </ErrorBoundary>
         </div>
       </main>
       <footer className="app-footer">{t("common.footer.text")}</footer>

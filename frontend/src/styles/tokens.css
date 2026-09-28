@@ -84,6 +84,16 @@
   --score-glass-fill: color-mix(in srgb, var(--accent) 82%, transparent); /* yellow, solid-ish */
   --score-glass-edge: oklch(60% 0.15 57);
 
+  /* Warm-earthy rating bands (replace generic err/warn/ok for score colour): brick (low) / gold
+     (mid) / sage (high). Darker than the dark-theme versions below so they clear AA (>= 4.5:1) on
+     the cream --bg. -bg variants are soft translucent fills for chips/hover states. */
+  --rate-low: oklch(50% 0.15 30); /* brick */
+  --rate-low-bg: color-mix(in srgb, var(--rate-low) 12%, transparent);
+  --rate-mid: oklch(52% 0.12 80); /* gold */
+  --rate-mid-bg: color-mix(in srgb, var(--rate-mid) 12%, transparent);
+  --rate-high: oklch(50% 0.10 150); /* sage */
+  --rate-high-bg: color-mix(in srgb, var(--rate-high) 12%, transparent);
+
   /* Landing bands (alternating sections). Light: navy ink + cream paper, as designed. */
   --band-dark: oklch(22.3% 0.049 274.6);
   --band-dark-raised: oklch(28.3% 0.06 274.6);
@@ -180,6 +190,12 @@
   color-scheme: dark;
   --score-glass-fill: color-mix(in srgb, var(--accent) 32%, transparent);
   --score-glass-edge: color-mix(in srgb, var(--accent) 85%, transparent);
+  --rate-low: oklch(66% 0.15 30); /* brick */
+  --rate-low-bg: color-mix(in srgb, var(--rate-low) 16%, transparent);
+  --rate-mid: oklch(80% 0.12 88); /* gold */
+  --rate-mid-bg: color-mix(in srgb, var(--rate-mid) 16%, transparent);
+  --rate-high: oklch(76% 0.10 150); /* sage */
+  --rate-high-bg: color-mix(in srgb, var(--rate-high) 16%, transparent);
   --band-dark: #1a1a18;
   --band-dark-raised: #242320;
   --band-dark-fg: #f5f3ec;
@@ -259,6 +275,12 @@
     color-scheme: dark;
     --score-glass-fill: color-mix(in srgb, var(--accent) 32%, transparent);
     --score-glass-edge: color-mix(in srgb, var(--accent) 85%, transparent);
+    --rate-low: oklch(66% 0.15 30); /* brick */
+    --rate-low-bg: color-mix(in srgb, var(--rate-low) 16%, transparent);
+    --rate-mid: oklch(80% 0.12 88); /* gold */
+    --rate-mid-bg: color-mix(in srgb, var(--rate-mid) 16%, transparent);
+    --rate-high: oklch(76% 0.10 150); /* sage */
+    --rate-high-bg: color-mix(in srgb, var(--rate-high) 16%, transparent);
     --band-dark: #1a1a18;
     --band-dark-raised: #242320;
     --band-dark-fg: #f5f3ec;
@@ -404,5 +426,38 @@
   --score-glass-fill: color-mix(in srgb, var(--signal) 32%, transparent);
   --score-glass-edge: color-mix(in srgb, var(--signal) 85%, transparent);
   --score-outof: color-mix(in srgb, var(--signal) 65%, var(--band-dark-dim));
+  --rate-low: oklch(66% 0.15 30); /* brick */
+  --rate-low-bg: color-mix(in srgb, var(--rate-low) 16%, transparent);
+  --rate-mid: oklch(80% 0.12 88); /* gold */
+  --rate-mid-bg: color-mix(in srgb, var(--rate-mid) 16%, transparent);
+  --rate-high: oklch(76% 0.10 150); /* sage */
+  --rate-high-bg: color-mix(in srgb, var(--rate-high) 16%, transparent);
   color: var(--text);
+}
+
+/* Score band colours: the big glass number and its "/100" pick up the same brick/gold/sage the
+   rating word uses. A component sets one of these from the band `bandOf`/`ratingFromRange` return
+   in format.ts (rarely -> low, sometimes -> mid, often/top -> high) on the element that wraps the
+   number. Theme-agnostic: --rate-low/-mid/-high are already tuned per theme above, so one
+   definition reads correctly everywhere, including on the dark band. Glass look preserved: fill is
+   the band colour at partial alpha, edge is the band colour itself. */
+.score-band-low {
+  --score-ink: color-mix(in srgb, var(--rate-low) 82%, transparent);
+  --score-glass-fill: color-mix(in srgb, var(--rate-low) 62%, transparent);
+  --score-glass-edge: var(--rate-low);
+  --score-outof: color-mix(in srgb, var(--rate-low) 70%, var(--muted));
+}
+
+.score-band-mid {
+  --score-ink: color-mix(in srgb, var(--rate-mid) 82%, transparent);
+  --score-glass-fill: color-mix(in srgb, var(--rate-mid) 62%, transparent);
+  --score-glass-edge: var(--rate-mid);
+  --score-outof: color-mix(in srgb, var(--rate-mid) 70%, var(--muted));
+}
+
+.score-band-high {
+  --score-ink: color-mix(in srgb, var(--rate-high) 82%, transparent);
+  --score-glass-fill: color-mix(in srgb, var(--rate-high) 62%, transparent);
+  --score-glass-edge: var(--rate-high);
+  --score-outof: color-mix(in srgb, var(--rate-high) 70%, var(--muted));
 }

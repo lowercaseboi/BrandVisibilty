@@ -148,6 +148,18 @@ export const RATING_KEY: Record<RatingBand, MessageKey> = {
   top: "pages.rating.top",
 };
 
+/**
+ * A rating band collapsed to the three score colours (brick/gold/sage — see tokens.css
+ * --rate-low/-mid/-high): rarely -> low, sometimes -> mid, often & top -> high. Use this on the
+ * element that wraps a big glass score number (`.score-band-${scoreBandClass(band)}`) so the
+ * number's colour always agrees with the rating word next to it.
+ */
+export function scoreBandClass(band: RatingBand): "low" | "mid" | "high" {
+  if (band === "rarely") return "low";
+  if (band === "sometimes") return "mid";
+  return "high";
+}
+
 /** 0–1 score -> whole points out of 100, as shown in the plain view. */
 export function scoreOutOf100(score0to1: number): number {
   return Math.round(Math.min(1, Math.max(0, score0to1)) * 100);

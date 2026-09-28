@@ -10,9 +10,12 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from dataclasses import asdict
+from datetime import UTC, datetime
 from typing import Any
 
 from app.analysis.summary import mention_summary
+from app.analysis.trend import TrendPoint, compute_trend
 
 _LEGACY_OBS_ID = re.compile(r"^(?:(?P<provider>[^:]+):)?(?P<query>[qp]\d+)-s\d+$")
 
@@ -131,3 +134,41 @@ def _normalize_observation(obs: dict[str, Any], default_provider: str) -> dict[s
     # Records written before question sets existed only held scored observations.
     out["scored"] = bool(out.get("scored", True))
     return out
+
+
+def _parse_time(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        at = datetime.fromisoformat(value)  # Python 3.11 accepts a trailing "Z"
+    except ValueError:
+        return None
+    return at if at.tzinfo else at.replace(tzinfo=UTC)
+
+
+def trend_verdict(snapshots: list[dict[str, Any]]) -> dict[str, Any]:
+    """AC-8 trend verdict (PRD §11.6) over normalized snapshots, oldest first.
+
+    Scores stay on the backend's 0–100 scale. Pure: the stats live in `app.analysis.trend`.
+    """
+    points = [
+        TrendPoint(
+            run_id=s["run_id"],
+            completed_at=_parse_time(s.get("collection_completed_at")),
+            composite_score=float(s["analysis_result"]["composite_score"]),
+            ci_low=float(s["analysis_result"]["ci_low"]),
+            ci_high=float(s["analysis_result"]["ci_high"]),
+            comparability_key=s["comparability_key"],
+            admissible=bool(s["admission"].get("admissible", True)),
+        )
+        for s in snapshots
+    ]
+    return asdict(compute_trend(points))
+
+
+def with_trend_verdict(snapshots: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Attach `trend_verdict` to the newest snapshot only (additive field; the verdict is
+    about the history *as of* that run, so older entries don't carry one)."""
+    if snapshots:
+        snapshots[-1] = {**snapshots[-1], "trend_verdict": trend_verdict(snapshots)}
+    return snapshots

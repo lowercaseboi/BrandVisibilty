@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { RatingBand } from "../format";
+import { scoreBandClass } from "../format";
 import { useFormat } from "../i18n";
 
 const COUNT_MS = 1100;
@@ -33,7 +34,10 @@ export function ScoreRing({ score, band, play }: { score: number | null; band?: 
   const fmt = useFormat();
   const value = useCountUp(score ?? 0, play);
   return (
-    <div className={`score-ring${band ? ` score-ring-${band}` : ""}${score === null ? " is-empty" : ""}`} aria-hidden="true">
+    <div
+      className={`score-ring${band ? ` score-ring-${band} score-band-${scoreBandClass(band)}` : ""}${score === null ? " is-empty" : ""}`}
+      aria-hidden="true"
+    >
       <svg viewBox="0 0 120 120">
         <circle className="score-ring-track" cx="60" cy="60" r="52" pathLength={100} />
         {score !== null && (

@@ -131,16 +131,16 @@
 }
 
 .score-rating-rarely {
-  color: var(--err);
+  color: var(--rate-low);
 }
 
 .score-rating-sometimes {
-  color: var(--warn);
+  color: var(--rate-mid);
 }
 
 .score-rating-often,
 .score-rating-top {
-  color: var(--ok);
+  color: var(--rate-high);
 }
 
 /* Mention rate vs competitors: faint ticks for competitors, an accent bar for you. */

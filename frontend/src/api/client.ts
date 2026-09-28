@@ -10,6 +10,7 @@ import type {
   QuestionSet,
   Snapshot,
   StartRunRequest,
+  TrendVerdict,
 } from "./types";
 
 // Default "/api": the Vite dev proxy (vite.config.ts) or nginx strips the
@@ -94,6 +95,7 @@ const b = encodeURIComponent;
 
 // The backend reports composite_score / ci_low / ci_high on a 0-100 scale (scorer.py);
 // the UI works in 0-1 fractions like the other metrics, so convert once here.
+// `trend_verdict` (AC-8) is deliberately left on the 0-100 scale: it speaks in points.
 function toFractions(s: Snapshot): Snapshot {
   const a = s.analysis_result;
   return {
@@ -126,6 +128,12 @@ export async function getLatestSnapshot(brandKey: string): Promise<Snapshot> {
 
 export async function getSnapshots(brandKey: string): Promise<Snapshot[]> {
   return (await getJson<Snapshot[]>(`/brands/${b(brandKey)}/snapshots`)).map(toFractions);
+}
+
+/** AC-8 trend verdict (0-100 scale). The newest snapshot from getSnapshots/getLatestSnapshot
+ * already carries the same object as `trend_verdict`. */
+export function getTrend(brandKey: string): Promise<TrendVerdict> {
+  return getJson(`/brands/${b(brandKey)}/trend`);
 }
 
 export async function getObservations(brandKey: string, runId: string): Promise<ObservationsResponse> {

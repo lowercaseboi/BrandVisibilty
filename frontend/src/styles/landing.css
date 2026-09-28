@@ -532,15 +532,17 @@
    tokens would still be light-theme cream/ink there. See the file banner comment above. */
 .lp-hero-card {
   position: relative;
-  border: 1px solid var(--band-dark-line);
-  background: var(--band-dark-raised);
+  border: 1px solid color-mix(in srgb, var(--band-dark-line) 55%, transparent);
+  background: color-mix(in srgb, var(--band-dark-raised) 55%, transparent);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
   border-radius: var(--radius-lg);
   padding: 26px;
   box-shadow:
-    0 0 0 calc(1px + var(--frame-gap)) var(--band-dark),
-    0 0 0 calc(2px + var(--frame-gap)) var(--band-dark-line),
-    6px 6px 0 -1px var(--band-dark),
-    6px 6px 0 0 var(--band-dark-line);
+    0 0 0 calc(1px + var(--frame-gap)) color-mix(in srgb, var(--band-dark) 55%, transparent),
+    0 0 0 calc(2px + var(--frame-gap)) color-mix(in srgb, var(--band-dark-line) 55%, transparent),
+    6px 6px 0 -1px color-mix(in srgb, var(--band-dark) 55%, transparent),
+    6px 6px 0 0 color-mix(in srgb, var(--band-dark-line) 55%, transparent);
 }
 
 .lp-hero-card::after {
@@ -550,12 +552,15 @@
   border-radius: inherit;
   pointer-events: none;
   opacity: 0.7;
+  --lp-hero-mark: color-mix(in srgb, var(--signal) 80%, transparent);
   background:
-    linear-gradient(to right, var(--signal) 0 var(--mark-size), transparent 0) top left / var(--mark-size) 2px no-repeat,
-    linear-gradient(to bottom, var(--signal) 0 var(--mark-size), transparent 0) top left / 2px var(--mark-size) no-repeat,
-    linear-gradient(to left, var(--signal) 0 var(--mark-size), transparent 0) bottom right / var(--mark-size) 2px
+    linear-gradient(to right, var(--lp-hero-mark) 0 var(--mark-size), transparent 0) top left / var(--mark-size) 2px
       no-repeat,
-    linear-gradient(to top, var(--signal) 0 var(--mark-size), transparent 0) bottom right / 2px var(--mark-size)
+    linear-gradient(to bottom, var(--lp-hero-mark) 0 var(--mark-size), transparent 0) top left / 2px var(--mark-size)
+      no-repeat,
+    linear-gradient(to left, var(--lp-hero-mark) 0 var(--mark-size), transparent 0) bottom right / var(--mark-size) 2px
+      no-repeat,
+    linear-gradient(to top, var(--lp-hero-mark) 0 var(--mark-size), transparent 0) bottom right / 2px var(--mark-size)
       no-repeat;
 }
 
@@ -583,7 +588,7 @@
 }
 
 .lp-dot-signal {
-  background: var(--signal);
+  background: color-mix(in srgb, var(--signal) 80%, transparent);
 }
 
 .lp-dot-detected {
@@ -603,7 +608,7 @@
   margin: 0 0 var(--space-4);
   font-family: var(--sans);
   font-size: 0.95rem;
-  color: var(--detected);
+  color: color-mix(in srgb, var(--detected) 82%, transparent);
   overflow-wrap: anywhere;
 }
 
@@ -627,7 +632,7 @@
 
 .lp-hero-answer {
   margin: 0 0 var(--space-5);
-  color: var(--band-dark-fg);
+  color: color-mix(in srgb, var(--band-dark-fg) 85%, transparent);
   font-size: 1rem;
   animation: fade 0.5s var(--ease) 1.7s backwards;
 }
@@ -646,7 +651,7 @@
   align-items: center;
   gap: 10px;
   font-size: 0.95rem;
-  color: var(--band-dark-fg);
+  color: color-mix(in srgb, var(--band-dark-fg) 85%, transparent);
   animation: pop 0.4s var(--ease) backwards;
 }
 
@@ -673,13 +678,13 @@
 }
 
 .lp-check-ok {
-  background: color-mix(in srgb, var(--detected) 20%, transparent);
-  color: var(--detected);
+  background: color-mix(in srgb, var(--detected) 16%, transparent);
+  color: color-mix(in srgb, var(--detected) 80%, transparent);
 }
 
 .lp-check-miss {
-  background: color-mix(in srgb, var(--missing) 20%, transparent);
-  color: var(--missing);
+  background: color-mix(in srgb, var(--missing) 16%, transparent);
+  color: color-mix(in srgb, var(--missing) 80%, transparent);
 }
 
 /* The global reduced-motion rule (base.css) zeroes animation *durations*, not *delays* — without
@@ -755,10 +760,13 @@
   margin-top: 48px;
 }
 
+/* Bottom end is measured from the [06] marker's own center (Workflow.tsx sets --lp-rail-length),
+   so the line stops exactly at the last step instead of running on past it; the calc() fallback
+   only covers the instant before that measurement effect runs. */
 .lp-workflow-rail {
   position: absolute;
   top: 24px;
-  bottom: 24px;
+  height: var(--lp-rail-length, calc(100% - 48px));
   left: 27px;
   width: 1px;
   overflow: hidden;

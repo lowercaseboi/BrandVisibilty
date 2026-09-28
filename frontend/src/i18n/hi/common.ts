@@ -36,6 +36,11 @@ export const common: Record<keyof typeof enCommon, string> = {
   "notFound.body": "अनुरोधित पेज मौजूद नहीं है या स्थानांतरित कर दिया गया है।",
   "notFound.back": "ओवरव्यू पर लौटें",
 
+  "errorBoundary.title": "कोई त्रुटि हुई",
+  "errorBoundary.body": "इस पेज में एक अनपेक्षित त्रुटि आई। पेज रीलोड करने से आमतौर पर यह ठीक हो जाती है।",
+  "errorBoundary.reload": "पेज रीलोड करें",
+  "errorBoundary.goToDashboard": "ओवरव्यू पर जाएँ",
+
   "loading": "लोड हो रहा है…",
   "error": "कोई त्रुटि हुई",
   "error.network": "सर्वर से संपर्क नहीं हो सका। सुनिश्चित करें कि सर्वर चालू है और पुनः प्रयास करें।",
