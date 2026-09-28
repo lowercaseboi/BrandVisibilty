@@ -13,7 +13,11 @@ import { CORNER_OF } from "./wireGeometry";
  * view-transition-name, so opening it grows the card into the module page's header.
  *
  * The outer `.hub-module` box is the grid item the live wires measure (it never transforms); the
- * TiltCard inside does the pop-in and the lean toward the cursor.
+ * TiltCard inside does the entrance (emerging from the centre card) and the lean toward the cursor.
+ *
+ * `named` drops the view-transition-name while the list → hub morph is still running: as a named
+ * element the card would be a separate snapshot clipped to its own box, so it couldn't emerge from
+ * the centre card (it sits in the page layer, under the morphing card, instead).
  */
 export function ModuleCard({
   def,
@@ -21,6 +25,7 @@ export function ModuleCard({
   brandKey,
   onActive,
   cardRef,
+  named = true,
   children,
 }: {
   def: ModuleDef;
@@ -28,6 +33,7 @@ export function ModuleCard({
   brandKey: string;
   onActive: (active: boolean) => void;
   cardRef: Ref<HTMLDivElement>;
+  named?: boolean;
   children: ReactNode;
 }) {
   const t = useT();
@@ -43,7 +49,7 @@ export function ModuleCard({
       ref={cardRef}
       className={`hub-module hub-module-${CORNER_OF[def.id]}`}
       data-module={def.id}
-      style={{ "--i": index, viewTransitionName: moduleVtName(def.id) } as CSSProperties}
+      style={{ "--i": index, viewTransitionName: named ? moduleVtName(def.id) : "none" } as CSSProperties}
       onPointerEnter={on}
       onPointerLeave={off}
     >

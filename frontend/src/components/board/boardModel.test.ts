@@ -5,12 +5,16 @@ import {
   buildBoard,
   clearLegacyDone,
   emptyBoardState,
+  filterCounts,
   findCard,
   legacyDoneKey,
   migrateLegacyDone,
   moveCard,
   readLegacyDone,
+  listCards,
+  matchesFilter,
   removeCard,
+  setStatus,
   summarizeBoard,
 } from "./boardModel";
 import type { BoardColumnView, StorageLike } from "./boardModel";
@@ -198,6 +202,38 @@ describe("moveCard", () => {
   it("removes a card", () => {
     const s = state({ "video|": { column: "done", order: 0, updated_at: T0 } });
     expect(removeCard(s, "video|").cards).toEqual({});
+  });
+});
+
+describe("list view", () => {
+  const saved = state({
+    "faq_page|": { column: "done", order: 0, updated_at: T0 },
+    "video|": { column: "rejected", order: 0, updated_at: T0 },
+    "comparison_page|rival": { column: "in_progress", order: 0, updated_at: T0 },
+  });
+  const cols = buildBoard(RECS, GAPS, ENTITIES, saved);
+
+  it("lists live cards by priority whatever their status, ghosts last", () => {
+    expect(listCards(cols).map((c) => c.key)).toEqual([
+      "comparison_page|rival",
+      "submit_to_directory|",
+      "faq_page|",
+      "video|",
+    ]);
+  });
+
+  it("counts cards per filter; open means Suggested or Saved for later", () => {
+    const cards = listCards(cols);
+    expect(filterCounts(cards)).toEqual({ all: 4, open: 1, in_progress: 1, done: 1, rejected: 1 });
+    expect(matchesFilter({ ...cards[0], column: "saved" }, "open")).toBe(true);
+  });
+
+  it("sets a status by moving the card to the end of that column; no-op when unchanged", () => {
+    const next = setStatus(saved, cols, "submit_to_directory|", "done", NOW);
+    expect(next.cards["submit_to_directory|"]).toEqual({ column: "done", order: 1, updated_at: NOW });
+    expect(next.cards["faq_page|"]).toEqual({ column: "done", order: 0, updated_at: T0 });
+    expect(setStatus(saved, cols, "faq_page|", "done", NOW)).toBe(saved);
+    expect(setStatus(saved, cols, "missing|", "done", NOW)).toBe(saved);
   });
 });
 

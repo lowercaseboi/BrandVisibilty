@@ -121,6 +121,26 @@ function Chips({ items }: { items: string[] }) {
   );
 }
 
+// Long-form fields (customer needs, target audience) read poorly as pills — full sentences don't
+// fit a tag shape. Instead: one item per line, a small leading number, generous line-height and a
+// hairline divider between rows.
+function LongList({ items }: { items: string[] }) {
+  const t = useT();
+  if (items.length === 0) return <span className="muted">{t("common.none")}</span>;
+  return (
+    <ol className="bi-longlist">
+      {items.map((item, i) => (
+        <li key={item} className="bi-longlist-item">
+          <span className="bi-longlist-marker" aria-hidden="true">
+            {i + 1}
+          </span>
+          <span className="bi-longlist-text">{item}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 /**
  * The brand's saved profile: a read-only glass card for everyone, plus an inline edit form for
  * non-pilot brands (PUT /brands/{key}). Handles `profile === null` (backend up but this brand has
@@ -281,46 +301,57 @@ export function ProfilePanel() {
           </button>
         )}
       </div>
-      <dl className="bi-fact-grid">
-        <div className="bi-fact">
-          <dt>{t("pages.add.name.label")}</dt>
-          <dd>{profile.brand}</dd>
+      <section className="bi-section">
+        <h3 className="bi-section-title">{t("brandinfo.profile.section.identity")}</h3>
+        <dl className="bi-fact-grid">
+          <div className="bi-fact">
+            <dt>{t("pages.add.name.label")}</dt>
+            <dd>{profile.brand}</dd>
+          </div>
+          <div className="bi-fact">
+            <dt>{t("pages.add.category.label")}</dt>
+            <dd>{profile.category || <span className="muted">{t("common.none")}</span>}</dd>
+          </div>
+          <div className="bi-fact">
+            <dt>{t("pages.add.cities.label")}</dt>
+            <dd>
+              <Chips items={profile.cities} />
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <section className="bi-section">
+        <h3 className="bi-section-title">{t("brandinfo.profile.section.competition")}</h3>
+        <dl className="bi-fact-grid">
+          <div className="bi-fact">
+            <dt>{t("pages.add.competitors.label")}</dt>
+            <dd>
+              <Chips items={profile.competitors} />
+            </dd>
+          </div>
+          <div className="bi-fact">
+            <dt>{t("pages.add.aliases.label")}</dt>
+            <dd>
+              <Chips items={profile.aliases} />
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <section className="bi-section">
+        <h3 className="bi-section-title">{t("brandinfo.profile.section.customers")}</h3>
+        <div className="bi-longlist-group">
+          <div className="bi-longlist-block">
+            <h4 className="bi-longlist-label">{t("pages.add.audiences.label")}</h4>
+            <LongList items={profile.audiences} />
+          </div>
+          <div className="bi-longlist-block">
+            <h4 className="bi-longlist-label">{t("pages.add.jobs.label")}</h4>
+            <LongList items={profile.jobs_to_be_done} />
+          </div>
         </div>
-        <div className="bi-fact">
-          <dt>{t("pages.add.category.label")}</dt>
-          <dd>{profile.category || <span className="muted">{t("common.none")}</span>}</dd>
-        </div>
-        <div className="bi-fact">
-          <dt>{t("pages.add.cities.label")}</dt>
-          <dd>
-            <Chips items={profile.cities} />
-          </dd>
-        </div>
-        <div className="bi-fact">
-          <dt>{t("pages.add.competitors.label")}</dt>
-          <dd>
-            <Chips items={profile.competitors} />
-          </dd>
-        </div>
-        <div className="bi-fact">
-          <dt>{t("pages.add.aliases.label")}</dt>
-          <dd>
-            <Chips items={profile.aliases} />
-          </dd>
-        </div>
-        <div className="bi-fact">
-          <dt>{t("pages.add.audiences.label")}</dt>
-          <dd>
-            <Chips items={profile.audiences} />
-          </dd>
-        </div>
-        <div className="bi-fact">
-          <dt>{t("pages.add.jobs.label")}</dt>
-          <dd>
-            <Chips items={profile.jobs_to_be_done} />
-          </dd>
-        </div>
-      </dl>
+      </section>
     </div>
   );
 }

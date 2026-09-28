@@ -9,6 +9,16 @@ type VTDocument = Document & {
   startViewTransition?: (update: () => void) => { finished: Promise<void> };
 };
 
+let running: Promise<void> | null = null;
+
+/**
+ * Resolves when the navigation View Transition in progress (if any) has finished, or null when
+ * none is running — e.g. so the hub can keep its module cards out of the list → hub morph.
+ */
+export function viewTransitionFinished(): Promise<void> | null {
+  return running;
+}
+
 /**
  * Navigate inside a View Transition, so elements sharing a `view-transition-name` on both pages
  * morph between them (brand list card → hub centre card, hub module card → module header) and
@@ -31,9 +41,11 @@ export function useTransitionNavigate(): (to: string) => void {
       const root = document.documentElement;
       root.dataset.vt = "nav";
       const vt = doc.startViewTransition(() => flushSync(() => navigate(to)));
-      vt.finished.finally(() => {
+      const done = vt.finished.catch(() => {}).finally(() => {
         delete root.dataset.vt;
+        if (running === done) running = null;
       });
+      running = done;
     },
     [navigate],
   );

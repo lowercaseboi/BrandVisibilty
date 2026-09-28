@@ -11,30 +11,41 @@
 }
 
 .hub {
-  /* When the module cards start popping in: right after the list → hub morph lands, or almost at
-     once on a direct load. Wires draw in after their module, then start carrying current. */
-  --hub-delay: 140ms;
-  --hub-wire-delay: calc(var(--hub-delay) + 420ms);
+  /* One sequence out of the brand card: each wire grows from the centre card toward its corner,
+     and its module card emerges from behind the centre card and rides out to the wire's end.
+     --hub-delay is when the first wire starts: almost at once on a direct load, or as the
+     list → hub morph (modules.css, 0.42s) is landing. Everything settles within ~0.85s of a click. */
+  --hub-delay: 40ms;
+  --hub-stagger: 30ms;
+  --hub-draw: 0.34s;
+  --hub-emerge: 0.4s;
+  --hub-out: cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
 .hub.is-vt {
-  --hub-delay: 460ms;
+  --hub-delay: 300ms;
 }
 
 /* Back from a module: that module's header shrinks back into its card (the view transition), so
-   the cards are simply there; only the wires draw in again. */
+   the cards and wires are simply there — nothing replays; the current fades back on. */
 .hub.is-back {
   --hub-delay: 0ms;
-  --hub-wire-delay: 320ms;
 }
 
 .hub.is-back .hub-module-tilt,
 .hub.is-back .hub-pv-chip,
-.hub.is-back .hub-stage::before {
+.hub.is-back .hub-spark-line,
+.hub.is-back .hub-stage::before,
+.hub.is-back .hub-port-body,
+.hub.is-back .hub-wire-sheath,
+.hub.is-back .hub-wire-base,
+.hub.is-back .hub-wire-core {
   animation: none;
+  stroke-dasharray: none;
+  stroke-dashoffset: 0;
 }
 
 .hub-crumbs {
@@ -42,14 +53,14 @@
 }
 
 /* Unpaired shared elements in a navigation morph (the other brand cards on the list, the module
-   cards when going back to the list) fade out quickly / in late instead of the default 0.55s
-   cross-fade, so the one card that moves is what the eye follows. */
+   cards when going back to the list) fade out quickly / in a touch later, all inside the morph's
+   0.42s, so the one card that moves is what the eye follows and nothing outlasts it. */
 :root[data-vt] ::view-transition-old(*):only-child {
-  animation: vt-fade-out 0.22s var(--ease) both;
+  animation: vt-fade-out 0.18s var(--ease) both;
 }
 
 :root[data-vt] ::view-transition-new(*):only-child {
-  animation: vt-fade-in 0.32s var(--ease) 0.2s both;
+  animation: vt-fade-in 0.26s var(--ease) 0.12s both;
 }
 
 /* ---------- stage ---------- */
@@ -84,19 +95,24 @@
   mask-image: radial-gradient(ellipse 62% 58% at 50% 50%, black 30%, transparent 78%);
   -webkit-mask-image: radial-gradient(ellipse 62% 58% at 50% 50%, black 30%, transparent 78%);
   opacity: 0.9;
-  animation: fade 0.8s var(--ease) var(--hub-delay) backwards;
+  animation: fade 0.5s var(--ease) calc(var(--hub-delay) * 0.5) backwards;
 }
 
 .hub-centre {
   grid-area: centre;
   align-self: center;
   position: relative;
-  z-index: 1;
+  /* Above the module cards, so they emerge from behind it. */
+  z-index: 2;
 }
 
 /* The same card as on the brand list (BrandCardBody), plus a soft accent halo: it's the source. */
 .hub-centre-card {
   width: 100%;
+  /* Same reason as .hub-module-glass: the wires' glow animates under its edges. */
+  background: color-mix(in srgb, var(--surface-solid) 92%, transparent);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .hub-centre-card:not(.is-skeleton) {
@@ -158,7 +174,8 @@
   z-index: 1;
   width: 100%;
   max-width: 350px;
-  /* Where the card flies in from: out of the centre card, toward its corner. */
+  /* Where the card emerges from: the offset to the centre card's middle, measured by HubPage
+     (these fallbacks just nudge it toward the centre until then). */
   --from-x: 0px;
   --from-y: 0px;
 }
@@ -195,24 +212,33 @@
   --from-y: -20px;
 }
 
+/* Emerges out of the centre card as its wire grows toward it, landing just after the wire does. */
 .hub-module-tilt {
   height: 100%;
-  animation: hub-pop 0.65s var(--ease-spring) backwards;
-  animation-delay: calc(var(--hub-delay) + var(--i, 0) * 90ms);
+  animation: hub-emerge var(--hub-emerge) var(--hub-out) backwards;
+  animation-delay: calc(var(--hub-delay) + var(--i, 0) * var(--hub-stagger) + 40ms);
 }
 
-@keyframes hub-pop {
+@keyframes hub-emerge {
   from {
     opacity: 0;
-    transform: translate(var(--from-x), var(--from-y)) scale(0.92);
+    transform: translate(var(--from-x), var(--from-y)) scale(0.3);
+  }
+  30% {
+    opacity: 1;
   }
 }
 
 .hub-module-glass {
-  /* Glass a touch lighter than the brand card, with the accent registration corner like .card. */
+  /* Glass a touch lighter than the brand card, with the accent registration corner like .card.
+     No backdrop blur here: the live wires and glows animate right behind these cards, so a blur
+     would be recomputed every frame (the hub's main source of jank). Behind them is only the dot
+     grid, so a denser fill reads the same. */
   background:
     linear-gradient(145deg, color-mix(in srgb, var(--text-h) 8%, transparent), transparent 55%),
-    color-mix(in srgb, var(--surface-solid) 52%, transparent);
+    color-mix(in srgb, var(--surface-solid) 84%, transparent);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .hub-module-glass::after {
@@ -489,7 +515,7 @@
   stroke-linecap: round;
   stroke-dasharray: 1 2;
   stroke-dashoffset: 1;
-  animation: hub-draw 0.9s var(--ease) calc(var(--hub-delay) + 420ms) forwards;
+  animation: hub-draw 0.6s var(--ease) calc(var(--hub-delay) + 0.3s) forwards;
 }
 
 .hub-spark-dot {
@@ -643,7 +669,7 @@
   background: var(--accent);
   box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 60%, transparent);
   animation: hub-chip 0.35s var(--ease-spring) backwards;
-  animation-delay: calc(var(--hub-delay) + 520ms + var(--k, 0) * 60ms);
+  animation-delay: calc(var(--hub-delay) + 0.36s + var(--k, 0) * 40ms);
 }
 
 @keyframes hub-chip {
@@ -677,8 +703,9 @@
 }
 
 .hub-wire {
-  --wire-delay: calc(var(--hub-wire-delay) + var(--i, 0) * 90ms);
-  --flow-dur: 1.15s;
+  --wire-delay: calc(var(--hub-delay) + var(--i, 0) * var(--hub-stagger));
+  /* One dash period (70px) per --flow-dur: an unhurried current, a little quicker when active. */
+  --flow-dur: 3.2s;
   transition: opacity var(--dur-slow) var(--ease);
 }
 
@@ -688,13 +715,13 @@
   stroke-linejoin: round;
 }
 
-/* The cable draws itself from the brand card out to its module (all three strands together). */
+/* The cable grows out of the brand card toward its module (all three strands together). */
 .hub-wire-sheath,
 .hub-wire-base,
 .hub-wire-core {
   stroke-dasharray: 1 2;
   stroke-dashoffset: 1;
-  animation: hub-draw 0.75s var(--ease) var(--wire-delay) forwards;
+  animation: hub-draw var(--hub-draw) var(--hub-out) var(--wire-delay) forwards;
 }
 
 /* Insulation: a wide, faint body so the cable has some weight. */
@@ -720,35 +747,25 @@
     opacity var(--dur-slow) var(--ease);
 }
 
-/* An occasional flicker, at a different moment on each wire. */
+/* A slow, soft breathing of the glow (no flicker), out of step on each wire. */
 .hub-wire-glow {
-  animation: hub-flicker 7s steps(1, end) infinite;
-  animation-delay: calc(var(--wire-delay) + var(--i, 0) * 1.7s);
+  animation: hub-breathe 6s ease-in-out infinite alternate;
+  animation-delay: calc(var(--wire-delay) + var(--hub-draw) + var(--i, 0) * -1.5s);
 }
 
-@keyframes hub-flicker {
-  0%,
-  100% {
+@keyframes hub-breathe {
+  from {
     opacity: 1;
   }
-  61% {
-    opacity: 0.35;
-  }
-  62% {
-    opacity: 1;
-  }
-  63% {
-    opacity: 0.5;
-  }
-  64.5% {
-    opacity: 1;
+  to {
+    opacity: 0.72;
   }
 }
 
 /* Current: bright dashes flowing out of the brand card, plus a spark (animateMotion) now and then. */
 .hub-wire-flow {
   opacity: 0;
-  animation: hub-flow-in 0.6s var(--ease) calc(var(--wire-delay) + 0.6s) forwards;
+  animation: hub-flow-in 0.5s var(--ease) calc(var(--wire-delay) + var(--hub-draw)) forwards;
 }
 
 @keyframes hub-flow-in {
@@ -802,12 +819,13 @@
   animation-delay: var(--wire-delay);
 }
 
+/* The far port lights as the wire reaches it. */
 .hub-port-end .hub-port-body {
-  animation-delay: calc(var(--wire-delay) + 0.6s);
+  animation-delay: calc(var(--wire-delay) + var(--hub-draw) - 0.08s);
 }
 
 .hub-port-shared .hub-port-body {
-  animation-delay: var(--hub-wire-delay);
+  animation-delay: var(--hub-delay);
 }
 
 @keyframes hub-port-in {
@@ -833,33 +851,34 @@
   opacity: 0;
   transform-box: fill-box;
   transform-origin: center;
-  animation: hub-halo 2.6s var(--ease) infinite;
-  animation-delay: calc(var(--wire-delay) + 0.8s);
+  animation: hub-halo 4.2s var(--ease) infinite;
+  animation-delay: calc(var(--wire-delay) + 0.6s);
 }
 
 .hub-port-end .hub-port-halo {
-  animation-delay: calc(var(--wire-delay) + 1.4s);
+  animation-delay: calc(var(--wire-delay) + 2.4s);
 }
 
+/* A gentle breath outward, then a rest. */
 @keyframes hub-halo {
   0% {
-    opacity: 0.5;
-    transform: scale(0.8);
+    opacity: 0.3;
+    transform: scale(0.9);
   }
-  70%,
+  55%,
   100% {
     opacity: 0;
-    transform: scale(2.6);
+    transform: scale(2);
   }
 }
 
-/* Hover / focus a module: its wire runs hot and fast, the others dim. */
+/* Hover / focus a module: its wire runs hotter and a little faster, the others dim. */
 .hub-wires[data-active] .hub-wire:not(.is-active) {
   opacity: 0.35;
 }
 
 .hub-wire.is-active {
-  --flow-dur: 0.55s;
+  --flow-dur: 2.2s;
 }
 
 .hub-wire.is-active .hub-wire-core {

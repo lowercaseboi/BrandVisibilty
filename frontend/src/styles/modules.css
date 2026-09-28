@@ -14,19 +14,21 @@
   animation-delay: 0s;
 }
 
-/* Shared elements (brand card ↔ hub centre card, module card ↔ module header) glide into place. */
+/* Shared elements (brand card ↔ hub centre card, module card ↔ module header) glide into place:
+   quick off the mark, long soft landing. Nothing else in the transition outlasts this 0.42s, so
+   the live page takes over the moment the card lands (the hub's wires start just before). */
 ::view-transition-group(*) {
-  animation-duration: 0.55s;
-  animation-timing-function: var(--ease);
+  animation-duration: 0.42s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Everything unshared fades out quickly, so the moving card reads as the one thing that stays. */
 :root[data-vt] ::view-transition-old(root) {
-  animation: vt-fade-out 0.28s var(--ease) both;
+  animation: vt-fade-out 0.2s var(--ease) both;
 }
 
 :root[data-vt] ::view-transition-new(root) {
-  animation: vt-fade-in 0.4s var(--ease) 0.12s both;
+  animation: vt-fade-in 0.3s var(--ease) 0.06s both;
 }
 
 /* Keep morphing elements' old/new images crisp instead of double-exposed. */
@@ -220,6 +222,7 @@
     0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
+/* Not a white flare: just a faint accent tint under the cursor, barely there. */
 .tilt-glare {
   position: absolute;
   inset: 0;
@@ -228,10 +231,9 @@
   opacity: 0;
   background: radial-gradient(
     circle at var(--mx) var(--my),
-    color-mix(in srgb, white 22%, transparent),
-    transparent 55%
+    color-mix(in srgb, var(--accent) 6%, transparent),
+    transparent 60%
   );
-  mix-blend-mode: soft-light;
   transition: opacity var(--dur-slow) var(--ease);
 }
 

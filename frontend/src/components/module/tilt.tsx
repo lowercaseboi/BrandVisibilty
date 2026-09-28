@@ -10,7 +10,7 @@ export interface Tilt {
   /** Translation toward the cursor, px. */
   tx: number;
   ty: number;
-  /** Cursor position within the card, 0–100 (%), for the specular glare. */
+  /** Cursor position within the card, 0–100 (%), for the faint cursor tint. */
   mx: number;
   my: number;
 }
@@ -77,7 +77,7 @@ export function useTilt<T extends HTMLElement>(maxDeg = 10, maxShift = 6) {
 
 /**
  * A 3D-tilting frosted-glass card. `.tilt` holds the perspective; `.tilt-inner` is the glass
- * surface that rotates/translates; `.tilt-glare` is the moving specular highlight.
+ * surface that rotates/translates; `.tilt-glare` is a faint accent tint that follows the cursor.
  */
 export function TiltCard({
   children,

@@ -22,6 +22,22 @@
   letter-spacing: normal;
 }
 
+/* Identity / Competition / Customers, each a labelled group separated by a hairline. */
+.bi-section + .bi-section {
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--line);
+}
+
+.bi-section-title {
+  margin: 0 0 var(--space-3);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 .bi-fact-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -58,6 +74,52 @@
   background: var(--surface-2);
   font-size: var(--fs-sm);
   color: var(--text-h);
+}
+
+/* Long-form fields (customer needs, target audience): full-width, one item per line — pills don't
+   fit whole sentences. A small tabular-numeral marker plus a hairline divider between rows. */
+.bi-longlist-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.bi-longlist-label {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.bi-longlist {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bi-longlist-item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  line-height: 1.6;
+  color: var(--text-h);
+}
+
+.bi-longlist-item + .bi-longlist-item {
+  border-top: 1px solid var(--line);
+}
+
+.bi-longlist-marker {
+  flex: 0 0 auto;
+  min-width: 1.5em;
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+
+.bi-longlist-text {
+  flex: 1 1 auto;
 }
 
 /* ---------- profile: edit form ---------- */

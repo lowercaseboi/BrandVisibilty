@@ -11,7 +11,7 @@ export const hub = {
   "module.gaps.title": "Gaps & evidence",
   "module.gaps.blurb": "What's missing, backed by the AI answers themselves",
   "module.recommendations.title": "Recommendation engine",
-  "module.recommendations.blurb": "What to do next, on a board you move forward",
+  "module.recommendations.blurb": "What to do next, with a status you track per suggestion",
   "loading": "Loading brand…",
   "error.load": "Couldn't load this brand.",
 

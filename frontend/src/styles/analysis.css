@@ -27,48 +27,23 @@
   margin-bottom: 0;
 }
 
-/* The two main cards: score (left) and run (right), equal height; stacked on narrow screens. */
+/* The two main cards: score first, then the run panel, stacked full width (as in the old
+   dashboard). Both cards are always full-width, so their internal layouts (score-hero-grid,
+   run-grid) only need the viewport-based breakpoints already in dashboard.css. */
 .analysis-main {
-  display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: var(--space-5);
-  align-items: stretch;
 }
 
 .analysis-main > .card {
   margin: 0;
-  /* Each card lays itself out by its own width (container queries below), not the viewport's. */
-  container-type: inline-size;
 }
 
 .analysis-empty {
   display: flex;
   flex-direction: column;
   justify-content: center;
-}
-
-/* RunPanel's settings row (AI · depth · questions) is three columns on a full-width card; at half
-   width it stacks, with the depth buttons keeping the full row. */
-@container (max-width: 600px) {
-  .run-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-4);
-  }
-}
-
-/* ScoreHero's number | sentence columns need ~a full-width card; at half width the number sits on
-   top and the sentence, range and peer strip get the card's whole width. */
-@container (max-width: 580px) {
-  .score-hero-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-3);
-  }
-}
-
-@media (max-width: 880px) {
-  .analysis-main {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 .analysis-trend {

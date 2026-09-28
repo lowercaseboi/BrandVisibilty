@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import type { ModuleId } from "../../components/module/modules";
 import { MODULES, brandVtName } from "../../components/module/modules";
-import { TransitionLink } from "../../components/module/transition";
+import { TransitionLink, viewTransitionFinished } from "../../components/module/transition";
 import { getBoard } from "../../api/client";
 import type { BoardState } from "../../api/types";
 import { buildBoard, summarizeBoard } from "../../components/board/boardModel";
@@ -35,11 +35,28 @@ export function HubPage() {
   const data = useBrandData();
   const { brandKey, brandName, latest, history, questions, profile, status } = data;
 
-  // Decided once at mount, so the entrance choreography (hub.css: modules pop in after the card
-  // morph, or are already in place when coming back from a module) never restarts.
+  // Decided once at mount, so the entrance choreography (hub.css: wires and modules grow out of the
+  // centre card as the card morph lands, or are already in place back from a module) never restarts.
   const [from] = useState(arrival);
   const [play, setPlay] = useState(0);
   const [active, setActive] = useState<ModuleId | null>(null);
+  // While the list → hub morph runs, the module cards stay out of it (see ModuleCard `named`).
+  const [landing, setLanding] = useState(() => from === "morph" && viewTransitionFinished() !== null);
+  useEffect(() => {
+    const done = landing ? viewTransitionFinished() : null;
+    if (!done) return;
+    let live = true;
+    done.then(() => live && setLanding(false));
+    return () => {
+      live = false;
+    };
+  }, [landing]);
+  // The morph (or a click) often leaves the pointer over the centre card as it lands: don't let
+  // that "hover" restart the score count-up in the middle of the entrance.
+  const [mountedAt] = useState(() => performance.now());
+  const replay = () => {
+    if (performance.now() - mountedAt > 1000) setPlay((n) => n + 1);
+  };
 
   const stageRef = useRef<HTMLDivElement | null>(null);
   const centreRef = useRef<HTMLDivElement | null>(null);
@@ -50,6 +67,29 @@ export function HubPage() {
     },
     [],
   );
+  // Each module card emerges from the centre card: give it the offset from its resting place to the
+  // centre card's middle (--from-x/--from-y, hub.css hub-emerge) before the first paint. Layout
+  // boxes only (offsets ignore transforms), so the tilt or the animation itself never skews it.
+  useLayoutEffect(() => {
+    const centre = centreRef.current;
+    if (!centre) return;
+    const mid = (el: HTMLElement) => {
+      let x = el.offsetWidth / 2;
+      let y = el.offsetHeight / 2;
+      for (let n: HTMLElement | null = el; n && n !== stageRef.current; n = n.offsetParent as HTMLElement | null) {
+        x += n.offsetLeft;
+        y += n.offsetTop;
+      }
+      return { x, y };
+    };
+    const c = mid(centre);
+    for (const el of Object.values(moduleRefs.current)) {
+      if (!el) continue;
+      const m = mid(el);
+      el.style.setProperty("--from-x", `${Math.round(c.x - m.x)}px`);
+      el.style.setProperty("--from-y", `${Math.round(c.y - m.y)}px`);
+    }
+  });
   const activate = (id: ModuleId) => (on: boolean) => setActive((cur) => (on ? id : cur === id ? null : cur));
 
   // Name / question count: the list's summary fills the first frame, then the loaded data.
@@ -112,7 +152,7 @@ export function HubPage() {
               ref={centreRef}
               className="card sample-card hub-centre-card"
               style={{ viewTransitionName: brandVtName(brandKey) } as CSSProperties}
-              onMouseEnter={() => setPlay((n) => n + 1)}
+              onMouseEnter={replay}
             >
               <BrandCardBody
                 name={brandName}
@@ -136,6 +176,7 @@ export function HubPage() {
               index={i}
               brandKey={brandKey}
               cardRef={setModuleRef(m.id)}
+              named={!landing}
               onActive={activate(m.id)}
             >
               {previews[m.id]}

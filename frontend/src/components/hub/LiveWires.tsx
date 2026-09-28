@@ -5,9 +5,13 @@ import { CORNER_OF, computeWires } from "./wireGeometry";
 import type { Box, Corner, WireGeom, WireLayout } from "./wireGeometry";
 
 /** Spark ("data packet") speed along every wire, px/s — one speed, so longer wires take longer. */
-const SPARK_SPEED = 150;
+const SPARK_SPEED = 80;
 /** Pause between sparks on one wire, s. */
-const SPARK_REST = 1.6;
+const SPARK_REST = 4.5;
+/** Offset between the wires' first sparks, s, so they never fire together. */
+const SPARK_OFFSET = 1.4;
+/** How much faster the hovered/focused wire's current flows. */
+const ACTIVE_RATE = 1.45;
 
 interface Geometry {
   w: number;
@@ -67,9 +71,9 @@ function Port({ x, y, className = "" }: { x: number; y: number; className?: stri
 /**
  * "Live wire" cables from the hub's centre card to its four module cards, drawn in an SVG laid
  * over the stage (pointer-events: none). Each wire is a dim cable with a glowing core that draws
- * itself in once its module has popped in, then carries current: bright dashes flowing from the
- * brand card outward, plus a spark that races along it every couple of seconds. The wire of the
- * hovered/focused module (`active`) runs hotter and faster while the others dim.
+ * itself out of the brand card as its module emerges, then carries current: bright dashes flowing from the
+ * brand card outward, plus a spark that drifts along it every few seconds. The wire of the
+ * hovered/focused module (`active`) runs hotter and a little faster while the others dim.
  *
  * Geometry is re-measured with a ResizeObserver on the stage and every card, when fonts load, and
  * after any animation in the stage ends. Under reduced motion the wires are static and glowing.
@@ -88,10 +92,14 @@ export function LiveWires({
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const reduced = usePrefersReducedMotion();
   const [geo, setGeo] = useState<Geometry | null>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
 
   const measure = useCallback(() => {
-    const stage = stageRef.current;
     const centre = centreRef.current;
+    // On the first commit this layout effect runs before the stage's own ref is attached (React
+    // attaches refs child-first), so find it from the centre card — otherwise the wires would only
+    // appear on some later render, a beat after the cards.
+    const stage = stageRef.current ?? centre?.closest<HTMLElement>(".hub-stage") ?? null;
     if (!stage || !centre) return;
     const els = moduleRefs.current ?? {};
     const ids = (Object.keys(CORNER_OF) as ModuleId[]).filter((id) => els[id]);
@@ -142,6 +150,21 @@ export function LiveWires({
     };
   }, [measure, stageRef, centreRef, moduleRefs]);
 
+  // The active wire's current speeds up in place: changing the CSS duration instead would jump the
+  // dashes to a different phase, so nudge the running animations' playback rate (keeps position).
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg || reduced) return;
+    for (const g of svg.querySelectorAll<SVGGElement>(".hub-wire")) {
+      const rate = g.dataset.id === active ? ACTIVE_RATE : 1;
+      for (const path of g.querySelectorAll(".hub-wire-pulse")) {
+        for (const anim of path.getAnimations?.() ?? []) {
+          if (anim.playbackRate !== rate) anim.updatePlaybackRate(rate);
+        }
+      }
+    }
+  }, [active, reduced, geo]);
+
   if (!geo || geo.wires.length === 0) return null;
 
   const glow = `hub-glow-${uid}`;
@@ -150,6 +173,7 @@ export function LiveWires({
 
   return (
     <svg
+      ref={svgRef}
       className="hub-wires"
       data-layout={geo.layout}
       data-active={active ?? undefined}
@@ -207,7 +231,7 @@ export function LiveWires({
                   <circle className="hub-wire-spark" r={2.4} opacity={0}>
                     <animateMotion
                       dur={`${cycle.toFixed(2)}s`}
-                      begin={`${(index * 0.45).toFixed(2)}s`}
+                      begin={`${(1 + index * SPARK_OFFSET).toFixed(2)}s`}
                       repeatCount="indefinite"
                       keyPoints="0;1;1"
                       keyTimes={`0;${k};1`}
@@ -218,7 +242,7 @@ export function LiveWires({
                     <animate
                       attributeName="opacity"
                       dur={`${cycle.toFixed(2)}s`}
-                      begin={`${(index * 0.45).toFixed(2)}s`}
+                      begin={`${(1 + index * SPARK_OFFSET).toFixed(2)}s`}
                       repeatCount="indefinite"
                       values="0;1;1;0;0"
                       keyTimes={`0;0.04;${(Number(k) * 0.92).toFixed(3)};${k};1`}

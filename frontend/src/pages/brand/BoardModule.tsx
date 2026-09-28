@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef } from "react";
 import type { BoardColumn } from "../../api/types";
-import { Board } from "../../components/board/Board";
-import { buildBoard, clearLegacyDone, migrateLegacyDone, moveCard, removeCard } from "../../components/board/boardModel";
+import { buildBoard, clearLegacyDone, migrateLegacyDone, removeCard, setStatus } from "../../components/board/boardModel";
+import { RecList } from "../../components/board/RecList";
 import { useBoardState } from "../../components/board/useBoardState";
 import type { BoardStatus } from "../../components/board/useBoardState";
 import { groupSuggestions, useShortDate } from "../../components/dashboard/helpers";
@@ -27,9 +27,9 @@ function EmptyBoard({ brandKey, noneFound }: { brandKey: string; noneFound: bool
 }
 
 /**
- * Recommendation engine: the latest run's suggestions as a kanban (Suggested · Saved for later ·
- * In progress · Done · Rejected — PRD §11.4's approve / reject / save-for-later). Column and order
- * per suggestion group are saved to the backend board; every card links back to its gap (AC-7).
+ * Recommendation engine: the latest run's suggestions as a priority-sorted grid of cards, each with
+ * a status (Suggested · Saved for later · In progress · Done · Rejected — PRD §11.4's approve /
+ * reject / save-for-later) saved to the backend board; every card links back to its gap (AC-7).
  */
 export function BoardModule() {
   const t = useT();
@@ -37,7 +37,6 @@ export function BoardModule() {
   const { state, status, retrying, commit, retry } = useBoardState(brandKey);
   const shortDate = useShortDate();
   const headingId = useId();
-  const hintId = useId();
 
   const recs = latest?.recommendations;
   const gaps = latest?.gaps;
@@ -69,9 +68,10 @@ export function BoardModule() {
       .catch(() => {});
   }, [status, latest, brandKey, state, groups, commit, t]);
 
-  const onMove = useCallback(
-    (key: string, to: BoardColumn, index: number) => {
-      commit(moveCard(state, columns, key, to, index)).catch(() => {});
+  const onStatus = useCallback(
+    (key: string, to: BoardColumn) => {
+      const next = setStatus(state, columns, key, to);
+      if (next !== state) commit(next).catch(() => {});
     },
     [commit, state, columns],
   );
@@ -110,17 +110,13 @@ export function BoardModule() {
             </button>
           </p>
         )}
-        <p id={hintId} className="board-hint">
-          {t("board.hint")}
-        </p>
-        <Board
+        <RecList
           columns={columns}
           brandKey={brandKey}
           runId={latest.run_id}
           entities={entities}
           labelOf={labelOf}
-          hintId={hintId}
-          onMove={onMove}
+          onStatus={onStatus}
           onRemove={onRemove}
         />
       </section>

@@ -1,6 +1,6 @@
-/* Recommendation board (kanban): pages/brand/BoardModule.tsx + components/board/*.
-   Tokens only. Each column sets --tone (its thin top rule, dot and drop highlight). No drag
-   animations: moves are instant, and the global reduced-motion rule covers the hover fades. */
+/* Recommendation list: pages/brand/BoardModule.tsx + components/board/*.
+   Tokens only. Each status sets --tone (the card's status dot and the filter chip). Only colour /
+   opacity fades, which the global reduced-motion rule covers. */
 
 .board-section {
   display: flex;
@@ -18,12 +18,6 @@
   font-size: var(--fs-xs) !important;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-}
-
-.board-hint {
-  margin: 0;
-  font-size: var(--fs-xs);
-  color: var(--muted);
 }
 
 /* "Not saved" notice when the saved board couldn't be loaded: quiet, not an alert. */
@@ -54,175 +48,103 @@
   cursor: pointer;
 }
 
-/* ---------- the board: wider than the page column on big screens, scrolls sideways below ---------- */
+/* ---------- filter bar ---------- */
 
-.board {
-  --board-gap: 10px;
-  --board-w: min(100vw - 2 * var(--gutter), 1360px);
-  width: var(--board-w);
-  margin-inline: calc((100% - var(--board-w)) / 2);
-  display: grid;
-  grid-template-columns: repeat(5, minmax(248px, 1fr));
-  gap: 14px;
-  align-items: start;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scroll-snap-type: x proximity;
-  scroll-padding-inline: 6px;
-  /* Room for the cards' offset pencil shadow inside the scroll box. */
-  padding: 6px 12px 16px 6px;
-}
-
-.board-col {
-  --tone: var(--line-strong);
+.rec-filters {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-width: 0;
-  min-height: 240px;
-  padding: 12px 10px;
-  border: 1px solid var(--line);
-  border-top: 2px solid var(--tone);
-  border-radius: var(--radius);
-  background: color-mix(in srgb, var(--surface-2) 55%, transparent);
-  backdrop-filter: var(--blur);
-  -webkit-backdrop-filter: var(--blur);
-  scroll-snap-align: start;
-  transition:
-    background-color var(--dur) var(--ease),
-    border-color var(--dur) var(--ease);
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
-.board-col[data-column="suggested"] {
-  --tone: var(--accent);
-}
-
-.board-col[data-column="saved"] {
-  --tone: var(--line-strong);
-}
-
-.board-col[data-column="in_progress"] {
-  --tone: var(--rate-mid);
-}
-
-.board-col[data-column="done"] {
-  --tone: var(--rate-high);
-}
-
-.board-col[data-column="rejected"] {
-  --tone: var(--muted);
-}
-
-.board-col.is-over {
-  background-color: color-mix(in srgb, var(--tone) 10%, transparent);
-  border-color: color-mix(in srgb, var(--tone) 55%, var(--line));
-  border-top-color: var(--tone);
-}
-
-.board-col-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  padding: 0 4px;
-}
-
-.board-col-title {
+.rec-filter {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin: 0;
-  font-family: var(--sans);
-  font-size: var(--fs-2xs);
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  padding: 5px 8px 5px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-color var(--dur) var(--ease),
+    background-color var(--dur) var(--ease),
+    color var(--dur) var(--ease);
+}
+
+.rec-filter:hover {
+  border-color: var(--line-strong);
   color: var(--text-h);
 }
 
-.board-col-title::before {
-  content: "";
-  flex: none;
-  width: 7px;
-  height: 7px;
-  border-radius: 1.5px;
-  background: var(--tone);
+.rec-filter.is-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-text);
 }
 
-.board-col-count {
-  min-width: 26px;
-  padding: 1px 7px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-xs);
+.rec-filter:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.rec-filter-count {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
   font-family: var(--display);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   text-align: center;
-  color: var(--muted);
+  color: var(--text-h);
 }
 
-.board-list {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: var(--board-gap);
-  min-height: 64px;
+.rec-filter.is-active .rec-filter-count {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--accent-text);
+}
+
+.rec-filter-empty {
+  margin: 0;
+  padding: var(--space-4) var(--space-3);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+
+.rec-filter-empty .btn-link {
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+/* ---------- the grid: cards side by side, highest priority first ---------- */
+
+.rec-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+  gap: 14px;
+  align-items: start;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-/* Where a dragged card will land: a zero-height line that doesn't push the cards around. */
-.board-drop {
-  position: relative;
-  height: 0;
-  margin-block: calc(var(--board-gap) / -2);
-  pointer-events: none;
-}
-
-.board-drop::before {
-  content: "";
-  position: absolute;
-  inset-inline: 0;
-  top: -1.5px;
-  height: 3px;
-  border-radius: 2px;
-  background: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
-}
-
-.board-empty {
-  display: grid;
-  place-items: center;
-  min-height: 84px;
-  padding: var(--space-3);
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius-sm);
-  color: var(--muted);
-  font-size: var(--fs-xs);
-  text-align: center;
-}
-
-.board.is-dragging .board-empty {
-  border-color: var(--line);
-}
-
-.board-col.is-over .board-empty {
-  border-color: var(--tone);
-  color: var(--text-h);
-  background: color-mix(in srgb, var(--tone) 8%, transparent);
-}
-
 /* ---------- cards: the glass .card, denser (no double frame ring) ---------- */
 
-.board-card {
+.rec-card {
+  --tone: var(--accent);
   --mark-size: 6px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 12px 14px;
-  cursor: grab;
+  min-width: 0;
+  padding: 14px 16px;
   box-shadow:
     var(--shadow-1),
     inset 0 1px 0 var(--glass-highlight);
@@ -232,53 +154,59 @@
     opacity var(--dur) var(--ease);
 }
 
-.board-card:hover {
+.rec-card:hover {
   border-color: var(--line-strong);
   box-shadow:
     var(--shadow-2),
     inset 0 1px 0 var(--glass-highlight);
 }
 
-.board-card:active {
-  cursor: grabbing;
+.rec-card[data-status="saved"] {
+  --tone: var(--line-strong);
 }
 
-.board-card:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
+.rec-card[data-status="in_progress"] {
+  --tone: var(--rate-mid);
 }
 
-/* The card being dragged stays in place as a dashed placeholder. */
-.board-card.is-dragging {
-  opacity: 0.45;
-  border-style: dashed;
+.rec-card[data-status="done"] {
+  --tone: var(--rate-high);
+}
+
+.rec-card[data-status="rejected"] {
+  --tone: var(--muted);
+}
+
+/* Decided cards step back; hovering or focusing one brings it forward again. */
+.rec-card[data-status="done"],
+.rec-card[data-status="rejected"] {
+  opacity: 0.66;
   box-shadow: none;
 }
 
-.board-card.is-dragging::after {
-  display: none;
+.rec-card[data-status="rejected"] .rec-card-title {
+  color: var(--muted);
 }
 
 /* Resolved in the latest run: faded, dashed, no lift. */
-.board-card.is-resolved {
-  opacity: 0.62;
+.rec-card.is-resolved {
+  opacity: 0.58;
   border-style: dashed;
   box-shadow: none;
 }
 
-.board-card.is-resolved:hover,
-.board-card.is-resolved:focus-within {
-  opacity: 0.92;
+.rec-card:is([data-status="done"], [data-status="rejected"], .is-resolved):is(:hover, :focus-within) {
+  opacity: 0.94;
 }
 
-.board-card-top {
+.rec-card-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
 }
 
-.board-impact {
+.rec-impact {
   font-family: var(--display);
   font-size: var(--fs-sm);
   font-weight: 600;
@@ -287,27 +215,23 @@
   white-space: nowrap;
 }
 
-.board-card-title {
+.rec-card-title {
   margin: 0;
   font-family: var(--display);
-  font-size: 15px;
+  font-size: 15.5px;
   font-weight: 600;
   line-height: 1.35;
   letter-spacing: -0.01em;
   color: var(--text-h);
 }
 
-.board-col[data-column="rejected"] .board-card-title {
-  color: var(--muted);
-}
-
-.board-card-note {
+.rec-card-note {
   margin: 0;
   font-size: var(--fs-xs);
   color: var(--muted);
 }
 
-.board-card-meta {
+.rec-card-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 16px;
@@ -316,17 +240,17 @@
   border-top: 1px solid var(--border);
 }
 
-.board-card-meta > div {
+.rec-card-meta > div {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.board-card-meta dt {
+.rec-card-meta dt {
   margin: 0;
 }
 
-.board-card-meta dd {
+.rec-card-meta dd {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -357,14 +281,14 @@
 }
 
 /* AC-7: the gap(s) a card traces to, and the responses behind it. */
-.board-card-links {
+.rec-card-links {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 12px;
 }
 
-.board-trace {
+.rec-trace {
   padding: 3px 8px;
   border-radius: var(--radius-xs);
   background: var(--accent-soft);
@@ -374,28 +298,28 @@
   text-decoration: none;
 }
 
-.board-trace:hover {
+.rec-trace:hover {
   color: var(--accent-text);
   box-shadow: inset 0 0 0 1px var(--accent);
 }
 
-.board-evidence {
+.rec-evidence {
   color: var(--accent-text);
   font-size: var(--fs-xs);
   font-weight: 600;
   text-decoration: none;
 }
 
-.board-evidence:hover {
+.rec-evidence:hover {
   text-decoration: underline;
 }
 
-.board-why {
+.rec-why {
   padding-top: 6px;
   border-top: 1px dashed var(--border);
 }
 
-.board-why-toggle {
+.rec-why-toggle {
   display: inline-flex;
   align-items: center;
   padding: 2px 0;
@@ -403,88 +327,82 @@
   cursor: pointer;
 }
 
-.board-why-body {
+.rec-why-body {
   margin-top: 8px;
   padding: 10px 12px;
   border-radius: var(--radius-sm);
   background: var(--surface-2);
   font-size: var(--fs-sm);
   line-height: 1.5;
-  cursor: auto;
 }
 
-.board-why-body p {
+.rec-why-body p {
   margin: 0 0 8px;
 }
 
-.board-why-body .board-why-label {
+.rec-why-body .rec-why-label {
   margin: 12px 0 4px;
 }
 
-.board-steps {
+.rec-steps {
   display: grid;
   gap: 4px;
   margin: 0 0 8px;
   padding-left: 1.3em;
 }
 
-.board-steps li::marker {
+.rec-steps li::marker {
   color: var(--muted);
   font-size: var(--fs-xs);
 }
 
-.board-why-body .board-drafted {
+.rec-why-body .rec-drafted {
   margin: 8px 0 0;
   font-size: var(--fs-2xs);
   color: var(--muted);
 }
 
-.board-card-foot {
+/* Status: a compact chip — the tone dot over a borderless native select. */
+.rec-card-foot {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  gap: var(--space-2);
 }
 
-.board-step {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 28px;
+.rec-status {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.rec-status-dot {
+  position: absolute;
+  left: 10px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tone);
+  pointer-events: none;
+}
+
+.rec-status select {
   height: 28px;
-  padding: 0;
+  padding: 2px 26px 2px 24px;
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-xs);
-  background: transparent;
+  border-radius: 999px;
+  background-color: transparent;
   color: var(--text-h);
-  font-size: 17px;
-  line-height: 1;
-  cursor: pointer;
-  transition:
-    border-color var(--dur) var(--ease),
-    color var(--dur) var(--ease);
-}
-
-.board-step:hover:not(:disabled) {
-  border-color: var(--accent);
-  color: var(--accent-text);
-}
-
-.board-step:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
-.board-move {
-  flex: 1;
-  height: 28px;
-  padding: 2px 8px;
   font-size: var(--fs-xs);
+  font-weight: 600;
   cursor: pointer;
 }
 
-.board-remove {
-  flex: none;
-  margin-left: 2px;
+.rec-status select:hover {
+  border-color: var(--line-strong);
+}
+
+.rec-remove {
   font-size: var(--fs-xs);
   cursor: pointer;
 }
@@ -507,41 +425,4 @@
 .board-empty-state p {
   max-width: 60ch;
   margin: 0 0 var(--space-2);
-}
-
-/* ---------- narrow screens ---------- */
-
-/* Tablets: two columns and a slice of the next, so it's obvious the board scrolls sideways. */
-@media (max-width: 900px) {
-  .board {
-    grid-template-columns: repeat(5, clamp(240px, 42vw, 320px));
-    scroll-snap-type: x mandatory;
-  }
-}
-
-/* The drag / keyboard hint means nothing on touch screens (it still describes each card). */
-@media (hover: none) {
-  .board-hint {
-    display: none;
-  }
-}
-
-/* Phones: columns stack (touch has no HTML5 drag; the Move controls do the work). */
-@media (max-width: 640px) {
-  .board {
-    width: auto;
-    margin-inline: 0;
-    grid-template-columns: minmax(0, 1fr);
-    overflow: visible;
-    scroll-snap-type: none;
-    padding: 0 6px 6px 0;
-  }
-
-  .board-col {
-    min-height: 0;
-  }
-
-  .board-empty {
-    min-height: 48px;
-  }
 }

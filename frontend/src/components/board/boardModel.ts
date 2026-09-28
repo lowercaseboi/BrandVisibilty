@@ -1,6 +1,7 @@
-// Pure board model for the recommendation board (kanban). No React, no network: the module feeds
-// it the latest snapshot's recommendations/gaps plus the saved BoardState, and gets back columns of
-// cards. Saved state is keyed by the stable suggestion group key `action|competitor_id`, so a card
+// Pure model for the recommendation list. No React, no network: the module feeds it the latest
+// snapshot's recommendations/gaps plus the saved BoardState, and gets back cards grouped by status
+// ("column" — the saved format predates the list view, which shows one priority-sorted grid with a
+// status control per card: listCards / setStatus / filterCounts). Saved state is keyed by the stable suggestion group key `action|competitor_id`, so a card
 // keeps its column across runs even though recommendation IDs change every run.
 //
 // Ghost cards: a saved key with no recommendation in the latest run is shown as "resolved in
@@ -153,6 +154,63 @@ export function removeCard(state: BoardState, key: string): BoardState {
   const cards = { ...(state.cards ?? {}) };
   delete cards[key];
   return { brand_key: state.brand_key, cards };
+}
+
+/**
+ * Set a card's status (its saved column). Order inside a column no longer shows in the list view, so
+ * the card simply goes to the end of that column. Returns `state` unchanged when nothing moves.
+ */
+export function setStatus(
+  state: BoardState,
+  columns: BoardColumnView[],
+  key: string,
+  to: BoardColumn,
+  now: string = new Date().toISOString(),
+): BoardState {
+  const at = findCard(columns, key);
+  if (!at || at.column === to) return state;
+  return moveCard(state, columns, key, to, Infinity, now);
+}
+
+/** Same comparison as sortByPriority, on each group's lead recommendation. */
+function byPriority(a: Recommendation, b: Recommendation): number {
+  return (
+    (b.priority ?? 0) - (a.priority ?? 0) ||
+    (b.delta_composite ?? 0) - (a.delta_composite ?? 0) ||
+    a.recommendation_id.localeCompare(b.recommendation_id)
+  );
+}
+
+/**
+ * Every card as one flat list for the grid: live suggestions by priority (whatever their status, so
+ * changing a status never reshuffles the list), then resolved ghosts by status and key.
+ */
+export function listCards(columns: BoardColumnView[]): BoardCard[] {
+  const all = columns.flatMap((c) => c.cards);
+  const live = all.filter((c) => c.suggestion).sort((a, b) => byPriority(a.suggestion!.lead, b.suggestion!.lead));
+  const ghosts = all
+    .filter((c) => !c.suggestion)
+    .sort((a, b) => BOARD_COLUMNS.indexOf(a.column) - BOARD_COLUMNS.indexOf(b.column) || a.key.localeCompare(b.key));
+  return [...live, ...ghosts];
+}
+
+/** The list's filter bar. "open" = not started yet (Suggested or Saved for later). */
+export type BoardFilter = "all" | "open" | "in_progress" | "done" | "rejected";
+
+export const BOARD_FILTERS: BoardFilter[] = ["all", "open", "in_progress", "done", "rejected"];
+
+export function matchesFilter(card: BoardCard, filter: BoardFilter): boolean {
+  if (filter === "all") return true;
+  if (filter === "open") return card.column === "suggested" || card.column === "saved";
+  return card.column === filter;
+}
+
+/** How many cards each filter shows. */
+export function filterCounts(cards: BoardCard[]): Record<BoardFilter, number> {
+  return Object.fromEntries(BOARD_FILTERS.map((f) => [f, cards.filter((c) => matchesFilter(c, f)).length])) as Record<
+    BoardFilter,
+    number
+  >;
 }
 
 /** Card counts per column (the hub's board preview). */

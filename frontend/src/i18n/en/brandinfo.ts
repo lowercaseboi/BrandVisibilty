@@ -10,6 +10,9 @@ export const brandinfo = {
   "profile.pilotBadge": "Sample brand — read only",
   "profile.unavailable": "This brand's profile couldn't be loaded. The saved questions are still shown below.",
   "profile.edit": "Edit profile",
+  "profile.section.identity": "Identity",
+  "profile.section.competition": "Competition",
+  "profile.section.customers": "Customers",
 
   // ---- Edit form (reuses AddBrandForm's pages.add.* labels/placeholders/hints/errors)
   "edit.comparabilityWarning":

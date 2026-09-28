@@ -1,13 +1,22 @@
 import type { BoardColumn } from "../../api/types";
 import type { MessageKey } from "../../i18n";
+import type { BoardFilter } from "./boardModel";
 
-/** Column names (board.column.*). The tone per column lives in board.css ([data-column]). */
-export const COLUMN_LABEL: Record<BoardColumn, MessageKey> = {
-  suggested: "board.column.suggested",
-  saved: "board.column.saved",
-  in_progress: "board.column.in_progress",
-  done: "board.column.done",
-  rejected: "board.column.rejected",
+/** Status names (board.status.*) — a card's saved column. The tone per status lives in board.css. */
+export const STATUS_LABEL: Record<BoardColumn, MessageKey> = {
+  suggested: "board.status.suggested",
+  saved: "board.status.saved",
+  in_progress: "board.status.in_progress",
+  done: "board.status.done",
+  rejected: "board.status.rejected",
+};
+
+export const FILTER_LABEL: Record<BoardFilter, MessageKey> = {
+  all: "board.filter.all",
+  open: "board.filter.open",
+  in_progress: "board.filter.in_progress",
+  done: "board.filter.done",
+  rejected: "board.filter.rejected",
 };
 
 /** Recommendation classes (DESIGN §5.4) — reuses the translated dashboard labels. */

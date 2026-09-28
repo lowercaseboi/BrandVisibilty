@@ -12,14 +12,15 @@ const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion:
  * morph carries an already-counted ring from one page to the next. */
 function useCountUp(target: number, play: number, instant = false): number {
   const [value, setValue] = useState(() => (instant ? target : 0));
-  const skipFirst = useRef(instant);
+  // The (target, play) pair already on screen. Comparing against it (rather than a one-shot "skip
+  // first run" flag) keeps `instant` working when StrictMode runs the mount effect twice.
+  const shown = useRef<string | null>(instant ? `${target}|${play}` : null);
   const reduced = prefersReducedMotion();
   useEffect(() => {
     if (reduced) return;
-    if (skipFirst.current) {
-      skipFirst.current = false;
-      return;
-    }
+    const key = `${target}|${play}`;
+    if (shown.current === key) return;
+    shown.current = key;
     let raf = 0;
     const start = performance.now();
     const tick = (now: number) => {
