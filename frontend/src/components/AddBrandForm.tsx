@@ -4,11 +4,8 @@ import { ApiError, createBrand } from "../api/client";
 import type { BrandSummary } from "../api/types";
 import { T, useT } from "../i18n";
 import type { MessageKey, Vars } from "../i18n";
+import { MAX_ITEM, MAX_ITEMS, MAX_NAME, clean, hasLetters, slug, splitList } from "./brandinfo/listFields";
 
-// Limits mirror backend brands/registry.py (_validate_spec / _clean_list).
-const MAX_NAME = 80;
-const MAX_ITEM = 120;
-const MAX_ITEMS = 10;
 const THIN_QUESTIONS = 10;
 
 type FieldId = "name" | "category" | "cities" | "competitors" | "audiences" | "jobs" | "aliases";
@@ -43,31 +40,6 @@ type FieldError = { key: MessageKey; vars?: Vars };
 type Errors = Partial<Record<FieldId, FieldError>>;
 
 const EMPTY: Values = { name: "", category: "", cities: "", competitors: "", audiences: "", jobs: "", aliases: "" };
-
-function splitList(value: string): string[] {
-  const out: string[] = [];
-  for (const raw of value.split(/[,\n]/)) {
-    const s = raw.trim().replace(/\s+/g, " ");
-    if (s && !out.includes(s)) out.push(s);
-  }
-  return out;
-}
-
-const clean = (s: string) => s.trim().replace(/\s+/g, " ");
-
-// Names may be in any script (the backend derives a key for Devanagari-only names);
-// they just need at least one letter or digit.
-const hasLetters = (s: string) => /[\p{L}\p{N}]/u.test(s);
-
-// Same as backend slugify() for Latin names (accents folded: "Café Mocha" -> "cafe_mocha"),
-// used to spot duplicate competitors.
-const slug = (s: string) =>
-  s
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
 
 function validateField(id: FieldId, values: Values): FieldError | undefined {
   const spec = FIELDS.find((f) => f.id === id)!;

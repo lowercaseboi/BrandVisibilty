@@ -5,6 +5,7 @@ import type { Job, JobStatus, ProviderInfo, ProviderProgress, QuestionSet } from
 import { useFormat, useT } from "../i18n";
 import type { MessageKey } from "../i18n";
 import { Details } from "../settings/details";
+import { brandHref } from "./module/modules";
 import { useListFormat, useProviderLabel } from "./dashboard/helpers";
 import { runCalls } from "./runMath";
 
@@ -189,7 +190,7 @@ export function RunPanel({
   const calls = runCalls(nQuestions, samples, sources);
   const withModel = (p: ProviderInfo) => (p.model ? `${labelOf(p.provider_id)} (${p.model})` : labelOf(p.provider_id));
   const askModels = provider === "auto" ? liveConfigured.map(withModel) : chosen ? [withModel(chosen)] : [];
-  const questionsHref = `/brands/${encodeURIComponent(brandKey)}/questions`;
+  const questionsHref = `${brandHref(brandKey, "details")}#questions`;
 
   const jobProviders: ProviderProgress[] = job?.providers ?? [];
   const skippingAll = skipping.has(SKIP_ALL);

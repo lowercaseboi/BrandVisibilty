@@ -87,6 +87,53 @@ export function sortByPriority(recs: Recommendation[]): Recommendation[] {
   );
 }
 
+/** One thing to do: recommendations sharing an action (and competitor) grouped under one card. */
+export interface Suggestion {
+  /** `action|competitor_id` (competitor empty when none) — stable across runs, unlike recommendation IDs. */
+  key: string;
+  /** Highest-priority recommendation in the group; drives title, effort and points. */
+  lead: Recommendation;
+  gaps: Gap[];
+  refs: string[];
+}
+
+const competitorOf = (gap: Gap | undefined): string =>
+  typeof gap?.detail?.competitor_id === "string" ? gap.detail.competitor_id : "";
+
+/** The stable group key for a recommendation: `action|competitor_id`. */
+export function suggestionKey(rec: Recommendation, gap: Gap | undefined): string {
+  return `${rec.action}|${competitorOf(gap)}`;
+}
+
+/** Splits a group key back into its action and competitor id (null when the group has none). */
+export function parseSuggestionKey(key: string): { action: string; competitorId: string | null } {
+  const i = key.indexOf("|");
+  if (i < 0) return { action: key, competitorId: null };
+  return { action: key.slice(0, i), competitorId: key.slice(i + 1) || null };
+}
+
+// The backend can suggest the same action for two gaps (e.g. "get listed" for two AIs).
+// A brand owner should see one card per thing to do, with every reason under "Why?".
+/** Groups recommendations by `action|competitor_id`, highest priority first (sortByPriority). */
+export function groupSuggestions(recs: Recommendation[], gapById: Map<string, Gap>): Suggestion[] {
+  const out: Suggestion[] = [];
+  const byKey = new Map<string, Suggestion>();
+  for (const rec of sortByPriority(recs)) {
+    const gap = gapById.get(rec.gap_id);
+    const key = suggestionKey(rec, gap);
+    const existing = byKey.get(key);
+    if (existing) {
+      if (gap && !existing.gaps.includes(gap)) existing.gaps.push(gap);
+      for (const r of rec.evidence_refs ?? []) if (!existing.refs.includes(r)) existing.refs.push(r);
+      continue;
+    }
+    const s: Suggestion = { key, lead: rec, gaps: gap ? [gap] : [], refs: [...(rec.evidence_refs ?? [])] };
+    byKey.set(key, s);
+    out.push(s);
+  }
+  return out;
+}
+
 export function humanizeId(value: string | null | undefined): string {
   if (!value) return "";
   const words = value.replace(/[_-]+/g, " ").trim();

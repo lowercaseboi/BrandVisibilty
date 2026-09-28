@@ -1,0 +1,287 @@
+/* Analysis + Gaps & evidence modules (pages/brand/AnalysisModule.tsx, GapsModule.tsx and
+   components/evidence/*). Builds on the moved dashboard pieces (dashboard.css / components.css) and
+   the shared module frame (modules.css); tokens only. */
+
+/* Sections sit in .module-body's flex gap, so drop the old dashboard's stacked-page margins. */
+.module[data-module="analysis"] .dash-section,
+.module[data-module="gaps"] .dash-section {
+  margin-top: 0;
+}
+
+/* =========================================================
+   Analysis
+   ========================================================= */
+
+.analysis-meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+/* HonestyBanners renders an empty wrapper when there's nothing to warn about. */
+.module[data-module="analysis"] .dash-banners:empty {
+  display: none;
+}
+
+.module[data-module="analysis"] .dash-banners .alert:last-child {
+  margin-bottom: 0;
+}
+
+/* The two main cards: score (left) and run (right), equal height; stacked on narrow screens. */
+.analysis-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: stretch;
+}
+
+.analysis-main > .card {
+  margin: 0;
+  /* Each card lays itself out by its own width (container queries below), not the viewport's. */
+  container-type: inline-size;
+}
+
+.analysis-empty {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* RunPanel's settings row (AI · depth · questions) is three columns on a full-width card; at half
+   width it stacks, with the depth buttons keeping the full row. */
+@container (max-width: 600px) {
+  .run-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+}
+
+/* ScoreHero's number | sentence columns need ~a full-width card; at half width the number sits on
+   top and the sentence, range and peer strip get the card's whole width. */
+@container (max-width: 580px) {
+  .score-hero-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+  }
+}
+
+@media (max-width: 880px) {
+  .analysis-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.analysis-trend {
+  padding: var(--space-5);
+}
+
+.analysis-trend .module-section-head {
+  align-items: baseline;
+}
+
+.analysis-trend .count {
+  white-space: nowrap;
+}
+
+/* =========================================================
+   Gaps & evidence
+   ========================================================= */
+
+.gaps-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.38fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.gaps-pane {
+  min-width: 0;
+}
+
+.gaps-pane .module-section-head h2 .count {
+  margin-left: 4px;
+  font-family: var(--sans);
+  vertical-align: middle;
+}
+
+/* Left pane stays in view while the evidence scrolls; its own scroll takes over when it's long.
+   Right padding leaves room for the selected card's connector notch (below). */
+.gaps-list-pane {
+  position: sticky;
+  top: 92px;
+  max-height: calc(100dvh - 108px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 12px 12px 2px;
+  scrollbar-width: thin;
+}
+
+.gaps-list-pane .gap-list {
+  gap: var(--space-3);
+}
+
+.gap-item.is-selectable {
+  cursor: pointer;
+}
+
+.gap-item.is-selectable:not(.is-selected):hover {
+  border-color: var(--line-strong);
+}
+
+/* Selected: the existing highlight plus a notch pointing at the evidence pane, and a short pulse. */
+.gap-item.is-selected {
+  animation: gap-pick var(--dur-slow) var(--ease);
+}
+
+@keyframes gap-pick {
+  from {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+}
+
+.gap-select[aria-pressed="true"] {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (min-width: 901px) {
+  .gap-item.is-selected::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: -9px;
+    margin-top: -7px;
+    border-left: 8px solid var(--accent);
+    border-top: 7px solid transparent;
+    border-bottom: 7px solid transparent;
+  }
+}
+
+/* Right pane. When a gap/refs selection is active, an accent rule ties it to the left. */
+.gaps-evidence-pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  scroll-margin-top: 92px;
+}
+
+.gaps-evidence-pane > .module-section-head {
+  margin-bottom: 0;
+}
+
+.gaps-evidence-pane > .alert {
+  margin: 0;
+}
+
+.evidence-selection-slot:empty {
+  display: none;
+}
+
+.evidence-selection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: 10px var(--space-3) 10px var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line));
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+  animation: rise var(--dur-slow) var(--ease) backwards;
+}
+
+.evidence-selection-gap {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.evidence-selection-text {
+  flex: 1 1 220px;
+  font-size: var(--fs-sm);
+  color: var(--text-h);
+}
+
+.evidence-clear {
+  margin-left: auto;
+}
+
+.evidence-spotlight {
+  position: relative;
+}
+
+.evidence-spotlight-label {
+  margin: 0 0 var(--space-1);
+  color: var(--accent-text);
+}
+
+.evidence-spotlight .section-note {
+  margin: 0 0 var(--space-3);
+}
+
+.evidence-hint {
+  margin: 0;
+  padding-left: var(--space-3);
+  border-left: 2px dashed var(--line-strong);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+.evidence-all {
+  margin: var(--space-3) 0 0;
+}
+
+.evidence-browser {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.evidence-browser .filters {
+  margin: 0;
+}
+
+.evidence-search {
+  flex: 1 1 100%;
+}
+
+.evidence-legend {
+  padding: 8px var(--space-3);
+}
+
+.evidence-empty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.evidence-more {
+  align-self: center;
+}
+
+.evidence-none {
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .gaps-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gaps-list-pane {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    padding: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gap-item.is-selected,
+  .evidence-selection {
+    animation: none;
+  }
+}

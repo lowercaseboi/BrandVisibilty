@@ -1,5 +1,7 @@
 import type {
+  BoardState,
   BrandDeleteResponse,
+  BrandProfile,
   BrandSummary,
   CreateBrandRequest,
   Job,
@@ -11,6 +13,7 @@ import type {
   Snapshot,
   StartRunRequest,
   TrendVerdict,
+  UpdateBrandRequest,
 } from "./types";
 
 // Default "/api": the Vite dev proxy (vite.config.ts) or nginx strips the
@@ -115,15 +118,47 @@ export function createBrand(spec: CreateBrandRequest): Promise<BrandSummary> {
 /** Delete a user-created brand and its stored runs/snapshots. Sample brands can't be deleted
  * (the backend returns 403). */
 export function deleteBrand(brandKey: string): Promise<BrandDeleteResponse> {
+  latestCache.delete(brandKey);
   return deleteJson(`/brands/${b(brandKey)}`);
+}
+
+/** Full saved profile (category, cities, competitors, aliases…). */
+export function getBrand(brandKey: string): Promise<BrandProfile> {
+  return getJson(`/brands/${b(brandKey)}`);
+}
+
+/** Edit a user-created brand (403 for a sample brand). Changing competitors/aliases starts a new
+ * comparability segment, so the trend restarts. */
+export function updateBrand(brandKey: string, body: UpdateBrandRequest): Promise<BrandProfile> {
+  return putJson(`/brands/${b(brandKey)}`, body);
+}
+
+/** Recommendation board column/order per suggestion group (empty `cards` when never saved). */
+export function getBoard(brandKey: string): Promise<BoardState> {
+  return getJson(`/brands/${b(brandKey)}/board`);
+}
+
+export function saveBoard(brandKey: string, board: BoardState): Promise<BoardState> {
+  return putJson(`/brands/${b(brandKey)}/board`, board);
 }
 
 export function listProviders(): Promise<ProviderInfo[]> {
   return getJson("/providers");
 }
 
+// Last latest-snapshot seen per brand, so the brand hub can draw the centre card on the very first
+// frame of the list → hub view transition (no loading flash mid-morph).
+const latestCache = new Map<string, Snapshot>();
+
+/** The most recently fetched latest snapshot for a brand, if any (synchronous; may be stale). */
+export function peekLatestSnapshot(brandKey: string): Snapshot | undefined {
+  return latestCache.get(brandKey);
+}
+
 export async function getLatestSnapshot(brandKey: string): Promise<Snapshot> {
-  return toFractions(await getJson<Snapshot>(`/brands/${b(brandKey)}/snapshots/latest`));
+  const snap = toFractions(await getJson<Snapshot>(`/brands/${b(brandKey)}/snapshots/latest`));
+  latestCache.set(brandKey, snap);
+  return snap;
 }
 
 export async function getSnapshots(brandKey: string): Promise<Snapshot[]> {

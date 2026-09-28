@@ -57,7 +57,9 @@ export function AppHeader({ variant = "app" }: { variant?: "app" | "landing" }) 
     .filter(Boolean)
     .join(" ");
   return (
-    <header className={cls}>
+    // Its own view-transition-name keeps the header still while brand pages morph beneath it
+    // (otherwise it cross-fades with the rest of the page).
+    <header className={cls} style={landing ? undefined : { viewTransitionName: "app-header" }}>
       <div className="app-header-inner">
         <Link to={landing ? "/app" : "/"} className="brand-mark" aria-label={landing ? t("common.nav.app") : t("common.app.home")}>
           <Logo />

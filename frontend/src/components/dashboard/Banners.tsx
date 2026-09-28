@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import type { QuestionSet, Snapshot } from "../../api/types";
 import { useT } from "../../i18n";
+import { brandHref } from "../module/modules";
 import { OriginBanner } from "../OriginBanner";
 import { useListFormat } from "./helpers";
 
@@ -48,7 +49,7 @@ export function HonestyBanners({
       {thin && (
         <div className="alert alert-warn" role="note">
           {t.n("dashboard.banner.thin", scored)}{" "}
-          <Link to={`/brands/${encodeURIComponent(brandKey)}/questions`}>{t("dashboard.banner.thinLink")}</Link>
+          <Link to={`${brandHref(brandKey, "details")}#questions`}>{t("dashboard.banner.thinLink")}</Link>
         </div>
       )}
     </div>

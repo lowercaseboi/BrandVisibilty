@@ -46,6 +46,52 @@ def test_create_brand_validates_and_persists(tmp_data_dir):
         registry.get_brand("nope")
 
 
+def test_update_brand_keeps_key_and_preserves_tasks_use_cases(tmp_data_dir):
+    registry.create_brand({
+        "name": "Chai Point", "category": "cafe", "cities": ["Pune"],
+        "competitors": ["Chaayos"], "tasks": ["cater a corporate meeting"], "use_cases": ["a quick tea break"],
+    })
+
+    updated = registry.update_brand("chai_point", {
+        "name": "Chai Point Renamed",
+        "category": "tea cafe",
+        "cities": ["Pune", "Mumbai"],
+        "audiences": ["students"],
+        "competitors": ["Chaayos", "Starbucks"],
+        "aliases": ["CP"],
+        "jobs_to_be_done": ["get a hot chai quickly"],
+    })
+
+    assert updated.brand_key == "chai_point"  # never changes, even though the name did
+    assert updated.name == "Chai Point Renamed"
+    assert updated.params.category == "tea cafe"
+    assert updated.params.cities == ("Pune", "Mumbai")
+    assert updated.params.audiences == ("students",)
+    assert updated.competitor_ids() == frozenset({"chaayos", "starbucks"})
+    assert updated.self_aliases == ("Chai Point Renamed", "CP")
+    assert updated.params.jobs_to_be_done == ("get a hot chai quickly",)
+    # tasks/use_cases aren't part of the edit surface — carried over from creation.
+    assert updated.params.tasks == ("cater a corporate meeting",)
+    assert updated.params.use_cases == ("a quick tea break",)
+
+    # get_brand reflects the change (no caching), still under the original key.
+    assert registry.get_brand("chai_point").name == "Chai Point Renamed"
+    with pytest.raises(KeyError):
+        registry.get_brand("chai_point_renamed")
+
+
+def test_update_brand_pilot_and_unknown_and_invalid(tmp_data_dir):
+    with pytest.raises(registry.PilotBrandUpdateError):
+        registry.update_brand("gajanan_vada_pav", {"name": "x", "category": "y", "cities": ["Mumbai"]})
+
+    with pytest.raises(KeyError):
+        registry.update_brand("does_not_exist", {"name": "x", "category": "y", "cities": ["Mumbai"]})
+
+    registry.create_brand({"name": "Chai Point", "category": "cafe", "cities": ["Pune"], "competitors": ["Chaayos"]})
+    with pytest.raises(ValueError, match="cities"):
+        registry.update_brand("chai_point", {"name": "Chai Point", "category": "cafe", "cities": []})
+
+
 def test_devanagari_only_names_get_a_stable_ascii_key(tmp_data_dir):
     brand = registry.create_brand(
         {"name": "शर्मा किराणा", "category": "किराणा दुकान", "cities": ["मुंबई"], "competitors": ["पटेल स्टोअर्स"]}

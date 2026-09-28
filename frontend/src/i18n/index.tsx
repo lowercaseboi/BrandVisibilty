@@ -1,8 +1,12 @@
 /* oxlint-disable react/only-export-components -- provider, hooks and <T> belong together */
 import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { board as enBoard } from "./en/board";
+import { brandinfo as enBrandinfo } from "./en/brandinfo";
 import { common as enCommon } from "./en/common";
 import { dashboard as enDashboard } from "./en/dashboard";
+import { hub as enHub } from "./en/hub";
+import { modules as enModules } from "./en/modules";
 import { pages as enPages } from "./en/pages";
 import { common as hiCommon } from "./hi/common";
 import { dashboard as hiDashboard } from "./hi/dashboard";
@@ -29,7 +33,11 @@ type NsKeys<NS extends string, D> = `${NS}.${Extract<keyof D, string>}`;
 export type MessageKey =
   | NsKeys<"common", typeof enCommon>
   | NsKeys<"dashboard", typeof enDashboard>
-  | NsKeys<"pages", typeof enPages>;
+  | NsKeys<"pages", typeof enPages>
+  | NsKeys<"hub", typeof enHub>
+  | NsKeys<"brandinfo", typeof enBrandinfo>
+  | NsKeys<"modules", typeof enModules>
+  | NsKeys<"board", typeof enBoard>;
 
 /** Base of a plural pair: "common.count.questions" when both "..._one" and "..._other" exist. */
 export type PluralKey = {
@@ -58,7 +66,16 @@ function merge(parts: Record<string, Flat>): Map<string, string> {
 }
 
 const DICTS: Record<Lang, Map<string, string>> = {
-  en: merge({ common: enCommon, dashboard: enDashboard, pages: enPages }),
+  // hub/brandinfo/modules/board are English-only for now; lookup() falls back to English.
+  en: merge({
+    common: enCommon,
+    dashboard: enDashboard,
+    pages: enPages,
+    hub: enHub,
+    brandinfo: enBrandinfo,
+    modules: enModules,
+    board: enBoard,
+  }),
   hi: merge({ common: hiCommon, dashboard: hiDashboard, pages: hiPages }),
   mr: merge({ common: mrCommon, dashboard: mrDashboard, pages: mrPages }),
 };

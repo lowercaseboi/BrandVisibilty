@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { Mention, Observation } from "../../api/types";
 import type { MessageKey } from "../../i18n";
 
-// Picking and highlighting one AI answer: shared by the dashboard's sample response and the
+// Picking and highlighting one AI answer: shared by the Gaps & evidence spotlight and the
 // landing page's sample section.
 
 export const MAX_CHARS = 600;
@@ -27,6 +27,13 @@ export function pickSample(observations: Observation[]): Observation | null {
     return comp !== null && (self === null || comp < self);
   });
   return outranked ?? scored.find((o) => bestRank(o, "self") !== null) ?? null;
+}
+
+/** Why pickSample chose this answer: a competitor is named before you, or it simply names you. */
+export function sampleReason(obs: Observation): "outranked" | "named" {
+  const self = bestRank(obs, "self");
+  const comp = bestRank(obs, "competitor");
+  return comp !== null && (self === null || comp < self) ? "outranked" : "named";
 }
 
 export const KIND_KEY: Record<Mention["entity_kind"], MessageKey> = {

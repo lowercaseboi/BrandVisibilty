@@ -10,10 +10,11 @@ import hashlib
 import json
 import uuid
 from collections import Counter
+from collections.abc import Sequence
 from dataclasses import asdict
 from datetime import datetime
 
-from app.analysis.types import AnalysisResult
+from app.analysis.types import AnalysisResult, EntityAlias
 
 ADMISSION_POLICY_VERSION = "v0"
 MIN_QUERY_COVERAGE = 0.8
@@ -22,14 +23,44 @@ MIN_SAMPLE_COMPLETENESS = 0.7
 OFFLINE_PROVIDERS = {"synthetic", "replay"}
 
 
-def comparability_key(query_set_content_hash: str, sampling_config: dict, model_versions: list[str]) -> str:
+def _alias_table_signature(entity_alias_table: Sequence[EntityAlias]) -> str:
+    """Order-independent fingerprint of the tracked entity/alias table (self + competitors)
+    the mention detector used for this run. Sorting entities and, within each entity, its
+    aliases means only a genuine membership change (a competitor or alias added/removed)
+    moves the signature — not the order the brand config happens to list them in."""
+    rows = sorted((ea.entity_id, ea.entity_kind, tuple(sorted(ea.aliases))) for ea in entity_alias_table)
+    return hashlib.sha256(json.dumps(rows, sort_keys=True).encode("utf-8")).hexdigest()[:16]
+
+
+def comparability_key(
+    query_set_content_hash: str,
+    sampling_config: dict,
+    model_versions: list[str],
+    entity_alias_table: Sequence[EntityAlias] = (),
+) -> str:
     """Two snapshots are directly comparable only if they share this key: same frozen query
-    set, same sampling config and the same resolved model versions."""
+    set, same sampling config, the same resolved model versions, AND the same tracked
+    entity/alias table (competitors + their aliases) the mention detector matched against.
+
+    That last part matters because editing competitors or aliases changes what counts as a
+    "mention" without necessarily changing the query text: a wider self-alias list can lift
+    Coverage on its own, and an added/removed competitor changes Share of Voice and the
+    COMPETITIVE gap, even though the questions asked are identical. Folding the alias table
+    into the key means such an edit starts a new comparability segment on the next run
+    instead of silently mixing pre- and post-edit runs on the same trend line.
+
+    `entity_alias_table` defaults to `()` for callers that don't pass one (kept
+    source-compatible); every real run (`pipeline.runner.run_pipeline`) passes
+    `brand.alias_table()`. Snapshots already written keep whatever key they were computed
+    with — this function is never used to recompute history, only for new runs going
+    forward, so past keys stay exactly as they are.
+    """
     material = "|".join(
         [
             query_set_content_hash,
             json.dumps(sampling_config, sort_keys=True),
             ",".join(sorted(set(model_versions))),
+            _alias_table_signature(entity_alias_table),
         ]
     )
     return hashlib.sha256(material.encode("utf-8")).hexdigest()[:16]
@@ -63,12 +94,17 @@ def build_snapshot(
     started_at: datetime,
     completed_at: datetime,
     run_id: str | None = None,
+    entity_alias_table: Sequence[EntityAlias] = (),
 ) -> dict:
     """Build the CONTRACT §5 record.
 
     `providers` are the provider ids the run *attempted*; `query_ids` the unprompted query
     ids it planned (`q<idx>`); `raw_observations` one dict per *successful* call. Planned
     calls = providers × queries × samples; anything short of that makes the run "partial".
+
+    `entity_alias_table` is the brand's tracked entity/alias table (`brand.alias_table()`)
+    as of this run — folded into `comparability_key` so editing competitors or aliases
+    starts a new trend segment (see `comparability_key`'s docstring).
     """
     planned_calls = len(providers) * len(query_ids) * samples_per_query
     successful_calls = len(raw_observations)
@@ -108,7 +144,9 @@ def build_snapshot(
         "status": status,
         "data_origin": data_origin(providers),
         "providers": list(providers),
-        "comparability_key": comparability_key(query_set_content_hash, full_sampling_config, model_versions),
+        "comparability_key": comparability_key(
+            query_set_content_hash, full_sampling_config, model_versions, entity_alias_table
+        ),
         "collection_started_at": started_at.isoformat(),
         "collection_completed_at": completed_at.isoformat(),
         "collection_span_days": span_days,

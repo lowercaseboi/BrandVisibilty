@@ -1,8 +1,8 @@
 from datetime import UTC, datetime
 
-from app.analysis.types import AnalysisResult, ProviderBreakdown
+from app.analysis.types import AnalysisResult, EntityAlias, ProviderBreakdown
 from app.tracking import store
-from app.tracking.snapshot import build_snapshot, data_origin
+from app.tracking.snapshot import build_snapshot, comparability_key, data_origin
 
 CONTRACT_KEYS = {
     "brand_key", "brand", "run_id", "status", "data_origin", "providers", "comparability_key",
@@ -70,6 +70,58 @@ def test_data_origin_synthetic_taints_and_offline_is_replay():
     assert data_origin(["replay"]) == "replay"
     assert data_origin(["groq"]) == "live"
     assert data_origin(["replay", "groq"]) == "live"
+
+
+def test_comparability_key_changes_when_the_entity_alias_table_changes():
+    """Editing competitors or aliases changes what the mention detector counts as a match
+    (Coverage/SoV/COMPETITIVE-gap inputs) without necessarily changing the query text, so
+    the alias table must be part of the comparability key or runs would silently mix."""
+    base_table = (
+        EntityAlias("self", "self", ("Demo",)),
+        EntityAlias("rival_a", "competitor", ("Rival A",)),
+    )
+    same_but_reordered = (
+        EntityAlias("rival_a", "competitor", ("Rival A",)),
+        EntityAlias("self", "self", ("Demo",)),
+    )
+    extra_self_alias = (
+        EntityAlias("self", "self", ("Demo", "Demo Co")),
+        EntityAlias("rival_a", "competitor", ("Rival A",)),
+    )
+    extra_competitor = base_table + (EntityAlias("rival_b", "competitor", ("Rival B",)),)
+
+    key_a = comparability_key("h", {}, ["m1"], base_table)
+    key_b = comparability_key("h", {}, ["m1"], same_but_reordered)
+    key_c = comparability_key("h", {}, ["m1"], extra_self_alias)
+    key_d = comparability_key("h", {}, ["m1"], extra_competitor)
+    key_no_table = comparability_key("h", {}, ["m1"])
+
+    assert len(key_a) == 16
+    assert key_a == key_b  # order of entities/aliases doesn't matter, only membership
+    assert key_a != key_c  # a new alias on an existing entity changes the key
+    assert key_a != key_d  # an added/removed competitor changes the key
+    assert key_a != key_no_table  # the default (no table passed) is its own, different key
+
+    # Same story end-to-end through build_snapshot: only the alias table differs.
+    result = AnalysisResult(0.5, 0.7, 0.4, 55.0, 40.0, 70.0, (ProviderBreakdown("synthetic", 0.5, 1, 1),), 1, 1, ("synthetic",))
+    now = datetime.now(UTC)
+
+    def snap_with(table):
+        return build_snapshot(
+            brand_key="demo", brand_name="Demo", entities={"self": "Demo"}, providers=["synthetic"],
+            query_ids=["q0"], samples_per_query=1, query_set_content_hash="abc",
+            query_set_template_version="v1", sampling_config={"temperature": None, "system_prompt": None},
+            raw_observations=[_raw("synthetic", 0, 0)], analysis_result=result, gaps=[], recommendations=[],
+            started_at=now, completed_at=now, entity_alias_table=table,
+        )
+
+    before = snap_with(base_table)
+    after_new_competitor = snap_with(extra_competitor)
+    after_new_alias = snap_with(extra_self_alias)
+    unchanged_reorder = snap_with(same_but_reordered)
+    assert before["comparability_key"] == unchanged_reorder["comparability_key"]
+    assert before["comparability_key"] != after_new_competitor["comparability_key"]
+    assert before["comparability_key"] != after_new_alias["comparability_key"]
 
 
 def test_normalize_snapshot_defaults_unscored_observation_count():

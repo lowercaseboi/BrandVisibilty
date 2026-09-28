@@ -1,6 +1,7 @@
 // Plain, translated title + concrete steps for each recommendation action id
 // (the closed vocabulary in backend/src/app/recommendation/engine.py ACTION_LABEL).
-import type { MessageKey } from "../../i18n";
+import type { MessageKey, TFunction } from "../../i18n";
+import { humanizeId } from "./helpers";
 
 export interface ActionCopy {
   title: MessageKey;
@@ -41,4 +42,12 @@ const COPY: Record<string, ActionCopy> = Object.fromEntries(
 /** null for an action id the frontend doesn't know yet (the caller falls back to backend text). */
 export function actionCopy(action: string): ActionCopy | null {
   return COPY[action] ?? null;
+}
+
+/** The plain title for an action, naming the competitor when the copy needs one. */
+export function actionTitle(action: string, competitor: string | null, t: TFunction): string {
+  const copy = actionCopy(action);
+  if (!copy) return humanizeId(action);
+  if (copy.titleGeneric && !competitor) return t(copy.titleGeneric);
+  return t(copy.title, { competitor: competitor ?? "" });
 }

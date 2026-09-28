@@ -1,40 +1,31 @@
-import { useEffect, useId, useState } from "react";
-import { Link } from "react-router-dom";
+import { useId, useState } from "react";
+import type { ReactNode } from "react";
 import { Details } from "../../settings/details";
-import { getObservations } from "../../api/client";
-import type { Mention } from "../../api/types";
-import { cutPoint, highlight, KIND_KEY, pickSample } from "./answerHighlight";
-import { useAsync } from "../../api/useAsync";
-import { evidenceHref } from "../../format";
+import type { Mention, Observation } from "../../api/types";
+import { cutPoint, highlight, KIND_KEY } from "./answerHighlight";
 import { useT } from "../../i18n";
 
 /**
- * "What AI actually said": one real answer, with your brand and competitors highlighted. Body
- * only — the caller (BrandDashboardPage) supplies the heading via CollapsibleSection.
- * `onSample` reports the responding AI's name upward once loaded, for the section's summary.
+ * One real AI answer, shown as a recorded artefact: which AI and model, the question, and the
+ * response with your brand and competitors highlighted (long answers collapse). Presentational —
+ * the caller picks the answer (`pickSample`) from observations it already loaded; the Gaps &
+ * evidence module uses it as the evidence pane's spotlight.
  */
 export function SampleAnswer({
-  brandKey,
+  obs,
   runId,
   labelOf,
-  onSample,
+  caption,
 }: {
-  brandKey: string;
+  obs: Observation;
   runId: string;
   labelOf: (id: string) => string;
-  onSample?: (aiName: string) => void;
+  /** Short line above the card saying why this answer was picked. */
+  caption?: ReactNode;
 }) {
   const t = useT();
   const [expanded, setExpanded] = useState(false);
   const bodyId = useId();
-  const state = useAsync(() => getObservations(brandKey, runId), [brandKey, runId]);
-  const obs = state.status === "ready" ? pickSample(state.data.observations) : null;
-
-  useEffect(() => {
-    if (obs) onSample?.(labelOf(obs.provider_id));
-  }, [obs, labelOf, onSample]);
-
-  if (!obs) return <p className="muted">{t("dashboard.sample.empty")}</p>;
 
   const text = obs.response_text ?? "";
   const mentions = obs.mentions ?? [];
@@ -45,7 +36,7 @@ export function SampleAnswer({
 
   return (
     <>
-      <p className="section-note">{t("dashboard.sample.caption")}</p>
+      <p className="section-note">{caption ?? t("dashboard.sample.caption")}</p>
       <figure className="card answer-card">
         {/* Source strip: which AI and model produced this exact response. */}
         <div className="answer-source">
@@ -84,9 +75,6 @@ export function SampleAnswer({
           <Details>
             <code className="answer-run">{runId}</code>
           </Details>
-          <Link to={evidenceHref(brandKey, runId)} className="sample-all">
-            {t("dashboard.sample.seeAll")}
-          </Link>
         </figcaption>
       </figure>
     </>

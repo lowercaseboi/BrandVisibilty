@@ -342,3 +342,39 @@ def create_brand(spec: dict) -> BrandConfig:
     tmp.write_text(json.dumps(specs, indent=2, ensure_ascii=False), encoding="utf-8")
     tmp.replace(path)
     return _config_from_spec(clean)
+
+
+class PilotBrandUpdateError(ValueError):
+    """Raised when the caller tries to edit one of the built-in sample (pilot) brands."""
+
+
+def update_brand(brand_key: str, spec: dict) -> BrandConfig:
+    """Edit a user-created brand's setup in place: validated exactly like `create_brand`
+    (AC-1), but `brand_key` never changes even when `spec["name"]` does — it stays the
+    stable identifier used by stored snapshots, saved questions and the recommendation
+    board. `tasks`/`use_cases` aren't part of the edit surface (PRD's brand-details UI
+    doesn't expose them), so whatever was last saved for them is carried over unchanged.
+
+    Raises `PilotBrandUpdateError` for a pilot brand, `KeyError` if `brand_key` isn't a
+    user-created brand, or `ValueError` with a human-readable message on invalid input.
+    """
+    if brand_key in _PILOTS_BY_KEY:
+        raise PilotBrandUpdateError(brand_key)
+
+    specs = _load_user_specs()
+    existing = next((s for s in specs if s["brand_key"] == brand_key), None)
+    if existing is None:
+        raise KeyError(brand_key)
+
+    clean = _validate_spec(spec)
+    clean["brand_key"] = brand_key  # stable identifier — never derived from the (possibly new) name
+    clean["tasks"] = existing.get("tasks", [])
+    clean["use_cases"] = existing.get("use_cases", [])
+
+    updated_specs = [clean if s["brand_key"] == brand_key else s for s in specs]
+    path = _brands_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(updated_specs, indent=2, ensure_ascii=False), encoding="utf-8")
+    tmp.replace(path)
+    return _config_from_spec(clean)

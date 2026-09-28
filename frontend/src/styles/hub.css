@@ -1,0 +1,1029 @@
+/* Brand hub (pages/brand/HubPage.tsx): the brand card in the centre, four 3D glass module cards at
+   the corners, joined to it by live wires (components/hub/LiveWires.tsx). Shared primitives (tilt,
+   view-transition timing) live in modules.css; this file only adds the hub's own look. */
+
+/* ---------- entrance choreography ---------- */
+
+/* `.is-vt` is set once at mount when the list was reached through a View Transition (back from a
+   hub): the morph is the entrance, so the cards' staggered rise is skipped for good. */
+.home.is-vt .stagger > * {
+  animation: none;
+}
+
+.hub {
+  /* When the module cards start popping in: right after the list → hub morph lands, or almost at
+     once on a direct load. Wires draw in after their module, then start carrying current. */
+  --hub-delay: 140ms;
+  --hub-wire-delay: calc(var(--hub-delay) + 420ms);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.hub.is-vt {
+  --hub-delay: 460ms;
+}
+
+/* Back from a module: that module's header shrinks back into its card (the view transition), so
+   the cards are simply there; only the wires draw in again. */
+.hub.is-back {
+  --hub-delay: 0ms;
+  --hub-wire-delay: 320ms;
+}
+
+.hub.is-back .hub-module-tilt,
+.hub.is-back .hub-pv-chip,
+.hub.is-back .hub-stage::before {
+  animation: none;
+}
+
+.hub-crumbs {
+  margin: 0;
+}
+
+/* Unpaired shared elements in a navigation morph (the other brand cards on the list, the module
+   cards when going back to the list) fade out quickly / in late instead of the default 0.55s
+   cross-fade, so the one card that moves is what the eye follows. */
+:root[data-vt] ::view-transition-old(*):only-child {
+  animation: vt-fade-out 0.22s var(--ease) both;
+}
+
+:root[data-vt] ::view-transition-new(*):only-child {
+  animation: vt-fade-in 0.32s var(--ease) 0.2s both;
+}
+
+/* ---------- stage ---------- */
+
+/* Wider than the reading column (--maxw) so the wires have room to breathe on big screens. */
+.hub-stage {
+  --hub-w: min(1240px, calc(100vw - 2 * var(--gutter)));
+  position: relative;
+  isolation: isolate;
+  width: var(--hub-w);
+  margin-inline: calc((100% - var(--hub-w)) / 2);
+  min-height: clamp(560px, calc(100dvh - 200px), 760px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(272px, 24vw, 340px) minmax(0, 1fr);
+  grid-template-rows: 1fr 1fr;
+  grid-template-areas:
+    "tl centre tr"
+    "bl centre br";
+  column-gap: clamp(64px, 9vw, 136px);
+  row-gap: clamp(28px, 6vh, 64px);
+  padding-block: var(--space-2) var(--space-5);
+}
+
+/* Blueprint dot-grid behind the stage, fading out at the edges — the "board" the cards sit on. */
+.hub-stage::before {
+  content: "";
+  position: absolute;
+  inset: -8px 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(circle, var(--grid-line-major) 1px, transparent 1.5px) 0 0 / 22px 22px;
+  mask-image: radial-gradient(ellipse 62% 58% at 50% 50%, black 30%, transparent 78%);
+  -webkit-mask-image: radial-gradient(ellipse 62% 58% at 50% 50%, black 30%, transparent 78%);
+  opacity: 0.9;
+  animation: fade 0.8s var(--ease) var(--hub-delay) backwards;
+}
+
+.hub-centre {
+  grid-area: centre;
+  align-self: center;
+  position: relative;
+  z-index: 1;
+}
+
+/* The same card as on the brand list (BrandCardBody), plus a soft accent halo: it's the source. */
+.hub-centre-card {
+  width: 100%;
+}
+
+.hub-centre-card:not(.is-skeleton) {
+  box-shadow:
+    var(--frame-ring),
+    var(--shadow-1),
+    inset 0 1px 0 var(--glass-highlight),
+    0 0 60px -18px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.hub-centre-card.is-skeleton {
+  min-height: 340px;
+}
+
+/* The round corner badge becomes a "live" indicator (no arrow: the card isn't a link here). */
+.sample-card-go.is-live {
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface-3));
+}
+
+.hub-live-dot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+}
+
+.hub-live-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: hub-ping 2.2s var(--ease) infinite;
+}
+
+@keyframes hub-ping {
+  0% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(3);
+  }
+}
+
+/* ---------- module cards ---------- */
+
+/* The nav only groups the links for assistive tech; its cards are the stage's grid items. */
+.hub-modules {
+  display: contents;
+}
+
+.hub-module {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 350px;
+  /* Where the card flies in from: out of the centre card, toward its corner. */
+  --from-x: 0px;
+  --from-y: 0px;
+}
+
+.hub-module-tl {
+  grid-area: tl;
+  justify-self: end;
+  align-self: start;
+  --from-x: 28px;
+  --from-y: 20px;
+}
+
+.hub-module-tr {
+  grid-area: tr;
+  justify-self: start;
+  align-self: start;
+  --from-x: -28px;
+  --from-y: 20px;
+}
+
+.hub-module-bl {
+  grid-area: bl;
+  justify-self: end;
+  align-self: end;
+  --from-x: 28px;
+  --from-y: -20px;
+}
+
+.hub-module-br {
+  grid-area: br;
+  justify-self: start;
+  align-self: end;
+  --from-x: -28px;
+  --from-y: -20px;
+}
+
+.hub-module-tilt {
+  height: 100%;
+  animation: hub-pop 0.65s var(--ease-spring) backwards;
+  animation-delay: calc(var(--hub-delay) + var(--i, 0) * 90ms);
+}
+
+@keyframes hub-pop {
+  from {
+    opacity: 0;
+    transform: translate(var(--from-x), var(--from-y)) scale(0.92);
+  }
+}
+
+.hub-module-glass {
+  /* Glass a touch lighter than the brand card, with the accent registration corner like .card. */
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--text-h) 8%, transparent), transparent 55%),
+    color-mix(in srgb, var(--surface-solid) 52%, transparent);
+}
+
+.hub-module-glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.7;
+  background:
+    linear-gradient(to right, var(--accent) 0 var(--mark-size), transparent 0) top left / var(--mark-size) 2px no-repeat,
+    linear-gradient(to bottom, var(--accent) 0 var(--mark-size), transparent 0) top left / 2px var(--mark-size) no-repeat;
+}
+
+/* A glow blooms from the side the wire plugs into. */
+.hub-module-glass::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 70%;
+  aspect-ratio: 1;
+  z-index: -1;
+  border-radius: 50%;
+  translate: 0 -50%;
+  background: radial-gradient(closest-side, var(--glow-1), transparent);
+  opacity: 0.5;
+  pointer-events: none;
+  transition:
+    opacity var(--dur-slow) var(--ease),
+    scale var(--dur-slow) var(--ease);
+}
+
+.hub-module-tl .hub-module-glass::before,
+.hub-module-bl .hub-module-glass::before {
+  right: -35%;
+}
+
+.hub-module-tr .hub-module-glass::before,
+.hub-module-br .hub-module-glass::before {
+  left: -35%;
+}
+
+.hub-module-glass {
+  isolation: isolate;
+}
+
+.hub-module:hover .hub-module-glass::before,
+.hub-module:focus-within .hub-module-glass::before {
+  opacity: 1;
+  scale: 1.25;
+}
+
+/* Keyboard focus: ring the glass itself (the link fills it), and lift it like a hover. */
+.hub-module-link:focus-visible {
+  outline: none;
+}
+
+.hub-module:has(.hub-module-link:focus-visible) .tilt-inner {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+}
+
+.hub-module-link {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  height: 100%;
+  min-height: 236px;
+  padding: 18px 20px 20px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.hub-module-top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.hub-module-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  box-shadow: var(--frame-ring-sm);
+  transition:
+    background var(--dur) var(--ease),
+    color var(--dur) var(--ease);
+}
+
+.hub-module:hover .hub-module-icon,
+.hub-module:focus-within .hub-module-icon {
+  color: var(--on-accent);
+  background: var(--accent);
+}
+
+.hub-module-index {
+  flex: 1;
+  min-width: 0;
+}
+
+.hub-module-go {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: var(--muted);
+  background: var(--surface-3);
+  transition:
+    transform 0.3s var(--ease),
+    background 0.3s var(--ease),
+    color 0.3s var(--ease);
+}
+
+.hub-module:hover .hub-module-go,
+.hub-module:focus-within .hub-module-go {
+  color: var(--on-accent);
+  background: var(--accent-grad);
+  transform: translateX(3px);
+}
+
+.hub-module-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hub-module-title {
+  font-family: var(--display);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+  color: var(--text-h);
+}
+
+.hub-module-blurb {
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.hub-module-preview {
+  display: block;
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--border-strong);
+  min-height: 70px;
+}
+
+/* ---------- live previews ---------- */
+
+.hub-pv-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px var(--space-4);
+  margin: 0;
+}
+
+.hub-pv-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  margin: 0;
+}
+
+.hub-pv-num {
+  font-family: var(--display);
+  font-size: 26px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.06em;
+  line-height: 1;
+  color: var(--text-h);
+}
+
+.hub-pv-unit {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+
+.hub-pv-line {
+  margin: 0 0 6px;
+  overflow: hidden;
+  font-size: var(--fs-sm);
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hub-pv-empty {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+
+.hub-pv-ok {
+  color: var(--rate-high);
+}
+
+.hub-pv-details .hub-pv-line {
+  font-weight: 500;
+  color: var(--text-h);
+}
+
+.hub-pv-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hub-pv-skeleton > span {
+  display: block;
+  height: 14px;
+  border-radius: var(--radius-xs);
+  background:
+    linear-gradient(100deg, transparent 30%, var(--glass-highlight) 50%, transparent 70%) 0 0 / 250% 100%,
+    var(--surface-3);
+  animation: shimmer 1.4s linear infinite;
+}
+
+.hub-pv-skeleton > span:first-child {
+  width: 40%;
+  height: 24px;
+}
+
+.hub-pv-skeleton > span:last-child {
+  width: 75%;
+}
+
+/* Analysis: score in its band colour + sparkline, then the trend word. */
+.hub-pv-analysis-top {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.hub-pv-score .hub-pv-num {
+  font-size: 34px;
+  color: var(--score-glass-edge);
+  text-shadow: 0 0 22px color-mix(in srgb, var(--score-glass-edge) 35%, transparent);
+}
+
+.hub-pv-score .hub-pv-unit {
+  color: var(--score-outof);
+}
+
+.hub-spark {
+  flex: none;
+  overflow: visible;
+  color: var(--score-glass-edge);
+}
+
+.hub-spark-area {
+  fill: currentColor;
+  opacity: 0.12;
+}
+
+.hub-spark-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  stroke-dasharray: 1 2;
+  stroke-dashoffset: 1;
+  animation: hub-draw 0.9s var(--ease) calc(var(--hub-delay) + 420ms) forwards;
+}
+
+.hub-spark-dot {
+  fill: currentColor;
+  filter: drop-shadow(0 0 4px currentColor);
+  animation: hub-pulse 2.2s var(--ease) infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes hub-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes hub-pulse {
+  50% {
+    transform: scale(1.5);
+  }
+}
+
+.hub-pv-meta {
+  display: flex;
+  flex-wrap: wrap;
+  white-space: normal;
+  gap: 2px var(--space-3);
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-xs);
+}
+
+.hub-pv-trend {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+.hub-pv-trend-up {
+  color: var(--rate-high);
+}
+
+.hub-pv-trend-down {
+  color: var(--rate-low);
+}
+
+/* Gaps: a count and one small status label per gap type (matches .pg-rating's square marker). */
+.hub-pv-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hub-pv-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 7px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-xs);
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-h);
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+}
+
+.hub-pv-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  background: var(--accent);
+}
+
+.hub-pv-badge-presence::before {
+  background: var(--rate-low);
+}
+
+.hub-pv-badge-prominence::before {
+  background: var(--rate-mid);
+}
+
+.hub-pv-badge-representation::before {
+  background: var(--detected);
+}
+
+.hub-pv-badge-source::before {
+  background: var(--muted);
+}
+
+.hub-pv-badge b {
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* Recommendation board: a mini kanban, one column per board state with a chip per card. */
+.hub-pv-kanban {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hub-pv-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.hub-pv-col-bar {
+  position: relative;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 3px;
+  height: 34px;
+  padding: 3px 26px 3px 3px;
+  border: 1px solid var(--border);
+  border-bottom-color: var(--line);
+  border-radius: var(--radius-xs);
+  background: linear-gradient(to top, color-mix(in srgb, var(--text-h) 5%, transparent), transparent);
+}
+
+.hub-pv-col-count {
+  position: absolute;
+  right: 5px;
+  bottom: 3px;
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--text-h);
+}
+
+.hub-pv-col.is-empty .hub-pv-col-count {
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+.hub-pv-chip {
+  flex: none;
+  height: 3px;
+  border-radius: 1px;
+  background: var(--accent);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 60%, transparent);
+  animation: hub-chip 0.35s var(--ease-spring) backwards;
+  animation-delay: calc(var(--hub-delay) + 520ms + var(--k, 0) * 60ms);
+}
+
+@keyframes hub-chip {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.hub-pv-col-done .hub-pv-chip {
+  background: var(--rate-high);
+  box-shadow: none;
+}
+
+.hub-pv-col-label {
+  overflow: hidden;
+  font-size: var(--fs-2xs);
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- live wires ---------- */
+
+.hub-wires {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.hub-wire {
+  --wire-delay: calc(var(--hub-wire-delay) + var(--i, 0) * 90ms);
+  --flow-dur: 1.15s;
+  transition: opacity var(--dur-slow) var(--ease);
+}
+
+.hub-wire path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The cable draws itself from the brand card out to its module (all three strands together). */
+.hub-wire-sheath,
+.hub-wire-base,
+.hub-wire-core {
+  stroke-dasharray: 1 2;
+  stroke-dashoffset: 1;
+  animation: hub-draw 0.75s var(--ease) var(--wire-delay) forwards;
+}
+
+/* Insulation: a wide, faint body so the cable has some weight. */
+.hub-wire-sheath {
+  stroke: var(--line);
+  stroke-width: 7;
+  opacity: 0.22;
+}
+
+.hub-wire-base {
+  stroke: var(--line);
+  stroke-width: 2.4;
+  opacity: 0.8;
+}
+
+/* The glowing conductor. */
+.hub-wire-core {
+  stroke: var(--accent);
+  stroke-width: 1.3;
+  opacity: 0.7;
+  transition:
+    stroke-width var(--dur-slow) var(--ease),
+    opacity var(--dur-slow) var(--ease);
+}
+
+/* An occasional flicker, at a different moment on each wire. */
+.hub-wire-glow {
+  animation: hub-flicker 7s steps(1, end) infinite;
+  animation-delay: calc(var(--wire-delay) + var(--i, 0) * 1.7s);
+}
+
+@keyframes hub-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  61% {
+    opacity: 0.35;
+  }
+  62% {
+    opacity: 1;
+  }
+  63% {
+    opacity: 0.5;
+  }
+  64.5% {
+    opacity: 1;
+  }
+}
+
+/* Current: bright dashes flowing out of the brand card, plus a spark (animateMotion) now and then. */
+.hub-wire-flow {
+  opacity: 0;
+  animation: hub-flow-in 0.6s var(--ease) calc(var(--wire-delay) + 0.6s) forwards;
+}
+
+@keyframes hub-flow-in {
+  to {
+    opacity: 1;
+  }
+}
+
+.hub-wire-pulse {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 12 58;
+  animation: hub-flow var(--flow-dur) linear infinite;
+}
+
+.hub-wire-pulse-boost {
+  stroke: color-mix(in srgb, var(--accent) 40%, white);
+  stroke-width: 1.4;
+  stroke-dasharray: 4 66;
+  stroke-dashoffset: -8;
+  animation-name: hub-flow-boost;
+}
+
+@keyframes hub-flow {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -70;
+  }
+}
+
+@keyframes hub-flow-boost {
+  from {
+    stroke-dashoffset: -8;
+  }
+  to {
+    stroke-dashoffset: -78;
+  }
+}
+
+.hub-wire-spark {
+  fill: color-mix(in srgb, var(--accent) 35%, white);
+}
+
+/* Ports: a socket ring on each card's edge with a lit core; the halo pulses outward. */
+.hub-port-body {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: hub-port-in 0.4s var(--ease-spring) backwards;
+  animation-delay: var(--wire-delay);
+}
+
+.hub-port-end .hub-port-body {
+  animation-delay: calc(var(--wire-delay) + 0.6s);
+}
+
+.hub-port-shared .hub-port-body {
+  animation-delay: var(--hub-wire-delay);
+}
+
+@keyframes hub-port-in {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+}
+
+.hub-port-ring {
+  fill: var(--surface-solid);
+  stroke: var(--accent);
+  stroke-width: 1.4;
+}
+
+.hub-port-core {
+  fill: var(--accent);
+  filter: drop-shadow(0 0 3px var(--accent));
+}
+
+.hub-port-halo {
+  fill: var(--accent);
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: hub-halo 2.6s var(--ease) infinite;
+  animation-delay: calc(var(--wire-delay) + 0.8s);
+}
+
+.hub-port-end .hub-port-halo {
+  animation-delay: calc(var(--wire-delay) + 1.4s);
+}
+
+@keyframes hub-halo {
+  0% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+/* Hover / focus a module: its wire runs hot and fast, the others dim. */
+.hub-wires[data-active] .hub-wire:not(.is-active) {
+  opacity: 0.35;
+}
+
+.hub-wire.is-active {
+  --flow-dur: 0.55s;
+}
+
+.hub-wire.is-active .hub-wire-core {
+  stroke-width: 2.4;
+  opacity: 1;
+}
+
+.hub-wire.is-active .hub-wire-base {
+  stroke: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+
+.hub-wire.is-active .hub-wire-pulse {
+  stroke-width: 2.8;
+}
+
+.hub-wire.is-active .hub-port-ring {
+  fill: var(--accent);
+}
+
+.hub-wire.is-active .hub-port-core {
+  fill: color-mix(in srgb, var(--accent) 30%, white);
+}
+
+/* ---------- light theme: glow reads as ink, so keep it tighter ---------- */
+
+:root[data-theme="light"] .hub-wire-core {
+  opacity: 0.85;
+}
+
+:root[data-theme="light"] .hub-wire-sheath {
+  opacity: 0.14;
+}
+
+/* ---------- stacked layout: centre on top, 2 × 2 modules, a bus wire down the middle ---------- */
+
+@media (max-width: 979px) {
+  .hub-stage {
+    --hub-w: 100%;
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto;
+    grid-template-areas:
+      "centre centre"
+      "tl tr"
+      "bl br";
+    column-gap: 36px;
+    row-gap: 22px;
+    padding-top: 0;
+  }
+
+  .hub-centre {
+    justify-self: center;
+    width: min(360px, 100%);
+    margin-bottom: 26px;
+  }
+
+  .hub-module {
+    max-width: none;
+    justify-self: stretch;
+    align-self: stretch;
+  }
+
+  .hub-module-tl,
+  .hub-module-tr {
+    --from-x: 0px;
+    --from-y: -24px;
+  }
+
+  .hub-module-bl,
+  .hub-module-br {
+    --from-x: 0px;
+    --from-y: -36px;
+  }
+}
+
+@media (max-width: 759px) {
+  .hub-stage {
+    column-gap: 24px;
+    row-gap: 16px;
+  }
+
+  .hub-centre {
+    width: 100%;
+  }
+
+  .hub-module-link {
+    gap: var(--space-2);
+    min-height: 0;
+    padding: 14px 14px 16px;
+  }
+
+  .hub-module-icon {
+    width: 34px;
+    height: 34px;
+  }
+
+  .hub-module-index,
+  .hub-module-go,
+  .hub-module-blurb {
+    display: none;
+  }
+
+  .hub-module-title {
+    font-size: 16px;
+  }
+
+  .hub-module-preview {
+    min-height: 0;
+    padding-top: var(--space-2);
+  }
+
+  .hub-pv-num {
+    font-size: 22px;
+  }
+
+  .hub-pv-score .hub-pv-num {
+    font-size: 26px;
+  }
+
+  .hub-pv-analysis-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+  }
+
+  .hub-pv-kanban {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 6px;
+  }
+
+  .hub-pv-col-bar {
+    height: 26px;
+  }
+
+  .hub-pv-badge {
+    letter-spacing: 0.04em;
+  }
+}
+
+/* ---------- reduced motion: everything in place, wires lit but still ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .hub-module-tilt,
+  .hub-stage::before,
+  .hub-port-body,
+  .hub-pv-chip,
+  .hub-live-dot::after,
+  .hub-spark-dot,
+  .hub-wire-glow {
+    animation: none;
+  }
+
+  .hub-spark-line,
+  .hub-wire-sheath,
+  .hub-wire-base,
+  .hub-wire-core {
+    animation: none;
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
+  }
+
+  .hub-port-halo {
+    animation: none;
+    opacity: 0.18;
+    transform: scale(1.6);
+  }
+}

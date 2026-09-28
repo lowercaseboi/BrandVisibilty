@@ -3,8 +3,8 @@ import { T, useT } from "../../i18n";
 import { mentionRows } from "./helpers";
 
 /** "Who AI recommends": how many answers named you and each competitor you listed. Body only — the
- * caller (BrandDashboardPage) supplies the heading via CollapsibleSection (its collapsed summary
- * uses the `competitiveLeaderName` helper from ./helpers, computed straight from the same props). */
+ * caller (the Analysis module's "Deeper numbers") supplies the heading. `competitiveLeaderName` in
+ * ./helpers gives a one-line summary from the same props. */
 export function CompetitorBars({
   summary,
   entities,

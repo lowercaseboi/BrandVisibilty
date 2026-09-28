@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import type { RatingBand } from "../format";
 import { scoreBandClass } from "../format";
 import { useFormat } from "../i18n";
@@ -7,12 +7,19 @@ const COUNT_MS = 1100;
 
 const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
-/** Counts 0 → target (ease-out) each time `play` changes; jumps straight to the target under reduced motion. */
-function useCountUp(target: number, play: number): number {
-  const [value, setValue] = useState(0);
+/** Counts 0 → target (ease-out) each time `play` changes; jumps straight to the target under reduced
+ * motion. `instant` starts at the target on mount (no first count-up), e.g. when a view-transition
+ * morph carries an already-counted ring from one page to the next. */
+function useCountUp(target: number, play: number, instant = false): number {
+  const [value, setValue] = useState(() => (instant ? target : 0));
+  const skipFirst = useRef(instant);
   const reduced = prefersReducedMotion();
   useEffect(() => {
     if (reduced) return;
+    if (skipFirst.current) {
+      skipFirst.current = false;
+      return;
+    }
     let raf = 0;
     const start = performance.now();
     const tick = (now: number) => {
@@ -30,9 +37,20 @@ function useCountUp(target: number, play: number): number {
  * Score as a ring that fills from zero while the number counts up; colour follows the rating band.
  * `play` replays it (the card bumps it on hover and focus). Decorative — the card carries the label.
  */
-export function ScoreRing({ score, band, play }: { score: number | null; band?: RatingBand; play: number }) {
+export function ScoreRing({
+  score,
+  band,
+  play,
+  instant = false,
+}: {
+  score: number | null;
+  band?: RatingBand;
+  play: number;
+  /** Show the final value on mount instead of counting up (see useCountUp). */
+  instant?: boolean;
+}) {
   const fmt = useFormat();
-  const value = useCountUp(score ?? 0, play);
+  const value = useCountUp(score ?? 0, play, instant);
   return (
     <div
       className={`score-ring${band ? ` score-ring-${band} score-band-${scoreBandClass(band)}` : ""}${score === null ? " is-empty" : ""}`}

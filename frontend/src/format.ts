@@ -1,4 +1,5 @@
 import type { Gap } from "./api/types";
+import { gapsHref } from "./components/module/modules";
 import { useT } from "./i18n";
 import type { MessageKey } from "./i18n";
 import { pages as enPages } from "./i18n/en/pages";
@@ -106,10 +107,9 @@ export function gapNumbers(gap: Gap): [string, string][] {
   return out;
 }
 
+/** The AI responses behind something (a run, or specific observation ids) in the Gaps & evidence module. */
 export function evidenceHref(brandKey: string, runId: string, refs?: string[]): string {
-  const base = `/brands/${encodeURIComponent(brandKey)}/runs/${encodeURIComponent(runId)}/evidence`;
-  if (!refs || refs.length === 0) return base;
-  return `${base}?refs=${refs.map(encodeURIComponent).join(",")}`;
+  return gapsHref(brandKey, { runId, refs });
 }
 
 // ---------------------------------------------------------------------------

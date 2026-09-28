@@ -1,28 +1,18 @@
 import { useState } from "react";
-import type { MouseEvent, ReactNode } from "react";
-import { Link } from "react-router-dom";
-import { deleteBrand, getLatestSnapshot, listBrands } from "../api/client";
+import type { MouseEvent } from "react";
+import { deleteBrand, getLatestSnapshot, listBrands, peekLatestSnapshot } from "../api/client";
 import type { BrandSummary } from "../api/types";
 import { useAsync } from "../api/useAsync";
 import { AddBrandForm } from "../components/AddBrandForm";
-import { ScoreRing } from "../components/ScoreRing";
-import { MetricStrip } from "../components/MetricStrip";
+import { BrandCardBody } from "../components/hub/BrandCardBody";
+import { forgetBrand, peekBrands, rememberBrands } from "../components/hub/brandCache";
+import { brandHref, brandVtName } from "../components/module/modules";
+import { TransitionLink } from "../components/module/transition";
 import { toast } from "../components/Toaster";
-import { RATING_KEY, ratingFromRange, scoreOutOf100, scoreRange } from "../format";
-import { useFormat, useT } from "../i18n";
+import { useT } from "../i18n";
 import { Details } from "../settings/details";
 
-const THIN_QUESTIONS = 10;
-
 const errMessage = (err: unknown) => (err instanceof Error ? err.message : String(err));
-
-function ArrowIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M5 12h14M13 6l6 6-6 6" />
-    </svg>
-  );
-}
 
 function TrashIcon() {
   return (
@@ -35,16 +25,20 @@ function TrashIcon() {
 
 function BrandCard({ brand, onDeleted }: { brand: BrandSummary; onDeleted?: () => void }) {
   const t = useT();
-  const fmt = useFormat();
   const latest = useAsync(
     () => (brand.has_data ? getLatestSnapshot(brand.brand_key) : Promise.resolve(null)),
     [brand.brand_key, brand.has_data],
   );
-  const snap = latest.status === "ready" ? latest.data : null;
-  const qCount = brand.question_count;
+  // Until the fetch lands, show the last snapshot seen for this brand (e.g. coming back from its
+  // hub), so the card is complete on the first frame and the hub's centre card can morph into it.
+  const cached = brand.has_data ? (peekLatestSnapshot(brand.brand_key) ?? null) : null;
+  const snap = latest.status === "ready" ? latest.data : cached;
   const [play, setPlay] = useState(0);
   const replay = () => setPlay((n) => n + 1);
   const [deleting, setDeleting] = useState(false);
+  const href = brandHref(brand.brand_key);
+  // Shared with the hub's centre card: the browser morphs this card into it (and back).
+  const vt = { viewTransitionName: brandVtName(brand.brand_key) };
 
   async function handleDelete(e: MouseEvent) {
     e.preventDefault();
@@ -54,6 +48,7 @@ function BrandCard({ brand, onDeleted }: { brand: BrandSummary; onDeleted?: () =
     setDeleting(true);
     try {
       await deleteBrand(brand.brand_key);
+      forgetBrand(brand.brand_key);
       toast(t("pages.brands.deleteDone", { brand: brand.brand }));
       onDeleted?.();
     } catch (err) {
@@ -62,77 +57,23 @@ function BrandCard({ brand, onDeleted }: { brand: BrandSummary; onDeleted?: () =
     }
   }
 
-  // Six fixed slots, always rendered (empty when unused), so cards in a row line up via subgrid.
-  let ring;
-  let rating: ReactNode = null;
-  let upper: ReactNode = null;
-  let meta: ReactNode = null;
-  let extra: ReactNode = null;
-  let label: string | undefined;
-  if (snap) {
-    const score = scoreOutOf100(snap.analysis_result.composite_score);
-    // Rating word from the low end of the likely range, so a lucky point estimate can't overclaim.
-    const r = ratingFromRange(...scoreRange(snap.analysis_result));
-    const when = fmt.relativeTime(snap.collection_completed_at);
-    label = t("pages.brands.scoreLabel", { score: fmt.number(score) });
-    ring = <ScoreRing score={score} band={r.band} play={play} />;
-    rating = <span className={`pg-rating pg-rating-${r.band}`}>{t(RATING_KEY[r.band])}</span>;
-    if (r.upper) upper = <p className="pg-rating-upper">{t("pages.rating.couldBe", { rating: t(RATING_KEY[r.upper]) })}</p>;
-    meta = (
-      <>
-        {when && <span className="muted small">{t("pages.brands.checked", { when })}</span>}
-        {snap.data_origin === "synthetic" && <span className="badge badge-synthetic">{t("pages.origin.synthetic")}</span>}
-        {snap.data_origin === "replay" && <span className="badge badge-replay">{t("pages.origin.replay")}</span>}
-      </>
-    );
-    extra = (
-      <Details>
-        <MetricStrip analysis={snap.analysis_result} compact />
-      </Details>
-    );
-  } else {
-    ring = <ScoreRing score={null} play={play} />;
-    if (!brand.has_data) rating = <span className="status-dot status-dot-idle">{t("pages.brands.noChecks")}</span>;
-    else if (latest.status === "loading") rating = <span className="muted small">{t("common.loading")}</span>;
-    else rating = <span className="status-dot status-dot-ok">{t("pages.brands.hasResults")}</span>;
-  }
-
   const body = (
-    <>
-      <div className="sample-card-top">
-        <div className="sample-card-title">
-          <h3>{brand.brand}</h3>
-          {typeof qCount === "number" && <p className="sample-card-sub">{t.n("pages.brands.tracked", qCount)}</p>}
-        </div>
-        <span className="sample-card-go">
-          <ArrowIcon />
-        </span>
-      </div>
-      <div className="sample-card-ring">
-        {label && <span className="sr-only">{label}</span>}
-        {ring}
-      </div>
-      <div className="sample-card-slot">{rating}</div>
-      <div className="sample-card-slot">{upper}</div>
-      <div className="sample-card-slot pg-card-meta">{meta}</div>
-      <div className="sample-card-slot">
-        {extra}
-        {typeof qCount === "number" && qCount < THIN_QUESTIONS && <p className="pg-thin">{t.n("pages.brands.thin", qCount)}</p>}
-      </div>
-    </>
+    <BrandCardBody
+      name={brand.brand}
+      questionCount={brand.question_count}
+      snap={snap}
+      hasData={brand.has_data}
+      loading={latest.status === "loading"}
+      play={play}
+    />
   );
 
-  // Sample (pilot) brands: the plain, unchanged link card — no delete button.
+  // Sample (pilot) brands: the plain link card — no delete button.
   if (brand.is_pilot) {
     return (
-      <Link
-        to={`/brands/${encodeURIComponent(brand.brand_key)}`}
-        className="card sample-card"
-        onMouseEnter={replay}
-        onFocus={replay}
-      >
+      <TransitionLink to={href} className="card sample-card" style={vt} onMouseEnter={replay} onFocus={replay}>
         {body}
-      </Link>
+      </TransitionLink>
     );
   }
 
@@ -142,15 +83,10 @@ function BrandCard({ brand, onDeleted }: { brand: BrandSummary; onDeleted?: () =
   // control is its own footer row (the card's 7th subgrid row) so it's always visible instead
   // of a hover-only corner button.
   return (
-    <div className={`card sample-card sample-card-user${deleting ? " is-deleting" : ""}`}>
-      <Link
-        to={`/brands/${encodeURIComponent(brand.brand_key)}`}
-        className="sample-card-link"
-        onMouseEnter={replay}
-        onFocus={replay}
-      >
+    <div className={`card sample-card sample-card-user${deleting ? " is-deleting" : ""}`} style={vt}>
+      <TransitionLink to={href} className="sample-card-link" onMouseEnter={replay} onFocus={replay}>
         {body}
-      </Link>
+      </TransitionLink>
       <div className="sample-card-footer">
         <button
           type="button"
@@ -210,17 +146,24 @@ function BrandRow({
 export function BrandListPage() {
   const t = useT();
   const [reload, setReload] = useState(0);
-  const state = useAsync(listBrands, [reload]);
+  const state = useAsync(() => listBrands().then(rememberBrands), [reload]);
+  // Arrived through a View Transition (back from a brand hub)? Decided once at mount: the morph is
+  // the entrance, so the page/card rise animations are skipped (hub.css) instead of replaying
+  // when the transition ends.
+  const [viaVt] = useState(() => typeof document !== "undefined" && "vt" in document.documentElement.dataset);
 
-  const brands = state.status === "ready" ? state.data : [];
+  // The last list seen fills the first frame (so the hub card can morph back into its slot).
+  const cached = peekBrands();
+  const brands = state.status === "ready" ? state.data : (cached ?? []);
+  const loading = state.status === "loading" && !cached;
   const samples = brands.filter((b) => b.is_pilot);
   const yours = brands.filter((b) => !b.is_pilot);
 
   return (
-    <div className="home">
+    <div className={`home${viaVt ? " is-vt" : ""}`}>
       <h1 className="sr-only">{t("common.app.tagline")}</h1>
 
-      {state.status === "loading" && (
+      {loading && (
         <section className="home-section" aria-busy="true">
           <SectionHead
             id="samples-loading"

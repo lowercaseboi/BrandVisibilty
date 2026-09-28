@@ -276,3 +276,49 @@ export interface MentionSummary {
   total_answers: number;
   entities: Record<string, { answers_mentioning: number; answers_ranked_first: number }>;
 }
+
+// ---------------------------------------------------------------------------
+// Brand profile (GET/PUT /brands/{key}) and recommendation board (GET/PUT /brands/{key}/board)
+// ---------------------------------------------------------------------------
+
+/** Everything saved about a brand. Pilot (sample) brands are read-only. */
+export interface BrandProfile {
+  brand_key: string;
+  brand: string;
+  is_pilot: boolean;
+  category: string;
+  cities: string[];
+  competitors: string[];
+  aliases: string[];
+  audiences: string[];
+  jobs_to_be_done: string[];
+}
+
+/** PUT /brands/{key} body. Same validation as CreateBrandRequest; 403 for a pilot brand. */
+export interface UpdateBrandRequest {
+  name: string;
+  category: string;
+  cities: string[];
+  audiences: string[];
+  competitors: string[];
+  aliases?: string[];
+  jobs_to_be_done?: string[];
+}
+
+/** Kanban columns (PRD §11.4 decisions: approve → in progress/done, reject, save for later). */
+export type BoardColumn = "suggested" | "saved" | "in_progress" | "done" | "rejected";
+
+export const BOARD_COLUMNS: BoardColumn[] = ["suggested", "saved", "in_progress", "done", "rejected"];
+
+export interface BoardCardState {
+  column: BoardColumn;
+  /** Position within its column, ascending. */
+  order: number;
+  updated_at: string;
+}
+
+/** Keyed by the stable suggestion group key (`action|competitor_id`), so it survives across runs. */
+export interface BoardState {
+  brand_key: string;
+  cards: Record<string, BoardCardState>;
+}

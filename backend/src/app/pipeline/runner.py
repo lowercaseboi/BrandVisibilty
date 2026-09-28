@@ -482,6 +482,7 @@ def run_pipeline(
         recommendations=[asdict(r) for r in recommendations],
         started_at=started_at,
         completed_at=completed_at,
+        entity_alias_table=brand.alias_table(),
     )
     snapshot["raw_observations"] = [*snapshot["raw_observations"], *unscored_raws]
     snapshot["unscored_observation_count"] = len(unscored_raws)

@@ -13,7 +13,9 @@ from app.brands import registry as brands_registry
 from app.collection import registry as provider_registry
 from app.interface.jobs import JobManager, JobNotRunning, UnknownProvider
 from app.interface.schemas import (
+    BoardState,
     BrandDeleteResponse,
+    BrandProfile,
     BrandSummary,
     CreateBrandRequest,
     HealthResponse,
@@ -24,6 +26,7 @@ from app.interface.schemas import (
     SaveQuestionsRequest,
     SkipRequest,
     TrendVerdict,
+    UpdateBrandRequest,
 )
 from app.interface.snapshots import (
     normalize_snapshot,
@@ -65,6 +68,11 @@ TAGS = [
     },
     {"name": "snapshots", "description": "Scored visibility snapshots, one per completed run."},
     {"name": "runs", "description": "Start a tracking run in the background and follow its progress."},
+    {
+        "name": "board",
+        "description": "The recommendation board (PRD §11.4): which column each suggestion sits in "
+        "(suggested, saved for later, in progress, done, rejected).",
+    },
 ]
 
 app = FastAPI(
@@ -204,6 +212,51 @@ def delete_brand(brand_key: str) -> dict[str, Any]:
             raise HTTPException(status_code=404, detail=f"Unknown brand '{brand_key}'") from None
         store.delete_brand_data(brand_key)
     return {"brand_key": brand_key, "deleted": True}
+
+
+def _brand_profile(cfg: Any) -> dict[str, Any]:
+    self_aliases = list(cfg.self_aliases)
+    if self_aliases and self_aliases[0] == cfg.name:
+        self_aliases = self_aliases[1:]  # the name itself isn't an "extra" alias
+    return {
+        "brand_key": cfg.brand_key,
+        "brand": cfg.name,
+        "is_pilot": bool(cfg.is_pilot),
+        "category": cfg.params.category,
+        "cities": list(cfg.params.cities),
+        "competitors": list(cfg.params.competitors),
+        "aliases": self_aliases,
+        "audiences": list(cfg.params.audiences),
+        "jobs_to_be_done": list(cfg.params.jobs_to_be_done),
+    }
+
+
+@app.get("/brands/{brand_key}", tags=["brands"], response_model=BrandProfile)
+def get_brand_profile(brand_key: str) -> dict[str, Any]:
+    """A brand's full saved setup (PRD §13.2): category, cities, competitors, aliases,
+    audiences and jobs. Pilot brands return their built-in profile too. 404 for an unknown
+    brand, including a "legacy" one that only has stored snapshots and no surviving setup."""
+    return _brand_profile(_brand_or_404(brand_key))
+
+
+@app.put("/brands/{brand_key}", tags=["brands"], response_model=BrandProfile)
+def update_brand_profile(brand_key: str, body: UpdateBrandRequest) -> dict[str, Any]:
+    """Edit a user-created brand's setup. Validated exactly like brand creation (422 with a
+    plain-English reason if invalid). The sample (pilot) brands are read-only (403); an
+    unknown brand 404s. `brand_key` never changes even if the display name does, so saved
+    questions, snapshot history and the recommendation board all keep pointing at the same
+    brand. Changing `competitors` or `aliases` starts a new trend baseline: the next run's
+    comparability_key differs, so the trend chart won't silently mix pre- and post-edit
+    scores (see `app.tracking.snapshot.comparability_key`)."""
+    try:
+        cfg = brands_registry.update_brand(brand_key, body.model_dump())
+    except brands_registry.PilotBrandUpdateError as exc:
+        raise HTTPException(status_code=403, detail=f"Sample brand '{exc}' cannot be edited") from exc
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Unknown brand '{brand_key}'") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _brand_profile(cfg)
 
 
 # --------------------------------------------------------------------------- questions
@@ -357,3 +410,54 @@ def skip_job(job_id: str, body: SkipRequest | None = None) -> dict[str, Any]:
 def list_jobs(brand_key: str | None = Query(default=None)) -> list[dict[str, Any]]:
     """Jobs submitted since the server started (in-memory), optionally filtered by brand."""
     return jobs.list(brand_key)
+
+
+# --------------------------------------------------------------------------- recommendation board
+
+
+def _board_store():
+    # Imported lazily, like the pipeline/question-set modules: it binds `app.tracking.store`
+    # by name at import time, so importing it only when needed keeps tests that fake out
+    # `app.tracking.store` (rather than monkeypatching its attributes) from permanently
+    # poisoning that binding for the rest of the test session.
+    from app.tracking import board
+
+    return board
+
+
+def _brand_known(brand_key: str) -> bool:
+    """True for a registered brand (pilot or user-created) or a legacy brand that only has
+    stored snapshots — everything `GET /brands` would list."""
+    try:
+        brands_registry.get_brand(brand_key)
+        return True
+    except KeyError:
+        return brand_key in store.brand_keys_with_data()
+
+
+@app.get("/brands/{brand_key}/board", tags=["board"], response_model=BoardState)
+def get_board(brand_key: str) -> dict[str, Any]:
+    """The brand's recommendation board: which column each suggestion sits in. `cards` is
+    `{}` when nothing has been saved yet. 404 for an unknown brand. Allowed for the sample
+    (pilot) brands too — the board holds the user's own decisions, not the brand's config."""
+    if not _brand_known(brand_key):
+        raise HTTPException(status_code=404, detail=f"Unknown brand '{brand_key}'")
+    return _board_store().load_board(brand_key)
+
+
+@app.put("/brands/{brand_key}/board", tags=["board"], response_model=BoardState)
+def save_board(brand_key: str, body: BoardState) -> dict[str, Any]:
+    """Replace the brand's board (drag-and-drop moves, approve/reject/save-for-later).
+    422 if the body's `brand_key` doesn't match the path, an unknown column, too many cards,
+    or a too-long card key; 404 for an unknown brand."""
+    if body.brand_key != brand_key:
+        raise HTTPException(
+            status_code=422, detail=f"Body brand_key {body.brand_key!r} does not match path {brand_key!r}"
+        )
+    if not _brand_known(brand_key):
+        raise HTTPException(status_code=404, detail=f"Unknown brand '{brand_key}'")
+    cards = {key: card.model_dump() for key, card in body.cards.items()}
+    try:
+        return _board_store().save_board(brand_key, cards)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

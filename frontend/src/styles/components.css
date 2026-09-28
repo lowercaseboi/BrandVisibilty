@@ -1585,8 +1585,7 @@ a.card:active {
   margin-top: 10px;
 }
 
-.gap-numbers,
-.rec-stats {
+.gap-numbers {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2) var(--space-5);
@@ -1600,87 +1599,6 @@ a.card:active {
 
 .link-evidence:hover {
   text-decoration: underline;
-}
-
-/* =========================================================
-   Recommendations
-   ========================================================= */
-
-.rec-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.rec-card {
-  display: flex;
-  gap: var(--space-4);
-}
-
-.rec-rank {
-  font-family: var(--mono);
-  font-size: 20px;
-  font-weight: 500;
-  color: var(--accent-text);
-  min-width: 28px;
-}
-
-.rec-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.rec-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-3);
-  margin-bottom: 10px;
-}
-
-.rec-reasoning {
-  margin: var(--space-3) 0;
-  font-size: 14.5px;
-}
-
-.rec-trace {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) 20px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--border);
-}
-
-.rec-drafted {
-  margin-left: auto;
-}
-
-.trace-link {
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-  background: var(--accent-soft);
-  color: var(--accent-text);
-  padding: 4px 10px;
-  border-radius: var(--radius-sm);
-}
-
-.trace-link:hover {
-  box-shadow: inset 0 0 0 1px var(--accent);
-}
-
-@media (max-width: 640px) {
-  .rec-card {
-    gap: var(--space-3);
-  }
-
-  .rec-drafted {
-    margin-left: 0;
-  }
 }
 
 /* =========================================================

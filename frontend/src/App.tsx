@@ -5,13 +5,24 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Toaster } from "./components/Toaster";
 import { useT } from "./i18n";
 import { BrandListPage } from "./pages/BrandListPage";
+import { AnalysisModule } from "./pages/brand/AnalysisModule";
+import { BoardModule } from "./pages/brand/BoardModule";
+import { BrandLayout, LegacyEvidenceRedirect, LegacyQuestionsRedirect } from "./pages/brand/BrandLayout";
+import { DetailsModule } from "./pages/brand/DetailsModule";
+import { GapsModule } from "./pages/brand/GapsModule";
+import { HubPage } from "./pages/brand/HubPage";
 
-// Every page except the brand overview loads on demand, keeping the first download small.
+// The landing and providers pages load on demand. The brand list, hub and modules are eager on
+// purpose: they navigate inside View Transitions (flushSync), and a lazy route would suspend
+// mid-morph and snapshot the loading fallback instead of the page.
 const LandingPage = lazy(() => import("./pages/LandingPage").then((m) => ({ default: m.LandingPage })));
-const BrandDashboardPage = lazy(() => import("./pages/BrandDashboardPage").then((m) => ({ default: m.BrandDashboardPage })));
 const ProvidersPage = lazy(() => import("./pages/ProvidersPage").then((m) => ({ default: m.ProvidersPage })));
-const EvidencePage = lazy(() => import("./pages/EvidencePage").then((m) => ({ default: m.EvidencePage })));
-const QuestionsPage = lazy(() => import("./pages/QuestionsPage").then((m) => ({ default: m.QuestionsPage })));
+
+/** One page-enter key per brand, so moving between a brand's hub and modules keeps its data mounted. */
+function sectionKey(pathname: string): string {
+  const m = /^\/brands\/([^/]+)/.exec(pathname);
+  return m ? `/brands/${m[1]}` : pathname;
+}
 
 function NotFound() {
   const t = useT();
@@ -49,8 +60,8 @@ export default function App() {
       </a>
       <AppHeader />
       <main className="app" id="main" tabIndex={-1}>
-        {/* Keyed on the path so each page plays its entrance once. */}
-        <div className="page-enter" key={pathname}>
+        {/* Keyed per section so each page plays its entrance once (a brand's hub + modules share one). */}
+        <div className="page-enter" key={sectionKey(pathname)}>
           {/* A crash in one page falls back to a friendly message instead of blanking the app;
               resetKey clears it automatically once the user navigates elsewhere. */}
           <ErrorBoundary resetKey={pathname}>
@@ -58,9 +69,15 @@ export default function App() {
               <Routes>
                 <Route path="/app" element={<BrandListPage />} />
                 <Route path="/providers" element={<ProvidersPage />} />
-                <Route path="/brands/:brandKey" element={<BrandDashboardPage />} />
-                <Route path="/brands/:brandKey/questions" element={<QuestionsPage />} />
-                <Route path="/brands/:brandKey/runs/:runId/evidence" element={<EvidencePage />} />
+                <Route path="/brands/:brandKey" element={<BrandLayout />}>
+                  <Route index element={<HubPage />} />
+                  <Route path="details" element={<DetailsModule />} />
+                  <Route path="analysis" element={<AnalysisModule />} />
+                  <Route path="gaps" element={<GapsModule />} />
+                  <Route path="recommendations" element={<BoardModule />} />
+                  <Route path="questions" element={<LegacyQuestionsRedirect />} />
+                  <Route path="runs/:runId/evidence" element={<LegacyEvidenceRedirect />} />
+                </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>

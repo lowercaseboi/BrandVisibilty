@@ -1,0 +1,135 @@
+/* Brand details module: profile card (view + edit), coverage matrix and the questions section
+   frame. The questions editor's own rows/lists/badges reuse the existing q- and pg- prefixed
+   classes in pages.css and components.css unchanged — nothing here duplicates those. */
+
+/* The old /questions deep link lands on #questions; leave room for the sticky module band. */
+.bi-questions-section {
+  scroll-margin-top: 92px;
+}
+
+/* ---------- profile: read view ---------- */
+
+.bi-profile-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.bi-pilot-badge {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.bi-fact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-4) var(--space-5);
+  margin: 0;
+}
+
+.bi-fact dt {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.bi-fact dd {
+  margin: var(--space-1) 0 0;
+  color: var(--text-h);
+}
+
+.bi-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bi-chip {
+  padding: 3px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  font-size: var(--fs-sm);
+  color: var(--text-h);
+}
+
+/* ---------- profile: edit form ---------- */
+
+.bi-edit-form .form-grid {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.bi-edit-form .alert {
+  margin-top: var(--space-3);
+}
+
+/* ---------- coverage matrix ---------- */
+
+.bi-coverage-grid {
+  display: grid;
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  overflow-x: auto;
+}
+
+.bi-coverage-row {
+  display: contents;
+}
+
+.bi-coverage-cell {
+  display: flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-solid);
+  font-size: var(--fs-sm);
+}
+
+.bi-coverage-corner {
+  background: var(--surface-2);
+}
+
+.bi-coverage-colhead,
+.bi-coverage-rowhead {
+  background: var(--surface-2);
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.bi-coverage-colhead {
+  justify-content: center;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.bi-coverage-count {
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+/* Blind spot: a zero cell, highlighted with the app's warning tone (not an alarm — for most
+   intents a zero city cell is normal; see coverageMatrix.ts). */
+.bi-coverage-count.is-blind {
+  background: color-mix(in srgb, var(--warn) 10%, var(--surface-solid));
+  color: var(--muted);
+}
+
+.bi-coverage-note {
+  margin: var(--space-2) 0 0;
+}
+
+@media (max-width: 640px) {
+  .bi-coverage-cell {
+    padding: var(--space-1) var(--space-2);
+  }
+}

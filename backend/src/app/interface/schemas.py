@@ -73,6 +73,71 @@ class BrandDeleteResponse(BaseModel):
     deleted: bool = True
 
 
+class BrandProfile(BaseModel):
+    """A brand's full saved setup (PRD §13.2). Returned by `GET /brands/{brand_key}` for a
+    pilot (read from its built-in config) or a user-created brand (read from
+    `brands.json`); a legacy brand that only has stored snapshots has no profile (404)."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "brand_key": "gajanan_vada_pav",
+                    "brand": "Gajanan Vada Pav",
+                    "is_pilot": True,
+                    "category": "vada pav outlet",
+                    "cities": ["Mumbai"],
+                    "competitors": ["Ashok Vada Pav", "Aaram Vada Pav", "Graduate Vada Pav", "Jumbo King", "Goli Vada Pav"],
+                    "aliases": ["Gajanan"],
+                    "audiences": ["street food lovers", "office-goers", "students"],
+                    "jobs_to_be_done": ["find a quick, tasty street food snack in Mumbai"],
+                }
+            ]
+        }
+    )
+
+    brand_key: str = Field(examples=["gajanan_vada_pav"])
+    brand: str = Field(description="Display name", examples=["Gajanan Vada Pav"])
+    is_pilot: bool = Field(description="True for the three built-in pilot brands (read-only)")
+    category: str
+    cities: list[str]
+    competitors: list[str]
+    aliases: list[str] = Field(description="Extra names for the brand itself, beyond its display name")
+    audiences: list[str]
+    jobs_to_be_done: list[str]
+
+
+class UpdateBrandRequest(BaseModel):
+    """`PUT /brands/{brand_key}` body. Validated exactly like `CreateBrandRequest`; 403 for
+    a pilot brand, 404 unknown, 422 invalid. `brand_key` itself never changes, even when
+    `name` does. Changing `competitors` or `aliases` starts a new trend baseline
+    (comparability_key) for runs made after the edit — see `tracking.snapshot.comparability_key`."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "name": "Ashok Vada Pav",
+                    "category": "vada pav stall",
+                    "cities": ["Mumbai", "Thane"],
+                    "audiences": ["office workers", "college students"],
+                    "competitors": ["Gajanan Vada Pav", "Aaram Vada Pav"],
+                    "aliases": ["Ashok VP"],
+                    "jobs_to_be_done": ["get a quick breakfast near the station"],
+                }
+            ]
+        }
+    )
+
+    name: str = Field(min_length=1)
+    category: str = Field(min_length=1)
+    cities: list[str] = Field(default_factory=list)
+    audiences: list[str] = Field(default_factory=list)
+    competitors: list[str] = Field(default_factory=list)
+    aliases: list[str] = Field(default_factory=list)
+    jobs_to_be_done: list[str] = Field(default_factory=list)
+
+
 class RunRequest(BaseModel):
     providers: str = Field(
         default="auto",
@@ -235,3 +300,39 @@ class TrendVerdict(BaseModel):
     span_days: float | None = None
     bootstrap_iterations: int | None = None
     valid_resamples: int | None = None
+
+
+BoardColumn = Literal["suggested", "saved", "in_progress", "done", "rejected"]
+
+
+class BoardCardState(BaseModel):
+    """Where one grouped suggestion sits on the recommendation board (PRD §11.4). Card keys
+    are the frontend's stable suggestion-group key (`action|competitor_id`), which survives
+    across runs, so they aren't part of this model — they're the `BoardState.cards` keys."""
+
+    column: BoardColumn
+    order: int = Field(description="Position within its column, ascending")
+    updated_at: str = Field(description="ISO-8601 timestamp of the last move", examples=["2026-09-28T10:00:00+00:00"])
+
+
+class BoardState(BaseModel):
+    """`GET`/`PUT /brands/{brand_key}/board`. `cards` is `{}` when nothing has been saved
+    yet. On `PUT`, `brand_key` here must match the path's brand_key (422 otherwise)."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "brand_key": "gajanan_vada_pav",
+                    "cards": {
+                        "run_more_evidence|ashok_vada_pav": {
+                            "column": "in_progress", "order": 0, "updated_at": "2026-09-28T10:00:00+00:00",
+                        }
+                    },
+                }
+            ]
+        }
+    )
+
+    brand_key: str
+    cards: dict[str, BoardCardState] = Field(default_factory=dict)

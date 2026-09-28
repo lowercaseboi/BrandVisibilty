@@ -4,10 +4,6 @@
    Page frame
    ========================================================= */
 
-.dash-head .run-meta {
-  margin-top: 2px;
-}
-
 /* Numbers every collapsible section in document order ("§ 01 Gaps", "§ 02 Recommended actions", …),
    independent of which sections actually render for a given brand/run. */
 .app {
@@ -314,194 +310,6 @@
 }
 
 /* =========================================================
-   What to do next
-   ========================================================= */
-
-.next-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: var(--space-4);
-}
-
-/* Cards in a row share one height; "Details" sits on the bottom edge of each. */
-.next-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  height: 100%;
-}
-
-.next-card-head {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-}
-
-.next-num {
-  flex: none;
-  font-family: var(--mono);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: var(--accent-text);
-  padding-top: 3px;
-}
-
-.next-title {
-  font-size: 15.5px;
-  line-height: 1.4;
-}
-
-/* Checklist: a tick per card and an overall "n of m completed" bar. */
-.next-progress {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin: 0 0 var(--space-3);
-  font-size: var(--fs-xs);
-  color: var(--muted);
-}
-
-.next-progress .progress {
-  flex: 0 1 220px;
-}
-
-.next-done {
-  display: inline-flex !important;
-  flex-direction: row !important;
-  align-items: center;
-  gap: 8px;
-  font-size: var(--fs-xs);
-  font-weight: 500;
-  color: var(--muted);
-  cursor: pointer;
-}
-
-.next-card.is-done {
-  opacity: 0.6;
-}
-
-.next-card.is-done .next-title {
-  text-decoration: line-through;
-  text-decoration-color: var(--muted);
-}
-
-/* Effort and impact as a small spec table instead of coloured pills. */
-.next-meta {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-3);
-  margin: 0;
-  padding: var(--space-3) 0;
-  border-block: 1px solid var(--border);
-}
-
-.next-meta dt {
-  margin-bottom: 4px;
-}
-
-.next-meta dd {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-/* Three-step bar: how much work a suggestion takes. */
-.effort-meter {
-  display: inline-flex;
-  gap: 2px;
-}
-
-.effort-meter i {
-  width: 5px;
-  height: 11px;
-  border-radius: 1px;
-  background: var(--surface-3);
-}
-
-.effort-meter i:nth-child(1),
-.effort-2 i:nth-child(2),
-.effort-3 i:nth-child(-n + 3) {
-  background: var(--text-h);
-}
-
-.next-impact {
-  color: var(--accent-text) !important;
-  font-variant-numeric: tabular-nums;
-}
-
-.next-steps {
-  margin: 0;
-  padding-left: 1.4em;
-  display: grid;
-  gap: 8px;
-  font-size: 13.5px;
-}
-
-.next-steps li::marker {
-  color: var(--muted);
-  font-family: var(--mono);
-  font-size: 13px;
-}
-
-.next-fallback {
-  margin: 0;
-  font-size: 14.5px;
-}
-
-.next-why {
-  margin-top: auto;
-  padding-top: var(--space-2);
-  border-top: 1px dashed var(--border);
-}
-
-.next-why-toggle {
-  display: inline-flex;
-  align-items: center;
-  font-size: 14.5px;
-  cursor: pointer;
-  padding: 4px 0;
-}
-
-.next-why-body {
-  margin-top: var(--space-2);
-  padding: var(--space-3);
-  border-radius: var(--radius);
-  background: var(--surface-2);
-  font-size: 14.5px;
-}
-
-.next-why-body p {
-  margin: 0 0 var(--space-2);
-}
-
-.next-evidence {
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.next-evidence:hover {
-  text-decoration: underline;
-}
-
-.next-more {
-  margin-top: var(--space-3);
-}
-
-@media (min-width: 900px) {
-  .next-list {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    align-items: stretch;
-  }
-}
-
-/* =========================================================
    Who AI recommends
    ========================================================= */
 
@@ -638,15 +446,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 8px;
-}
-
-.sample-all {
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.sample-all:hover {
-  text-decoration: underline;
 }
 
 /* =========================================================
@@ -907,24 +706,12 @@
    Numbers behind this (details)
    ========================================================= */
 
-.dash-details-switch {
-  margin-top: var(--space-6);
-}
-
-.dash-details > h2 {
-  margin-top: var(--space-5);
-}
-
 .dash-sub {
   margin: var(--space-5) 0 var(--space-2);
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-2);
-}
-
-.dash-details .admission-banner {
-  margin-top: 0;
 }
 
 .dash-facts {
@@ -961,10 +748,6 @@
   background: none;
   color: var(--text-h);
   font-size: 14.5px;
-}
-
-.rec-action {
-  font-size: 11px;
 }
 
 .trend-one .trend-svg {
@@ -1166,42 +949,42 @@
    section that mounts already open (persisted from localStorage) plays it once on load, and every
    toggle open replays it (closing removes the property, and with it any in-flight animation). */
 .collapsible-body-outer.is-open .collapsible-body-inner > *,
-.collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .next-list, .who-list, .metric-cards, .rec-list) > * {
+.collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .who-list, .metric-cards) > * {
   animation: rise 0.25s var(--ease) backwards;
 }
 
 .collapsible-body-outer.is-open .collapsible-body-inner > *:nth-child(2),
-.collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .next-list, .who-list, .metric-cards, .rec-list) > *:nth-child(2) {
+.collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .who-list, .metric-cards) > *:nth-child(2) {
   animation-delay: 35ms;
 }
 
 .collapsible-body-outer.is-open .collapsible-body-inner > *:nth-child(3),
-.collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .next-list, .who-list, .metric-cards, .rec-list) > *:nth-child(3) {
+.collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .who-list, .metric-cards) > *:nth-child(3) {
   animation-delay: 70ms;
 }
 
 .collapsible-body-outer.is-open .collapsible-body-inner > *:nth-child(4),
-.collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .next-list, .who-list, .metric-cards, .rec-list) > *:nth-child(4) {
+.collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .who-list, .metric-cards) > *:nth-child(4) {
   animation-delay: 105ms;
 }
 
 .collapsible-body-outer.is-open .collapsible-body-inner > *:nth-child(5),
-.collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .next-list, .who-list, .metric-cards, .rec-list) > *:nth-child(5) {
+.collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .who-list, .metric-cards) > *:nth-child(5) {
   animation-delay: 140ms;
 }
 
 .collapsible-body-outer.is-open .collapsible-body-inner > *:nth-child(6),
-.collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .next-list, .who-list, .metric-cards, .rec-list) > *:nth-child(6) {
+.collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .who-list, .metric-cards) > *:nth-child(6) {
   animation-delay: 175ms;
 }
 
 .collapsible-body-outer.is-open .collapsible-body-inner > *:nth-child(7),
-.collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .next-list, .who-list, .metric-cards, .rec-list) > *:nth-child(7) {
+.collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .who-list, .metric-cards) > *:nth-child(7) {
   animation-delay: 210ms;
 }
 
 .collapsible-body-outer.is-open .collapsible-body-inner > *:nth-child(n + 8),
-.collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .next-list, .who-list, .metric-cards, .rec-list) > *:nth-child(n + 8) {
+.collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .who-list, .metric-cards) > *:nth-child(n + 8) {
   animation-delay: 245ms;
 }
 
@@ -1210,7 +993,7 @@
    in — not "instant". Disable the stagger outright instead. */
 @media (prefers-reduced-motion: reduce) {
   .collapsible-body-outer.is-open .collapsible-body-inner > *,
-  .collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .next-list, .who-list, .metric-cards, .rec-list) > * {
+  .collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .who-list, .metric-cards) > * {
     animation: none;
   }
 }

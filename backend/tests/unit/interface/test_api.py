@@ -486,6 +486,145 @@ def test_delete_brand(real_client: TestClient) -> None:
     assert real_client.get(f"/brands/{brand_key}/questions").status_code == 404
 
 
+def test_brand_profile_get_pilot_and_user_brand(real_client: TestClient) -> None:
+    assert real_client.get("/brands/nope").status_code == 404
+
+    pilot = real_client.get("/brands/gajanan_vada_pav").json()
+    assert pilot["brand_key"] == "gajanan_vada_pav"
+    assert pilot["brand"] == "Gajanan Vada Pav"
+    assert pilot["is_pilot"] is True
+    assert pilot["category"] == "vada pav outlet"
+    assert pilot["cities"] == ["Mumbai"]
+    assert "Ashok Vada Pav" in pilot["competitors"]
+    assert pilot["aliases"] == ["Gajanan"]  # self_aliases minus the display name itself
+    assert set(pilot).issuperset({"audiences", "jobs_to_be_done"})
+
+    created = real_client.post("/brands", json={
+        "name": "Ashok Vada Pav", "category": "vada pav stall", "cities": ["Mumbai"],
+        "competitors": ["Gajanan Vada Pav"], "aliases": ["Ashok VP"], "audiences": ["students"],
+        "jobs_to_be_done": ["get a quick breakfast"],
+    })
+    assert created.status_code == 201
+    profile = real_client.get("/brands/ashok_vada_pav").json()
+    assert profile == {
+        "brand_key": "ashok_vada_pav", "brand": "Ashok Vada Pav", "is_pilot": False,
+        "category": "vada pav stall", "cities": ["Mumbai"], "competitors": ["Gajanan Vada Pav"],
+        "aliases": ["Ashok VP"], "audiences": ["students"], "jobs_to_be_done": ["get a quick breakfast"],
+    }
+
+
+def test_brand_profile_put_success_pilot_403_unknown_404_invalid_422(real_client: TestClient) -> None:
+    real_client.post("/brands", json={
+        "name": "Ashok Vada Pav", "category": "vada pav stall", "cities": ["Mumbai"],
+        "competitors": ["Gajanan Vada Pav"],
+    })
+
+    res = real_client.put("/brands/ashok_vada_pav", json={
+        "name": "Ashok Vada Pav Renamed", "category": "vada pav outlet", "cities": ["Mumbai", "Thane"],
+        "audiences": ["office workers"], "competitors": ["Gajanan Vada Pav", "Aaram Vada Pav"],
+        "aliases": ["Ashok VP"], "jobs_to_be_done": ["find a quick snack"],
+    })
+    assert res.status_code == 200
+    body = res.json()
+    assert body["brand_key"] == "ashok_vada_pav"  # unchanged even though the name changed
+    assert body["brand"] == "Ashok Vada Pav Renamed"
+    assert body["cities"] == ["Mumbai", "Thane"]
+    assert body["competitors"] == ["Gajanan Vada Pav", "Aaram Vada Pav"]
+    assert real_client.get("/brands/ashok_vada_pav").json() == body
+
+    pilot_res = real_client.put("/brands/gajanan_vada_pav", json={
+        "name": "x", "category": "y", "cities": ["Mumbai"], "competitors": [],
+    })
+    assert pilot_res.status_code == 403
+
+    unknown_res = real_client.put("/brands/does_not_exist", json={
+        "name": "x", "category": "y", "cities": ["Mumbai"], "competitors": [],
+    })
+    assert unknown_res.status_code == 404
+
+    invalid_res = real_client.put("/brands/ashok_vada_pav", json={
+        "name": "Ashok Vada Pav Renamed", "category": "vada pav outlet", "cities": [], "competitors": [],
+    })
+    assert invalid_res.status_code == 422 and "cities" in invalid_res.json()["detail"]
+
+
+def test_brand_profile_update_changes_default_questions_and_comparability_key(real_client: TestClient) -> None:
+    """Editing competitors changes the template question set (a new default) and the next
+    run's comparability_key, so the trend restarts instead of silently mixing (PRD §10.5)."""
+    from app.pipeline.runner import run_pipeline
+
+    real_client.post("/brands", json={
+        "name": "Ashok Vada Pav", "category": "vada pav stall", "cities": ["Mumbai"],
+        "competitors": ["Gajanan Vada Pav"],
+    })
+    before_questions = real_client.get("/brands/ashok_vada_pav/questions").json()
+    before_run = run_pipeline("ashok_vada_pav", providers="synthetic", samples=1)
+
+    real_client.put("/brands/ashok_vada_pav", json={
+        "name": "Ashok Vada Pav", "category": "vada pav stall", "cities": ["Mumbai"],
+        "competitors": ["Gajanan Vada Pav", "Jumbo King"],
+    })
+    after_questions = real_client.get("/brands/ashok_vada_pav/questions").json()
+    after_run = run_pipeline("ashok_vada_pav", providers="synthetic", samples=1)
+
+    assert after_questions["content_hash"] != before_questions["content_hash"]
+    assert after_run["comparability_key"] != before_run["comparability_key"]
+
+
+def test_board_get_empty_put_round_trip_bad_column_mismatched_key(real_client: TestClient) -> None:
+    assert real_client.get("/brands/nope/board").status_code == 404
+
+    empty = real_client.get("/brands/gajanan_vada_pav/board").json()
+    assert empty == {"brand_key": "gajanan_vada_pav", "cards": {}}
+
+    state = {
+        "brand_key": "gajanan_vada_pav",
+        "cards": {
+            "run_more_evidence|ashok_vada_pav": {
+                "column": "in_progress", "order": 0, "updated_at": "2026-09-28T10:00:00Z",
+            },
+        },
+    }
+    res = real_client.put("/brands/gajanan_vada_pav/board", json=state)
+    assert res.status_code == 200
+    assert res.json() == state
+    assert real_client.get("/brands/gajanan_vada_pav/board").json() == state
+
+    # Board PUT works for a pilot brand too — it's the user's own decisions.
+    bad_column = real_client.put("/brands/gajanan_vada_pav/board", json={
+        "brand_key": "gajanan_vada_pav",
+        "cards": {"x": {"column": "bogus", "order": 0, "updated_at": "t"}},
+    })
+    assert bad_column.status_code == 422
+
+    mismatched = real_client.put("/brands/gajanan_vada_pav/board", json={
+        "brand_key": "some_other_brand", "cards": {},
+    })
+    assert mismatched.status_code == 422
+
+    # Neither rejected write disturbed the previously-saved state.
+    assert real_client.get("/brands/gajanan_vada_pav/board").json() == state
+
+
+def test_board_removed_on_brand_delete(real_client: TestClient) -> None:
+    from app.tracking import board as board_store
+
+    created = real_client.post(
+        "/brands", json={"name": "Doomed Shop", "category": "vada pav stall", "cities": ["Pune"]}
+    )
+    brand_key = created.json()["brand_key"]
+    real_client.put(f"/brands/{brand_key}/board", json={
+        "brand_key": brand_key,
+        "cards": {"a": {"column": "suggested", "order": 0, "updated_at": "t"}},
+    })
+    assert board_store.board_path(brand_key).exists()
+
+    res = real_client.delete(f"/brands/{brand_key}")
+    assert res.status_code == 200
+    assert not board_store.board_path(brand_key).exists()
+    assert real_client.get(f"/brands/{brand_key}/board").status_code == 404
+
+
 def test_legacy_mention_summary_counts_scored_raw_observations() -> None:
     from app.interface.snapshots import normalize_snapshot
 
