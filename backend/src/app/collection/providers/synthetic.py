@@ -37,10 +37,13 @@ class _Profile:
     passing_share: float  # of appearances, fraction that are only a passing "(also ...)" mention
 
 
+# Deliberately spread across the dashboard's rating bands so the three sample cards read as
+# distinct demo cases: Gajanan lands "sometimes" (amber), V.A. Mayekar "rarely" (red), and the
+# perfume pilot "top" (green) — the ideal, high-visibility case (frontend/src/format.ts bandOf).
 _PROFILES: dict[str, _Profile] = {
     "gajanan_vada_pav": _Profile(presence=0.35, rank_range=(3, 5), passing_share=0.25),
     "va_mayekar_opticians": _Profile(presence=0.20, rank_range=(2, 6), passing_share=0.35),
-    "perfume_pilot": _Profile(presence=0.05, rank_range=(4, 6), passing_share=0.5),
+    "perfume_pilot": _Profile(presence=0.92, rank_range=(1, 1), passing_share=0.05),
 }
 _DEFAULT_PROFILE = _Profile(presence=0.15, rank_range=(2, 6), passing_share=0.3)
 

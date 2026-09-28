@@ -1,4 +1,5 @@
 import type {
+  BrandDeleteResponse,
   BrandSummary,
   CreateBrandRequest,
   Job,
@@ -107,6 +108,12 @@ export function listBrands(): Promise<BrandSummary[]> {
 
 export function createBrand(spec: CreateBrandRequest): Promise<BrandSummary> {
   return postJson("/brands", spec);
+}
+
+/** Delete a user-created brand and its stored runs/snapshots. Sample brands can't be deleted
+ * (the backend returns 403). */
+export function deleteBrand(brandKey: string): Promise<BrandDeleteResponse> {
+  return deleteJson(`/brands/${b(brandKey)}`);
 }
 
 export function listProviders(): Promise<ProviderInfo[]> {

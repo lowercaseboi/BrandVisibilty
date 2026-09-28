@@ -1,17 +1,20 @@
 import { useState } from "react";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { getLatestSnapshot, listBrands } from "../api/client";
+import { deleteBrand, getLatestSnapshot, listBrands } from "../api/client";
 import type { BrandSummary } from "../api/types";
 import { useAsync } from "../api/useAsync";
 import { AddBrandForm } from "../components/AddBrandForm";
 import { ScoreRing } from "../components/ScoreRing";
 import { MetricStrip } from "../components/MetricStrip";
+import { toast } from "../components/Toaster";
 import { RATING_KEY, ratingFromRange, scoreOutOf100, scoreRange } from "../format";
 import { useFormat, useT } from "../i18n";
 import { Details } from "../settings/details";
 
 const THIN_QUESTIONS = 10;
+
+const errMessage = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
 function ArrowIcon() {
   return (
@@ -21,7 +24,16 @@ function ArrowIcon() {
   );
 }
 
-function BrandCard({ brand }: { brand: BrandSummary }) {
+function TrashIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
+  );
+}
+
+function BrandCard({ brand, onDeleted }: { brand: BrandSummary; onDeleted?: () => void }) {
   const t = useT();
   const fmt = useFormat();
   const latest = useAsync(
@@ -32,6 +44,23 @@ function BrandCard({ brand }: { brand: BrandSummary }) {
   const qCount = brand.question_count;
   const [play, setPlay] = useState(0);
   const replay = () => setPlay((n) => n + 1);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete(e: MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (deleting) return;
+    if (!window.confirm(t("pages.brands.deleteConfirm", { brand: brand.brand }))) return;
+    setDeleting(true);
+    try {
+      await deleteBrand(brand.brand_key);
+      toast(t("pages.brands.deleteDone", { brand: brand.brand }));
+      onDeleted?.();
+    } catch (err) {
+      toast(t("pages.brands.deleteError", { brand: brand.brand }) + " " + errMessage(err));
+      setDeleting(false);
+    }
+  }
 
   // Six fixed slots, always rendered (empty when unused), so cards in a row line up via subgrid.
   let ring;
@@ -68,13 +97,8 @@ function BrandCard({ brand }: { brand: BrandSummary }) {
     else rating = <span className="status-dot status-dot-ok">{t("pages.brands.hasResults")}</span>;
   }
 
-  return (
-    <Link
-      to={`/brands/${encodeURIComponent(brand.brand_key)}`}
-      className="card sample-card"
-      onMouseEnter={replay}
-      onFocus={replay}
-    >
+  const body = (
+    <>
       <div className="sample-card-top">
         <div className="sample-card-title">
           <h3>{brand.brand}</h3>
@@ -95,7 +119,47 @@ function BrandCard({ brand }: { brand: BrandSummary }) {
         {extra}
         {typeof qCount === "number" && qCount < THIN_QUESTIONS && <p className="pg-thin">{t.n("pages.brands.thin", qCount)}</p>}
       </div>
-    </Link>
+    </>
+  );
+
+  // Sample (pilot) brands: the plain, unchanged link card — no delete button.
+  if (brand.is_pilot) {
+    return (
+      <Link
+        to={`/brands/${encodeURIComponent(brand.brand_key)}`}
+        className="card sample-card"
+        onMouseEnter={replay}
+        onFocus={replay}
+      >
+        {body}
+      </Link>
+    );
+  }
+
+  // A user's own brand: the same card, but wrapped so a delete button can sit beside the
+  // link instead of nested inside it (`.sample-card-link` is `display: contents`, so the
+  // link itself stays invisible to layout and the subgrid rows still line up).
+  return (
+    <div className={`card sample-card sample-card-user${deleting ? " is-deleting" : ""}`}>
+      <Link
+        to={`/brands/${encodeURIComponent(brand.brand_key)}`}
+        className="sample-card-link"
+        onMouseEnter={replay}
+        onFocus={replay}
+      >
+        {body}
+      </Link>
+      <button
+        type="button"
+        className="sample-card-delete"
+        onClick={handleDelete}
+        disabled={deleting}
+        aria-label={t("pages.brands.deleteAriaLabel", { brand: brand.brand })}
+        title={t("pages.brands.deleteLabel")}
+      >
+        <TrashIcon />
+      </button>
+    </div>
   );
 }
 
@@ -111,14 +175,28 @@ function SectionHead({ id, eyebrow, title, sub }: { id: string; eyebrow: string;
   );
 }
 
-function BrandRow({ id, eyebrow, title, sub, brands }: { id: string; eyebrow: string; title: string; sub: string; brands: BrandSummary[] }) {
+function BrandRow({
+  id,
+  eyebrow,
+  title,
+  sub,
+  brands,
+  onDeleted,
+}: {
+  id: string;
+  eyebrow: string;
+  title: string;
+  sub: string;
+  brands: BrandSummary[];
+  onDeleted?: () => void;
+}) {
   if (brands.length === 0) return null;
   return (
     <section className="home-section" aria-labelledby={id}>
       <SectionHead id={id} eyebrow={eyebrow} title={title} sub={sub} />
       <div className="sample-grid stagger">
         {brands.map((b) => (
-          <BrandCard key={b.brand_key} brand={b} />
+          <BrandCard key={b.brand_key} brand={b} onDeleted={onDeleted} />
         ))}
       </div>
     </section>
@@ -167,18 +245,19 @@ export function BrandListPage() {
       )}
 
       <BrandRow
-        id="samples-title"
-        eyebrow={t("pages.brands.samplesEyebrow")}
-        title={t("pages.brands.samples")}
-        sub={t("pages.brands.samplesSub")}
-        brands={samples}
-      />
-      <BrandRow
         id="yours-title"
         eyebrow={t("pages.brands.yoursEyebrow")}
         title={t("pages.brands.yours")}
         sub={t("pages.brands.yoursSub")}
         brands={yours}
+        onDeleted={() => setReload((n) => n + 1)}
+      />
+      <BrandRow
+        id="samples-title"
+        eyebrow={t("pages.brands.samplesEyebrow")}
+        title={t("pages.brands.samples")}
+        sub={t("pages.brands.samplesSub")}
+        brands={samples}
       />
 
       <section id="add-brand" className="home-section pg-add-section" aria-labelledby="add-brand-title">

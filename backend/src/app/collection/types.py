@@ -46,3 +46,17 @@ class LLMProvider(Protocol):
     def query(self, prompt: str, params: SamplingParams) -> CollectionResult: ...
 
     def quota_state(self) -> QuotaState: ...
+
+
+class QuotaExhausted(Exception):
+    """A provider's long-window quota (daily tokens/requests) is used up.
+
+    Raised instead of retrying: the quota won't come back within this run, so waiting on it
+    only stalls the run and every further call is another rejected request. `resets_in` is
+    the provider's Retry-After in seconds when it sent one. The message is safe to show
+    (never the request, URL or key).
+    """
+
+    def __init__(self, message: str = "daily quota used up", resets_in: float | None = None):
+        super().__init__(message)
+        self.resets_in = resets_in

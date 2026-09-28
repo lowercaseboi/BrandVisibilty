@@ -69,6 +69,12 @@ export const pages = {
   "brands.hasResults": "Results available",
   "brands.thin_one": "Only {n} question — low precision",
   "brands.thin_other": "Only {n} questions — low precision",
+  // Delete button on a user's own brand card (never shown on a sample brand).
+  "brands.deleteLabel": "Delete analysis",
+  "brands.deleteAriaLabel": "Delete analysis for {brand}",
+  "brands.deleteConfirm": "Delete {brand} and all its stored analysis? This can't be undone.",
+  "brands.deleteDone": "{brand} deleted.",
+  "brands.deleteError": "Couldn't delete {brand}. Try again.",
 
   // ---------------------------------------------------------------- Add a brand (form)
   // Labels are short nouns. Placeholders for category, audience and customer needs stay in

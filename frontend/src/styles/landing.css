@@ -389,6 +389,72 @@
 }
 
 /* =========================================================
+   Scroll FAB (bottom-right "next section" / "back to top" button)
+   ========================================================= */
+
+.lp-scroll-fab {
+  position: fixed;
+  right: var(--gutter);
+  bottom: 24px;
+  z-index: 35;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  background: var(--surface-solid);
+  color: var(--accent-text);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  box-shadow:
+    var(--frame-ring-accent),
+    var(--shadow-accent),
+    inset 0 1px 0 var(--glass-highlight);
+  cursor: pointer;
+  transition:
+    transform var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease);
+}
+
+.lp-scroll-fab:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    var(--frame-ring-accent),
+    var(--shadow-accent-hover),
+    inset 0 1px 0 var(--glass-highlight);
+}
+
+.lp-scroll-fab:active {
+  transform: translateY(0) scale(0.95);
+}
+
+.lp-scroll-fab svg {
+  transition: transform var(--dur-slow) var(--ease);
+}
+
+/* Near the bottom of the page: arrow flips to point up (back-to-top). */
+.lp-scroll-fab-up svg {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-scroll-fab,
+  .lp-scroll-fab svg {
+    transition: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .lp-scroll-fab {
+    right: 14px;
+    bottom: 14px;
+    width: 42px;
+    height: 42px;
+  }
+}
+
+/* =========================================================
    Hero
    ========================================================= */
 
@@ -656,7 +722,8 @@
 .lp-context-tag {
   margin: 0 0 10px;
   font-family: var(--sans);
-  font-size: var(--fs-xs);
+  /* ~10% larger than the base --fs-xs token (kept local so this card's type doesn't drift with it). */
+  font-size: calc(var(--fs-xs) * 1.1);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -664,7 +731,7 @@
 }
 
 .lp-context-col p:not(.lp-context-tag) {
-  font-size: 1.02rem;
+  font-size: 1.12rem;
 }
 
 @media (max-width: 760px) {

@@ -51,6 +51,11 @@ export const pages: Record<keyof typeof enPages, string> = {
   "brands.hasResults": "परिणाम उपलब्ध",
   "brands.thin_one": "केवल {n} प्रश्न — सटीकता कम",
   "brands.thin_other": "केवल {n} प्रश्न — सटीकता कम",
+  "brands.deleteLabel": "विश्लेषण हटाएं",
+  "brands.deleteAriaLabel": "{brand} का विश्लेषण हटाएं",
+  "brands.deleteConfirm": "{brand} और उसका पूरा सहेजा गया विश्लेषण हटाएं? इसे वापस नहीं लाया जा सकता।",
+  "brands.deleteDone": "{brand} हटा दिया गया।",
+  "brands.deleteError": "{brand} को हटाया नहीं जा सका। फिर से कोशिश करें।",
 
   // ---------------------------------------------------------------- Add a brand (form)
   // The app writes its queries in English, so examples in the boxes stay in English letters.

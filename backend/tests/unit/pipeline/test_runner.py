@@ -387,3 +387,35 @@ def test_snapshot_mention_summary_counts_scored_answers_only(tmp_path, monkeypat
     custom_snap = run_pipeline("gajanan_vada_pav", providers="steady", samples=1)
     assert custom_snap["unscored_observation_count"] == 1
     assert custom_snap["mention_summary"]["total_answers"] == 2
+
+
+def test_daily_quota_exhausted_skips_the_provider_at_once(tmp_path, monkeypatch):
+    """A daily-quota 429 must not be retried or counted towards 3-in-a-row: stop that provider now."""
+    from app.collection.types import QuotaExhausted
+
+    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    _install_fakes(monkeypatch)
+    from app.pipeline import runner
+
+    calls = {"dead": 0}
+
+    def fake_retry(provider, prompt, params, *, should_stop=None, on_wait=None):
+        if provider.provider_id == "dead":
+            calls["dead"] += 1
+            raise QuotaExhausted("daily quota used up", resets_in=400.0)
+        return provider.query(prompt, params)
+
+    sys.modules["app.collection.retry"].query_with_retry = fake_retry
+    n = _n_questions("gajanan_vada_pav")
+    payloads, messages = [], []
+    snap = runner.run_pipeline(
+        "gajanan_vada_pav", providers="steady,dead", samples=1,
+        on_progress=lambda m, d, t: messages.append((m, d, t)), on_provider=payloads.append,
+    )
+    assert calls["dead"] == 1
+    texts = [m for m, _, _ in messages]
+    assert "dead daily quota used up, resets in about 7 minutes — skipped for the rest of this run" in texts
+    final = _latest_by_provider(payloads)["dead"]
+    assert final["state"] == "skipped" and final["skip_reason"] == "unavailable"
+    assert final["note"] == "daily quota used up, resets in about 7 minutes" and final["failed"] == 1
+    assert snap["status"] == "partial" and messages[-1][1] == messages[-1][2] == 2 * n

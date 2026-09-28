@@ -163,7 +163,13 @@ def build_provider(provider_id: str, *, brand: BrandConfig | Any | None = None, 
     if provider_id == "openai":
         return OpenAICompatibleAdapter("openai", s.openai_base_url, s.openai_api_key, s.openai_model)
     if provider_id == "groq":
-        return OpenAICompatibleAdapter("groq", GROQ_BASE_URL, s.groq_api_key, s.groq_model)
+        extra: dict[str, Any] = {}
+        if s.groq_reasoning_effort and s.groq_model.startswith("openai/gpt-oss"):
+            extra["reasoning_effort"] = s.groq_reasoning_effort  # other Groq models reject it
+        return OpenAICompatibleAdapter(
+            "groq", GROQ_BASE_URL, s.groq_api_key, s.groq_model,
+            max_tokens=s.groq_max_tokens or None, extra_body=extra, rpm=s.groq_rpm or None,
+        )
     if provider_id == "openrouter":
         return OpenAICompatibleAdapter(
             "openrouter",

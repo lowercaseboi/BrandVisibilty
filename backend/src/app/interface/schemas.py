@@ -68,6 +68,11 @@ class CreateBrandRequest(BaseModel):
     )
 
 
+class BrandDeleteResponse(BaseModel):
+    brand_key: str
+    deleted: bool = True
+
+
 class RunRequest(BaseModel):
     providers: str = Field(
         default="auto",

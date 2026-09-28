@@ -5,7 +5,7 @@ import { toast } from "./Toaster";
 
 // Logo and the theme / language toggles, shared by the app header and the landing nav.
 
-/** Mark: a rising graph on a light-orange tile, with a yellow spark where the line peaks. */
+/** Mark: a rising graph on a dark-maroon tile, with a yellow spark where the line peaks. */
 export function Logo() {
   const id = useId();
   const fill = `bv-logo-${id}`;
@@ -13,11 +13,12 @@ export function Logo() {
     <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true">
       <defs>
         <linearGradient id={fill} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#ffb07a" />
-          <stop offset="1" stopColor="#f5793b" />
+          <stop offset="0" stopColor="#722020" />
+          <stop offset="1" stopColor="#4a1010" />
         </linearGradient>
       </defs>
-      <rect width="32" height="32" rx="9" fill={`url(#${fill})`} />
+      {/* Thin light stroke keeps the tile's edge legible against a near-black dark-theme bg. */}
+      <rect width="32" height="32" rx="9" fill={`url(#${fill})`} stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
       <path d="M7 23 L12.5 16 L17.5 19 L22.5 11.5" stroke="#fff" strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
       <path
         d="M24.5 3.6 Q25.4 8.1 29.9 9 Q25.4 9.9 24.5 14.4 Q23.6 9.9 19.1 9 Q23.6 8.1 24.5 3.6 Z"

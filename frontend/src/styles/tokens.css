@@ -34,12 +34,12 @@
   --muted: oklch(47% 0.035 274.6); /* >= 5:1 on every surface */
 
   /* accent (vermillion) — primary buttons, focus, "you" in charts */
-  --accent: oklch(77.5% 0.135 76.5);
-  --accent-hover: oklch(72% 0.14 74);
-  --accent-soft: oklch(77.5% 0.135 76.5 / 0.2);
-  --accent-text: oklch(50% 0.12 70);
-  --accent-grad: oklch(77.5% 0.135 76.5); /* solid (no gradient); white text >= 4.5:1 */
-  --accent-grad-hover: oklch(72% 0.14 74);
+  --accent: oklch(75% 0.155 60);
+  --accent-hover: oklch(70% 0.16 56);
+  --accent-soft: oklch(75% 0.155 60 / 0.2);
+  --accent-text: oklch(50% 0.13 55);
+  --accent-grad: oklch(75% 0.155 60); /* solid (no gradient); white text >= 4.5:1 */
+  --accent-grad-hover: oklch(70% 0.16 56);
   --on-accent: oklch(21% 0.045 60);
   --focus: oklch(22.3% 0.049 274.6);
 
@@ -70,7 +70,7 @@
   --mark-size: 9px;
 
   /* page glow + faint grid (behind everything) */
-  --glow-1: oklch(77.5% 0.135 76.5 / 0.22);
+  --glow-1: oklch(75% 0.155 60 / 0.22);
   --glow-2: oklch(68.8% 0.079 183.5 / 0.16);
   --glow-3: oklch(40% 0.08 274.6 / 0.1);
   --grid-line: oklch(22.3% 0.049 274.6 / 0.05);
@@ -82,7 +82,7 @@
 
   /* Glass score numbers: see-through fill + crisp edge (darker amber so it reads on cream). */
   --score-glass-fill: color-mix(in srgb, var(--accent) 82%, transparent); /* yellow, solid-ish */
-  --score-glass-edge: oklch(60% 0.13 72);
+  --score-glass-edge: oklch(60% 0.15 57);
 
   /* Landing bands (alternating sections). Light: navy ink + cream paper, as designed. */
   --band-dark: oklch(22.3% 0.049 274.6);
@@ -95,7 +95,7 @@
   --band-light-fg: oklch(24.3% 0.045 274.6);
   --band-light-dim: oklch(24.3% 0.045 274.6 / 0.64);
   --band-light-line: oklch(22.3% 0.049 274.6 / 0.14);
-  --signal: oklch(77.5% 0.135 76.5);
+  --signal: oklch(75% 0.155 60);
   --signal-fg: oklch(21% 0.045 60);
   --detected: oklch(68.8% 0.079 183.5);
   --missing: oklch(66% 0.15 28);
@@ -128,10 +128,10 @@
   --hl-disc-line: #7e22ce;
 
   /* charts */
-  --chart-self: oklch(62% 0.14 72); /* "you" */
+  --chart-self: oklch(62% 0.155 57); /* "you" */
   --chart-other: #9ca3af; /* competitors */
   --chart-line: oklch(22.3% 0.049 274.6);
-  --chart-band: oklch(77.5% 0.135 76.5 / 0.24);
+  --chart-band: oklch(75% 0.155 60 / 0.24);
   --chart-grid: rgb(24 20 16 / 0.08);
 
   /* type */
@@ -180,31 +180,31 @@
   color-scheme: dark;
   --score-glass-fill: color-mix(in srgb, var(--accent) 32%, transparent);
   --score-glass-edge: color-mix(in srgb, var(--accent) 85%, transparent);
-  --band-dark: #1f1e1c;
-  --band-dark-raised: #2a2926;
+  --band-dark: #1a1a18;
+  --band-dark-raised: #242320;
   --band-dark-fg: #f5f3ec;
   --band-dark-dim: rgb(245 243 236 / 0.66);
   --band-dark-line: rgb(236 230 215 / 0.12);
-  --band-light: #262624;
-  --band-light-raised: #302f2b;
+  --band-light: #20201f;
+  --band-light-raised: #292825;
   --band-light-fg: #f5f3ec;
   --band-light-dim: rgb(245 243 236 / 0.64);
   --band-light-line: rgb(236 230 215 / 0.1);
-  --signal: oklch(77.5% 0.135 76.5);
+  --signal: oklch(75% 0.155 60);
   --signal-fg: oklch(21% 0.045 60);
   --detected: oklch(68.8% 0.079 183.5);
   --missing: #f2a58e;
-  --bg: #262624;
-  --surface: rgb(31 30 28 / 0.72);
-  --surface-solid: #1f1e1c;
-  --surface-2: #2c2b28;
-  --surface-3: #36352f;
+  --bg: #20201f;
+  --surface: rgb(26 26 24 / 0.72);
+  --surface-solid: #1a1a18;
+  --surface-2: #252522;
+  --surface-3: #2e2d28;
   --border: rgb(236 230 215 / 0.1);
   --border-strong: rgb(236 230 215 / 0.18);
   --line: rgb(236 230 215 / 0.26);
   --line-strong: rgb(236 230 215 / 0.48);
-  --field-bg: rgb(24 23 21 / 0.6);
-  --popover: #2c2b28;
+  --field-bg: rgb(20 20 18 / 0.6);
+  --popover: #252522;
   --text: #e8e5dc;
   --text-h: #f5f3ec;
   --muted: #b5b0a3;
@@ -259,31 +259,31 @@
     color-scheme: dark;
     --score-glass-fill: color-mix(in srgb, var(--accent) 32%, transparent);
     --score-glass-edge: color-mix(in srgb, var(--accent) 85%, transparent);
-    --band-dark: #1f1e1c;
-    --band-dark-raised: #2a2926;
+    --band-dark: #1a1a18;
+    --band-dark-raised: #242320;
     --band-dark-fg: #f5f3ec;
     --band-dark-dim: rgb(245 243 236 / 0.66);
     --band-dark-line: rgb(236 230 215 / 0.12);
-    --band-light: #262624;
-    --band-light-raised: #302f2b;
+    --band-light: #20201f;
+    --band-light-raised: #292825;
     --band-light-fg: #f5f3ec;
     --band-light-dim: rgb(245 243 236 / 0.64);
     --band-light-line: rgb(236 230 215 / 0.1);
-    --signal: oklch(77.5% 0.135 76.5);
+    --signal: oklch(75% 0.155 60);
     --signal-fg: oklch(21% 0.045 60);
     --detected: oklch(68.8% 0.079 183.5);
     --missing: #f2a58e;
-    --bg: #262624;
-    --surface: rgb(31 30 28 / 0.72);
-    --surface-solid: #1f1e1c;
-    --surface-2: #2c2b28;
-    --surface-3: #36352f;
+    --bg: #20201f;
+    --surface: rgb(26 26 24 / 0.72);
+    --surface-solid: #1a1a18;
+    --surface-2: #252522;
+    --surface-3: #2e2d28;
     --border: rgb(236 230 215 / 0.1);
     --border-strong: rgb(236 230 215 / 0.18);
     --line: rgb(236 230 215 / 0.26);
     --line-strong: rgb(236 230 215 / 0.48);
-    --field-bg: rgb(24 23 21 / 0.6);
-    --popover: #2c2b28;
+    --field-bg: rgb(20 20 18 / 0.6);
+    --popover: #252522;
     --text: #e8e5dc;
     --text-h: #f5f3ec;
     --muted: #b5b0a3;

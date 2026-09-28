@@ -24,7 +24,7 @@ function readPref(): ThemePref {
   } catch {
     /* storage unavailable */
   }
-  return "system";
+  return "dark";
 }
 
 function media(): MediaQueryList | null {
@@ -40,8 +40,8 @@ function subscribeSystem(onChange: () => void) {
 const systemIsDark = () => media()?.matches ?? false;
 
 const ThemeContext = createContext<ThemeCtx>({
-  pref: "system",
-  resolved: "light",
+  pref: "dark",
+  resolved: "dark",
   setPref: () => {},
   toggle: () => {},
 });

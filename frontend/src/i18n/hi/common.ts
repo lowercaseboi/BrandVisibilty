@@ -10,6 +10,8 @@ export const common: Record<keyof typeof enCommon, string> = {
 
   "nav.providers": "कनेक्शन",
   "nav.providersClose": "कनेक्शन बंद करें",
+  "nav.scrollDown": "अगले सेक्शन पर जाएँ",
+  "nav.scrollTop": "सबसे ऊपर जाएँ",
 
   "lang.label": "भाषा",
   "lang.button": "भाषा: {lang}। {next} पर बदलें",

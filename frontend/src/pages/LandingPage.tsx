@@ -4,6 +4,7 @@ import { Features } from "../components/landing/Features";
 import { Hero } from "../components/landing/Hero";
 import { LandingFooter } from "../components/landing/LandingFooter";
 import { Sample } from "../components/landing/Sample";
+import { ScrollFab } from "../components/landing/ScrollFab";
 import { ScrollProgress } from "../components/landing/ScrollProgress";
 import { WhyItMatters } from "../components/landing/WhyItMatters";
 import { Workflow } from "../components/landing/Workflow";
@@ -29,6 +30,7 @@ export function LandingPage() {
         <Features />
       </main>
       <LandingFooter />
+      <ScrollFab />
     </div>
   );
 }

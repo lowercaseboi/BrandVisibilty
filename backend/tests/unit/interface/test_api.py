@@ -447,6 +447,44 @@ def test_created_brand_details_add_questions(real_client: TestClient) -> None:
     assert thin.json()["question_count"] == thin_count
 
 
+def test_delete_brand(real_client: TestClient) -> None:
+    """DELETE /brands/{key} removes a user brand plus its snapshots and saved questions;
+    sample (pilot) brands are protected; an unknown key 404s."""
+    from app.pipeline.runner import run_pipeline
+    from app.querysets import custom
+    from app.brands.registry import get_brand
+
+    # Pilots can never be deleted, regardless of whether they have stored data.
+    res = real_client.delete("/brands/gajanan_vada_pav")
+    assert res.status_code == 403
+    assert "gajanan_vada_pav" in {b["brand_key"] for b in real_client.get("/brands").json()}
+
+    # Unknown brand -> 404.
+    assert real_client.delete("/brands/does_not_exist").status_code == 404
+
+    created = real_client.post(
+        "/brands", json={"name": "Doomed Shop", "category": "vada pav stall", "cities": ["Pune"]}
+    )
+    assert created.status_code == 201
+    brand_key = created.json()["brand_key"]
+
+    # Give it a saved custom question list and a run, so deletion has real data to clear.
+    real_client.put(f"/brands/{brand_key}/questions", json={"questions": [{"text": "is it any good"}]})
+    run_pipeline(brand_key, providers="synthetic", samples=1)
+    assert real_client.get(f"/brands/{brand_key}/snapshots/latest").status_code == 200
+    assert custom.get_questions(get_brand(brand_key))["customized"] is True
+
+    res = real_client.delete(f"/brands/{brand_key}")
+    assert res.status_code == 200
+    assert res.json() == {"brand_key": brand_key, "deleted": True}
+
+    # Gone from the list, its snapshots, and re-deleting/looking it up 404s.
+    assert brand_key not in {b["brand_key"] for b in real_client.get("/brands").json()}
+    assert real_client.get(f"/brands/{brand_key}/snapshots/latest").status_code == 404
+    assert real_client.delete(f"/brands/{brand_key}").status_code == 404
+    assert real_client.get(f"/brands/{brand_key}/questions").status_code == 404
+
+
 def test_legacy_mention_summary_counts_scored_raw_observations() -> None:
     from app.interface.snapshots import normalize_snapshot
 

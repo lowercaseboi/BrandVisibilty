@@ -11,6 +11,11 @@ export interface BrandSummary {
   question_count?: number | null;
 }
 
+export interface BrandDeleteResponse {
+  brand_key: string;
+  deleted: boolean;
+}
+
 export interface CreateBrandRequest {
   name: string;
   category: string;

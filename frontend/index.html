@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -15,8 +15,8 @@
           pref = localStorage.getItem("bv.theme");
           lang = localStorage.getItem("bv.lang");
         } catch (e) {}
-        var dark = pref === "dark";
-        if (pref !== "light" && pref !== "dark") {
+        var dark = pref !== "light";
+        if (pref === "system") {
           try {
             dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
           } catch (e) {}

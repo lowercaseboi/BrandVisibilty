@@ -27,7 +27,7 @@ from app.analysis.scorer import score
 from app.analysis.summary import mention_summary
 from app.analysis.types import Observation
 from app.brands.registry import SELF_ENTITY_ID, BrandConfig, get_brand
-from app.collection.types import SamplingParams
+from app.collection.types import QuotaExhausted, SamplingParams
 from app.querysets import custom as question_sets
 from app.querysets.generator import Query
 from app.tracking import store
@@ -91,6 +91,8 @@ def _duration(seconds: float, *, short: bool = False) -> str:
 
 def _short_error(exc: BaseException) -> str:
     """A short, safe failure summary. Never str(exc) of an HTTP error: it can carry the URL."""
+    if isinstance(exc, QuotaExhausted):
+        return str(exc)  # our own fixed wording
     if isinstance(exc, httpx.HTTPStatusError):
         code = exc.response.status_code
         if code == 429:
@@ -274,6 +276,17 @@ def _collect_provider(
                     )
                 except Skipped:
                     return stop(records)
+                except QuotaExhausted as exc:
+                    # Daily quota gone: every further call would be rejected too, so stop now
+                    # instead of burning retries and waiting out the auto-skip timer.
+                    resets = f", resets in about {_duration(math.ceil(exc.resets_in / 60) * 60)}" if exc.resets_in else ""
+                    run.report(failed=run.status["failed"] + 1)
+                    run.finish_skipped(
+                        f"{label} {exc}{resets} — skipped for the rest of this run",
+                        f"{exc}{resets}",
+                        "unavailable",
+                    )
+                    return records
                 except Exception as exc:  # noqa: BLE001 - one failed sample must not kill the run
                     consecutive_failures += 1
                     run.last_problem = _short_error(exc)

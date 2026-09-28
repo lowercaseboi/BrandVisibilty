@@ -62,6 +62,15 @@ class Settings(BaseSettings):
     groq_api_key: str | None = None
     # llama-3.3-70b-versatile was retired by Groq; gpt-oss-120b is its general-chat replacement.
     groq_model: str = "openai/gpt-oss-120b"
+    # Groq's free tier for gpt-oss-120b is 30 req/min, 8K tokens/min, 200K tokens/day, and
+    # gpt-oss's hidden reasoning tokens count too. Uncapped, one answer is ~1-2K tokens, so a
+    # run (~18 questions x 3 answers) hit the per-minute limit within seconds and used a third
+    # of the daily budget. These keep one answer to <=1K tokens (reasoning included) and pace
+    # requests; raise them on a paid tier. GROQ_REASONING_EFFORT applies to gpt-oss models only
+    # (low / medium / high; blank = Groq's default, medium).
+    groq_max_tokens: int = 1024
+    groq_reasoning_effort: str | None = "low"
+    groq_rpm: int = 30
 
     # OpenRouter (OpenAI-compatible, fixed base URL)
     openrouter_api_key: str | None = None

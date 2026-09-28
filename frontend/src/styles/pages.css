@@ -188,6 +188,64 @@
 }
 
 
+/* A user's own brand card: the link itself generates no box (`display: contents`), so its
+   children stay direct grid items of `.sample-card`'s subgrid, exactly as when the card was
+   the link; the delete button is then a normal sibling, not nested inside the anchor. */
+.sample-card-link {
+  display: contents;
+  color: inherit;
+  text-decoration: none;
+}
+
+.sample-card-delete {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  color: var(--muted);
+  background: var(--surface-3);
+  opacity: 0;
+  transform: translateY(-2px);
+  transition:
+    opacity 0.2s var(--ease),
+    transform 0.2s var(--ease),
+    background 0.2s var(--ease),
+    color 0.2s var(--ease);
+}
+
+.sample-card-user:hover .sample-card-delete,
+.sample-card-user:focus-within .sample-card-delete,
+.sample-card-delete:focus-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.sample-card-delete:hover:not(:disabled),
+.sample-card-delete:focus-visible {
+  color: var(--on-accent);
+  background: var(--err);
+}
+
+.sample-card-delete:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.sample-card-user.is-deleting {
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+.sample-card-user.is-deleting .sample-card-delete {
+  opacity: 1;
+}
+
 .sample-card.is-skeleton {
   grid-row: auto;
   display: block;

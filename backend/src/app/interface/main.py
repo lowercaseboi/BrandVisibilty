@@ -13,6 +13,7 @@ from app.brands import registry as brands_registry
 from app.collection import registry as provider_registry
 from app.interface.jobs import JobManager, JobNotRunning, UnknownProvider
 from app.interface.schemas import (
+    BrandDeleteResponse,
     BrandSummary,
     CreateBrandRequest,
     HealthResponse,
@@ -181,6 +182,23 @@ def create_brand(body: CreateBrandRequest) -> BrandSummary:
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _brand_summary(cfg, store.brand_keys_with_data())
+
+
+@app.delete("/brands/{brand_key}", tags=["brands"], response_model=BrandDeleteResponse)
+def delete_brand(brand_key: str) -> dict[str, Any]:
+    """Delete a user-created brand and all its stored runs/snapshots (and any saved custom
+    question list). The built-in sample brands can't be deleted (403)."""
+    try:
+        brands_registry.delete_brand(brand_key)
+    except brands_registry.PilotBrandDeleteError as exc:
+        raise HTTPException(status_code=403, detail=f"Sample brand '{exc}' cannot be deleted") from exc
+    except KeyError:
+        # Not a registered brand spec — fall back to a legacy data-only brand (PRD §9.2
+        # note: stored snapshots with no surviving setup still count as "the user's data").
+        if brand_key not in store.brand_keys_with_data():
+            raise HTTPException(status_code=404, detail=f"Unknown brand '{brand_key}'") from None
+        store.delete_brand_data(brand_key)
+    return {"brand_key": brand_key, "deleted": True}
 
 
 # --------------------------------------------------------------------------- questions

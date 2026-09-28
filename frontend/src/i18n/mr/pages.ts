@@ -52,6 +52,11 @@ export const pages: Record<keyof typeof enPages, string> = {
   "brands.hasResults": "निकाल उपलब्ध",
   "brands.thin_one": "फक्त {n} प्रश्न — अचूकता कमी",
   "brands.thin_other": "फक्त {n} प्रश्न — अचूकता कमी",
+  "brands.deleteLabel": "विश्लेषण हटवा",
+  "brands.deleteAriaLabel": "{brand} चे विश्लेषण हटवा",
+  "brands.deleteConfirm": "{brand} आणि त्याचे सर्व साठवलेले विश्लेषण हटवायचे? हे पूर्ववत करता येणार नाही.",
+  "brands.deleteDone": "{brand} हटवले.",
+  "brands.deleteError": "{brand} हटवता आले नाही. पुन्हा प्रयत्न करा.",
 
   // ---------------------------------------------------------------- Add a brand (form)
   "add.optional": "(ऐच्छिक)",

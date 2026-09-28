@@ -64,6 +64,14 @@ def get_snapshot(brand_key: str, run_id: str) -> dict | None:
     return None
 
 
+def delete_brand_data(brand_key: str) -> None:
+    """Remove all stored data for a brand: its snapshot history and any saved custom
+    question list (`DATA_DIR/questions/<brand_key>.json`, written by app.querysets.custom).
+    Missing files are not an error — deleting is idempotent."""
+    _path_for(brand_key).unlink(missing_ok=True)
+    (DATA_DIR / "questions" / f"{brand_key}.json").unlink(missing_ok=True)
+
+
 def brand_keys_with_data() -> set[str]:
     directory = _tracking_dir()
     if not directory.is_dir():

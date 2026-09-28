@@ -303,6 +303,29 @@ def get_brand(brand_key: str) -> BrandConfig:
     raise KeyError(brand_key)
 
 
+class PilotBrandDeleteError(ValueError):
+    """Raised when the caller tries to delete one of the built-in sample (pilot) brands."""
+
+
+def delete_brand(brand_key: str) -> None:
+    """Remove a user-created brand's spec plus its stored runs/snapshots and saved
+    question list. Raises `PilotBrandDeleteError` for one of the built-in pilots (they
+    are not deletable) and `KeyError` if no such user brand spec exists."""
+    if brand_key in _PILOTS_BY_KEY:
+        raise PilotBrandDeleteError(brand_key)
+
+    specs = _load_user_specs()
+    remaining = [s for s in specs if s["brand_key"] != brand_key]
+    if len(remaining) == len(specs):
+        raise KeyError(brand_key)
+
+    path = _brands_path()
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(remaining, indent=2, ensure_ascii=False), encoding="utf-8")
+    tmp.replace(path)
+    store.delete_brand_data(brand_key)
+
+
 def create_brand(spec: dict) -> BrandConfig:
     """Validate (AC-1), persist to DATA_DIR/brands.json and return the new brand.
     Raises ValueError with a human-readable message on invalid input or a duplicate key."""

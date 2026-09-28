@@ -14,6 +14,9 @@ export const common = {
   "nav.providers": "Connections",
   // Same button while the Connections page is open: it takes you back.
   "nav.providersClose": "Close connections",
+  // Floating landing-page button: scrolls one viewport down, or (near the bottom) back to top.
+  "nav.scrollDown": "Scroll to next section",
+  "nav.scrollTop": "Scroll to top",
 
   "lang.label": "Language",
   // {lang} = current language, {next} = the one a click switches to (each in its own script).
