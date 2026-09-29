@@ -238,6 +238,10 @@ class Job(BaseModel):
     run_id: str | None = None
     error: str | None = None
     providers: list[ProviderProgress] = Field(default_factory=list)
+    kind: Literal["analysis", "campaign"] = Field(
+        default="analysis", description='"analysis" = a tracking run; "campaign" = Campaign Studio drafting (copy + images)'
+    )
+    campaign_id: str | None = Field(default=None, description='For kind "campaign": the campaign being drafted')
 
 
 class SkipRequest(BaseModel):
@@ -482,3 +486,136 @@ class ObservationsResponse(_OpenModel):
     run_id: str
     entities: dict[str, str]
     raw_observations: list[Observation]
+
+
+# --------------------------------------------------------------------------- Campaign Studio
+# Mirrors app.distribution.types field-for-field (PRD §11.5 / AC-10); the frontend mirrors these in
+# src/api/types.ts.
+
+ChannelIdLit = Literal["facebook_page", "instagram", "x", "google_business", "whatsapp", "export", "sandbox"]
+ImageFormatLit = Literal["square", "portrait", "landscape", "story", "gbp"]
+CampaignStatusLit = Literal["generating", "ready", "approved", "published", "partially_published", "failed"]
+DeliverableKindLit = Literal[
+    "social_post", "article", "faq", "profile_copy", "video_script", "review_request", "listing",
+    "outreach_email", "community_answer",
+]
+
+
+class ChannelStatusOut(BaseModel):
+    channel: ChannelIdLit
+    label: str
+    mode: Literal["connected", "export_only", "disabled"] = Field(
+        description="connected: can publish now · export_only: no credentials / no API (copy + download) · "
+        "disabled: turned off in config"
+    )
+    detail: str = ""
+    quota_remaining: int | None = Field(default=None, description="X free-tier posts left this month, when known")
+
+
+class AssetOut(BaseModel):
+    asset_id: str
+    format: ImageFormatLit
+    path: str = Field(description='Relative to the media root, served at GET /media/{path}, e.g. "cmp-…/ab12.png"')
+    provider: str = Field(examples=["gemini", "cloudflare", "template"])
+    prompt: str
+    seed: int | None = None
+    overlay_text: str | None = None
+    created_at: str = ""
+
+
+class VariantOut(BaseModel):
+    channel: ChannelIdLit
+    text: str
+    hashtags: list[str] = Field(default_factory=list)
+    link: str | None = None
+    asset_id: str | None = None
+    alt_text: str | None = None
+    enabled: bool = True
+    approved_hash: str | None = Field(default=None, description="Content hash at approval; null = not approved")
+    issues: list[str] = Field(default_factory=list, description="Validation problems (too long, unsupported claim…)")
+
+
+class DeliverableOut(BaseModel):
+    kind: DeliverableKindLit
+    title: str
+    body: str = Field(description="Markdown")
+    extra: dict[str, str] = Field(default_factory=dict, description='e.g. {"jsonld": "..."} for an FAQ')
+
+
+class DistributionEventOut(BaseModel):
+    event_id: str
+    campaign_id: str
+    recommendation_id: str
+    channel: ChannelIdLit
+    outcome: Literal["published", "failed", "exported", "blocked"] = Field(
+        description="blocked = refused before sending (approval gate, validation, admin token)"
+    )
+    at: str
+    external_url: str | None = None
+    external_id: str | None = None
+    error: str | None = None
+    content_hash: str | None = Field(default=None, description="Hash of exactly what was (or would have been) sent")
+
+
+class CampaignOut(BaseModel):
+    """A recommendation turned into a campaign. Every campaign keeps its recommendation_id and a
+    non-empty gap_id (AC-7); `events` logs every publish attempt, blocked ones included (AC-10)."""
+
+    campaign_id: str
+    brand_key: str
+    recommendation_id: str
+    gap_id: str = Field(min_length=1, description="Never empty (PRD AC-7)")
+    action: str
+    suggestion_key: str = Field(description="Board card key `action|competitor_id`")
+    status: CampaignStatusLit
+    created_at: str
+    updated_at: str
+    headline: str = ""
+    variants: list[VariantOut] = Field(default_factory=list)
+    assets: list[AssetOut] = Field(default_factory=list)
+    deliverables: list[DeliverableOut] = Field(default_factory=list)
+    events: list[DistributionEventOut] = Field(default_factory=list)
+    drafted_by: str = Field(default="", examples=["template", "gemini:gemini-3.1-flash-lite"])
+    approved_at: str | None = None
+    job_id: str | None = None
+
+
+class CreateCampaignRequest(BaseModel):
+    recommendation_id: str = Field(min_length=1, examples=["rec-1a2b3c4d5e"])
+
+
+class CreateCampaignResponse(BaseModel):
+    campaign: CampaignOut
+    job: Job
+
+
+class VariantPatch(BaseModel):
+    """Only the fields present are changed. Changing an approved variant revokes the approval."""
+
+    text: str | None = Field(default=None, max_length=70_000)
+    hashtags: list[str] | None = Field(default=None, max_length=30)
+    link: str | None = Field(default=None, max_length=2_000)
+    enabled: bool | None = None
+    asset_id: str | None = None
+    alt_text: str | None = Field(default=None, max_length=1_000)
+
+
+class DeliverablePatch(BaseModel):
+    title: str | None = Field(default=None, max_length=300)
+    body: str | None = Field(default=None, max_length=100_000)
+
+
+class RegenerateImageRequest(BaseModel):
+    format: ImageFormatLit
+    prompt: str | None = Field(default=None, max_length=2_000, description="Scene description; omit to reuse the current one")
+    style: str | None = Field(default=None, max_length=200, examples=["photo", "vibrant", "minimal", "festive"])
+    seed: int | None = Field(default=None, ge=0, le=2**31 - 1)
+
+
+class PublishRequest(BaseModel):
+    channels: list[ChannelIdLit] = Field(min_length=1)
+
+
+class CampaignDeleteResponse(BaseModel):
+    campaign_id: str
+    deleted: bool = True

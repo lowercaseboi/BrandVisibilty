@@ -4,6 +4,8 @@ import type { Snapshot, TrendVerdict } from "../api/types";
 import { T, useFormat, useT } from "../i18n";
 import type { Formatter, MessageKey, Vars } from "../i18n";
 import { useDetails } from "../settings/details";
+import { markerIndex, sinceDelta } from "./campaign/trendMarkers";
+import type { PublishMarker } from "./campaign/trendMarkers";
 import { toScore, useListFormat, useShortDate, useShortTime } from "./dashboard/helpers";
 
 const MAX_W = 720;
@@ -72,14 +74,18 @@ function TrendVerdictLine({ verdict }: { verdict: TrendVerdict }) {
 // The score (0–100) over checks, with its likely range as a band (PRD: trend claims always
 // carry their CI). A change in comparability_key means the questions, sampling or AIs changed,
 // so points on either side aren't comparable: the line breaks there and a dashed marker shows it.
+// `events` (Campaign Studio): small "Published" flags on the x-axis where a campaign went out,
+// placed between the checks around it, with a "since then" delta in the tooltip.
 export function TrendChart({
   snapshots,
   currentRunId,
   labelOf = (id: string) => id,
+  events,
 }: {
   snapshots: Snapshot[];
   currentRunId?: string;
   labelOf?: (id: string) => string;
+  events?: PublishMarker[];
 }) {
   const t = useT();
   const fmt = useFormat();
@@ -88,6 +94,7 @@ export function TrendChart({
   const list = useListFormat();
   const { showDetails } = useDetails();
   const [active, setActive] = useState<number | null>(null);
+  const [activeMarker, setActiveMarker] = useState<number | null>(null);
   // Draw at the container's real width so labels stay readable on phones (a fixed
   // 720-wide viewBox shrank the text to ~5px at 390px).
   const [width, setWidth] = useState(MAX_W);
@@ -178,6 +185,14 @@ export function TrendChart({
   const showLabel = (i: number) =>
     (i % labelEvery === 0 || i === n - 1) && (i === 0 || axisLabels[i] !== axisLabels[i - 1]);
   const ap = active !== null ? pts[active] : null;
+  const times = snapshots.map((s) => Date.parse(s.collection_completed_at || s.collection_started_at));
+  const markers = (events ?? []).flatMap((ev) => {
+    const at = markerIndex(times, Date.parse(ev.at));
+    if (!at) return [];
+    const mx = at.after ? x(n - 1) + Math.min(PAD.right - 8, 14) : PAD.left + (at.index / (n - 1)) * innerW;
+    return [{ ev, x: mx, delta: sinceDelta(snapshots, ev.at) }];
+  });
+  const am = activeMarker !== null ? (markers[activeMarker] ?? null) : null;
   const hitHalf = Math.max(10, innerW / (n - 1) / 2);
   const first = snapshots[0];
   const last = snapshots[n - 1];
@@ -251,6 +266,10 @@ export function TrendChart({
 
         {ap && <line x1={ap.x} x2={ap.x} y1={PAD.top} y2={PAD.top + innerH} className="trend-crosshair" />}
 
+        {markers.map((m, i) => (
+          <line key={`ml${i}`} x1={m.x} x2={m.x} y1={PAD.top} y2={PAD.top + innerH} className={`trend-pub-line${activeMarker === i ? " is-active" : ""}`} />
+        ))}
+
         {pts.map((p, i) => (
           <g key={p.s.run_id}>
             <circle
@@ -281,10 +300,40 @@ export function TrendChart({
             />
           </g>
         ))}
+
+        {markers.map((m, i) => {
+          const by = PAD.top + innerH;
+          const label = t("board.campaign.trend.marker", { headline: m.ev.headline, date: fmt.date(m.ev.at) });
+          return (
+            <g
+              key={`m${i}`}
+              className="trend-pub"
+              onMouseEnter={() => setActiveMarker(i)}
+              onMouseLeave={() => setActiveMarker(null)}
+              onClick={() => setActiveMarker(i)}
+            >
+              <title>{label}</title>
+              <rect x={m.x - 8} y={by - 4} width={16} height={16} fill="transparent" />
+              <path d={`M${m.x},${by + 1} L${m.x + 5},${by + 9} L${m.x - 5},${by + 9} Z`} className="trend-pub-flag" />
+            </g>
+          );
+        })}
       </svg>
 
       <p className="trend-tooltip-row" aria-live="polite">
-        {ap ? (
+        {am ? (
+          <>
+            {t("board.campaign.trend.marker", { headline: am.ev.headline, date: fmt.date(am.ev.at) })}
+            {am.delta !== null && (
+              <span className="muted">
+                {" · "}
+                {t("board.campaign.trend.since", {
+                  delta: `${am.delta > 0 ? "+" : ""}${fmt.number(am.delta, 1)}`,
+                })}
+              </span>
+            )}
+          </>
+        ) : ap ? (
           <>
             <T
               k="dashboard.trend.point"
@@ -320,6 +369,11 @@ export function TrendChart({
         {breaks.length > 0 && (
           <span>
             <i className="swatch swatch-break" /> {t("dashboard.trend.legendBreak")}
+          </span>
+        )}
+        {markers.length > 0 && (
+          <span>
+            <i className="swatch swatch-pub" /> {t("board.campaign.trend.legend")}
           </span>
         )}
       </div>

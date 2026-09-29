@@ -3,6 +3,8 @@ import { BOARD_COLUMNS } from "../../api/types";
 import type { BoardColumn } from "../../api/types";
 import { T, useFormat, useT } from "../../i18n";
 import { actionCopy } from "../dashboard/actions";
+import { campaignHref, useCampaignIndex } from "../campaign/CampaignIndex";
+import { statusView } from "../campaign/campaignModel";
 import { effortKey, effortLevel, gapFinding, gapTypeText, humanizeId } from "../dashboard/helpers";
 import { gapsHref } from "../module/modules";
 import { TransitionLink } from "../module/transition";
@@ -44,6 +46,9 @@ export function RecCard({ card, title, brandKey, runId, entities, labelOf, onSta
       : [{ id: s.lead.gap_id, type: humanizeId(s.lead.gap_id) }]
     : [];
   const classKey = rec ? CLASS_LABEL[rec.action_class] : undefined;
+  const campaigns = useCampaignIndex();
+  const campaign = campaigns ? campaigns.find(card.key, rec?.recommendation_id ?? null) : null;
+  const creating = campaigns?.creating === card.key;
 
   return (
     <li className={`card rec-card${s ? "" : " is-resolved"}`} data-status={card.column} aria-labelledby={titleId}>
@@ -174,6 +179,28 @@ export function RecCard({ card, title, brandKey, runId, entities, labelOf, onSta
             ))}
           </select>
         </span>
+        {campaigns && campaign && (
+          <TransitionLink
+            to={campaignHref(brandKey, campaign.campaign_id)}
+            className="btn btn-secondary btn-small rec-campaign"
+            title={t(statusView(campaign.status).key)}
+          >
+            {t("board.campaign.open")}
+          </TransitionLink>
+        )}
+        {campaigns && !campaign && rec && card.column !== "rejected" && (
+          <button
+            type="button"
+            className="btn btn-secondary btn-small rec-campaign"
+            disabled={campaigns.creating !== null}
+            aria-busy={creating || undefined}
+            aria-label={t("board.campaign.createLabel", { title })}
+            onClick={() => campaigns.create(card.key, rec.recommendation_id)}
+          >
+            {creating && <span className="cs-spinner" aria-hidden="true" />}
+            {creating ? t("board.campaign.creating") : t("board.campaign.create")}
+          </button>
+        )}
         {!s && (
           <button
             type="button"

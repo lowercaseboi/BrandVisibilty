@@ -89,6 +89,42 @@ class Settings(BaseSettings):
     custom_llm_api_key: str | None = None
     custom_llm_model: str | None = None
 
+    # --- Campaign Studio / distribution (PRD §11.5, AC-10) ---------------------------------
+    # ADMIN_TOKEN gates approve / publish / delete (header X-Admin-Token). Unset → only the
+    # sandbox / export / whatsapp channels (which send nothing externally) can be used.
+    admin_token: str | None = None
+    # Fernet key material for encrypting stored platform tokens (later OAuth "Connect" UI).
+    secret_key: str | None = None
+    # Public origin that serves /media/... (Render URL, or a cloudflared tunnel locally).
+    # Instagram needs the image at a public URL; unset → IG publishing fails with a clear error.
+    public_base_url: str | None = None
+    # Image providers in fallback order; "template" is the offline renderer (always works).
+    image_providers: str = "gemini,cloudflare,template"
+    # Gemini image-capable model (uses GEMINI_API_KEY).
+    gemini_image_model: str = "gemini-3.1-flash-image-preview"
+    # Cloudflare Workers AI (FLUX schnell, free daily quota).
+    cloudflare_account_id: str | None = None
+    cloudflare_api_token: str | None = None
+    cloudflare_image_model: str = "@cf/black-forest-labs/flux-1-schnell"
+    # Meta: Facebook Page + Instagram Business (Graph API).
+    meta_page_id: str | None = None
+    meta_page_token: str | None = None
+    ig_user_id: str | None = None
+    meta_graph_version: str = "v21.0"
+    # X (user-context OAuth 1.0a). Free tier allows few posts/month; the adapter counts them.
+    x_api_key: str | None = None
+    x_api_secret: str | None = None
+    x_access_token: str | None = None
+    x_access_secret: str | None = None
+    x_monthly_post_limit: int = 500
+    # Google Business Profile (export-only until Google approves API access).
+    gbp_account_id: str | None = None
+    gbp_location_id: str | None = None
+    gbp_access_token: str | None = None
+    # Campaign copy drafting: "auto" = first configured of gemini / groq, else template;
+    # or force "gemini" | "groq" | "template".
+    copy_provider: str = "auto"
+
     @model_validator(mode="before")
     @classmethod
     def _blank_means_unset(cls, data: object) -> object:

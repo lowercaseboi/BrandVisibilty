@@ -1,5 +1,12 @@
 import type {
   BoardState,
+  Campaign,
+  ChannelId,
+  ChannelStatus,
+  CreateCampaignResponse,
+  DeliverablePatch,
+  RegenerateImageRequest,
+  VariantPatch,
   BrandDeleteResponse,
   BrandProfile,
   BrandSummary,
@@ -201,4 +208,85 @@ export function saveQuestions(brandKey: string, questions: QuestionInput[]): Pro
 
 export function resetQuestions(brandKey: string): Promise<QuestionSet> {
   return deleteJson(`/brands/${b(brandKey)}/questions`);
+}
+
+// ---------------------------------------------------------------------------
+// Campaign Studio (PRD §11.5 / AC-10)
+// ---------------------------------------------------------------------------
+
+/** Header the backend checks on approve / publish / delete (ADMIN_TOKEN). */
+export const ADMIN_HEADER = "X-Admin-Token";
+
+/** JSON request with the admin token header; an empty token sends no header (server without ADMIN_TOKEN). */
+function adminJson<T>(method: string, path: string, token: string, body?: unknown): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (token) headers[ADMIN_HEADER] = token;
+  return request<T>(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+}
+
+const campaignPath = (brandKey: string, campaignId: string) => `/brands/${b(brandKey)}/campaigns/${b(campaignId)}`;
+
+/** Every channel adapter: connected / export only / disabled, with detail and quota. */
+export function listChannels(): Promise<ChannelStatus[]> {
+  return getJson("/channels");
+}
+
+export function listCampaigns(brandKey: string): Promise<Campaign[]> {
+  return getJson(`/brands/${b(brandKey)}/campaigns`);
+}
+
+/** Starts drafting a campaign for one recommendation (202): the campaign comes back "generating"
+ * with its job; poll getJob until terminal, then getCampaign. */
+export function createCampaign(brandKey: string, recommendationId: string): Promise<CreateCampaignResponse> {
+  return postJson(`/brands/${b(brandKey)}/campaigns`, { recommendation_id: recommendationId });
+}
+
+export function getCampaign(brandKey: string, campaignId: string): Promise<Campaign> {
+  return getJson(campaignPath(brandKey, campaignId));
+}
+
+/** Edit one channel's copy. Editing an approved campaign revokes the approval. */
+export function patchVariant(brandKey: string, campaignId: string, channel: ChannelId, patch: VariantPatch): Promise<Campaign> {
+  return request(`${campaignPath(brandKey, campaignId)}/variants/${b(channel)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+}
+
+export function updateDeliverable(
+  brandKey: string,
+  campaignId: string,
+  index: number,
+  patch: DeliverablePatch,
+): Promise<Campaign> {
+  return postJson(`${campaignPath(brandKey, campaignId)}/deliverables/${index}`, patch);
+}
+
+export function regenerateImage(brandKey: string, campaignId: string, body: RegenerateImageRequest): Promise<Campaign> {
+  return postJson(`${campaignPath(brandKey, campaignId)}/regenerate-image`, body);
+}
+
+export function approveCampaign(brandKey: string, campaignId: string, token: string): Promise<Campaign> {
+  return adminJson("POST", `${campaignPath(brandKey, campaignId)}/approve`, token, {});
+}
+
+export function publishCampaign(brandKey: string, campaignId: string, channels: ChannelId[], token: string): Promise<Campaign> {
+  return adminJson("POST", `${campaignPath(brandKey, campaignId)}/publish`, token, { channels });
+}
+
+export function deleteCampaign(brandKey: string, campaignId: string, token: string): Promise<unknown> {
+  return adminJson("DELETE", campaignPath(brandKey, campaignId), token);
+}
+
+/** Direct link to the export pack (images + copy + deliverables). */
+export function campaignExportUrl(brandKey: string, campaignId: string): string {
+  return `${API_BASE}${campaignPath(brandKey, campaignId)}/export.zip`;
+}
+
+/** URL of a generated image (Asset.path is relative to the media root). */
+export function mediaUrl(path: string, version?: string): string {
+  const clean = path.split("/").map(encodeURIComponent).join("/");
+  return `${API_BASE}/media/${clean}${version ? `?v=${encodeURIComponent(version)}` : ""}`;
 }

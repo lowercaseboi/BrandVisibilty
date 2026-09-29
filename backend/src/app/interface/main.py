@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
+import contextlib
+import hmac
 import logging
 import os
+import re
+from collections.abc import Iterator
 from dataclasses import asdict
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Query, status
+from fastapi import FastAPI, Header, HTTPException, Query, Response, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 from app.brands import registry as brands_registry
 from app.collection import registry as provider_registry
@@ -18,18 +23,27 @@ from app.interface.schemas import (
     BrandDeleteResponse,
     BrandProfile,
     BrandSummary,
+    CampaignDeleteResponse,
+    CampaignOut,
+    ChannelStatusOut,
     CreateBrandRequest,
+    CreateCampaignRequest,
+    CreateCampaignResponse,
+    DeliverablePatch,
     HealthResponse,
     Job,
     ObservationsResponse,
     ProviderInfoOut,
+    PublishRequest,
     QuestionSet,
+    RegenerateImageRequest,
     RunRequest,
     SaveQuestionsRequest,
     SkipRequest,
     Snapshot,
     TrendVerdict,
     UpdateBrandRequest,
+    VariantPatch,
 )
 from app.interface.snapshots import (
     normalize_snapshot,
@@ -75,6 +89,13 @@ TAGS = [
         "name": "board",
         "description": "The recommendation board (PRD §11.4): which column each suggestion sits in "
         "(suggested, saved for later, in progress, done, rejected).",
+    },
+    {
+        "name": "campaigns",
+        "description": "Campaign Studio (PRD §11.5, AC-10): turn a recommendation into channel-ready copy and "
+        "images, edit, approve, then publish or export. Approve / publish / delete need the `X-Admin-Token` "
+        "header when the server sets ADMIN_TOKEN; without ADMIN_TOKEN only the sandbox, export and WhatsApp "
+        "channels can be used. Every publish attempt, including refused ones, is logged.",
     },
 ]
 
@@ -497,3 +518,251 @@ def save_board(brand_key: str, body: BoardState) -> dict[str, Any]:
         return _board_store().save_board(brand_key, cards)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+# --------------------------------------------------------------------------- campaigns (Campaign Studio)
+
+
+def _campaigns():
+    # Lazy for the same reason as `_board_store`: the service imports the brand registry and the
+    # tracking store/board inside its functions, and the image/channel packages only when used.
+    from app.distribution import service
+
+    return service
+
+
+def _recover_campaigns() -> None:
+    try:
+        _campaigns().recover_stale_generating()
+    except (OSError, ValueError):
+        logging.getLogger("app.distribution").exception("Could not recover stale campaign jobs")
+
+
+_recover_campaigns()
+
+
+def _admin_token() -> str | None:
+    from app.config.settings import Settings
+
+    token = Settings().admin_token
+    return token.strip() if token and token.strip() else None
+
+
+ADMIN_HEADER_DOC = "Must equal the server's ADMIN_TOKEN (when one is set)"
+
+
+def _check_admin(header: str | None) -> tuple[bool, str | None]:
+    """(token_configured, actor). Raises 401 when a token is configured and the header is wrong."""
+    token = _admin_token()
+    if token is None:
+        return False, "user"
+    if header is None or not hmac.compare_digest(header.encode(), token.encode()):
+        return True, None
+    return True, "admin"
+
+
+@contextlib.contextmanager
+def _campaign_errors() -> Iterator[None]:
+    service = _campaigns()
+    from app.distribution.gate import GateError
+
+    try:
+        yield
+    except service.CampaignBusy as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except GateError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except service.CampaignNotFound as exc:
+        raise HTTPException(status_code=404, detail=f"Unknown campaign '{exc}'") from exc
+    except service.RecommendationNotFound as exc:
+        raise HTTPException(status_code=404, detail=f"No stored snapshot has recommendation '{exc}'") from exc
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Unknown brand or item {exc}") from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+def _known_brand_or_404(brand_key: str) -> None:
+    if not _brand_known(brand_key):
+        raise HTTPException(status_code=404, detail=f"Unknown brand '{brand_key}'")
+
+
+@app.get("/channels", tags=["campaigns"], response_model=list[ChannelStatusOut])
+def list_channels() -> list[dict[str, Any]]:
+    """Every channel adapter and whether it can publish now (connected), only export, or is disabled.
+    Reads settings only — never calls a platform. Credentials are never returned."""
+    return [asdict(s) for s in _campaigns().channel_statuses()]
+
+
+@app.get("/brands/{brand_key}/campaigns", tags=["campaigns"], response_model=list[CampaignOut])
+def list_campaigns(brand_key: str) -> list[dict[str, Any]]:
+    """The brand's campaigns, newest first."""
+    _known_brand_or_404(brand_key)
+    with _campaign_errors():
+        return [asdict(c) for c in _campaigns().list_campaigns(brand_key)]
+
+
+@app.post(
+    "/brands/{brand_key}/campaigns",
+    tags=["campaigns"],
+    response_model=CreateCampaignResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def create_campaign(brand_key: str, body: CreateCampaignRequest) -> dict[str, Any]:
+    """Start a campaign for a stored recommendation (it keeps the recommendation's gap_id, AC-7). The
+    campaign comes back "generating" with its job (kind "campaign"): poll `GET /jobs/{job_id}`, then
+    refetch the campaign. The recommendation's board card moves to "in progress"."""
+    with _campaign_errors():
+        campaign, job = _campaigns().create_campaign(brand_key, body.recommendation_id, jobs=jobs)
+    return {"campaign": asdict(campaign), "job": job}
+
+
+@app.get("/brands/{brand_key}/campaigns/{campaign_id}", tags=["campaigns"], response_model=CampaignOut)
+def get_campaign(brand_key: str, campaign_id: str) -> dict[str, Any]:
+    with _campaign_errors():
+        return asdict(_campaigns().get_campaign(brand_key, campaign_id))
+
+
+@app.patch("/brands/{brand_key}/campaigns/{campaign_id}/variants/{channel}", tags=["campaigns"], response_model=CampaignOut)
+def patch_variant(brand_key: str, campaign_id: str, channel: str, body: VariantPatch) -> dict[str, Any]:
+    """Edit one channel's copy (only the fields sent). Editing an approved campaign's content revokes
+    the approval (status back to "ready"). 409 while the campaign is still generating."""
+    patch = body.model_dump(exclude_unset=True)
+    for key in ("text", "hashtags", "enabled"):  # null means "leave as is" for these
+        if patch.get(key, 0) is None:
+            patch.pop(key)
+    with _campaign_errors():
+        return asdict(_campaigns().edit_variant(brand_key, campaign_id, channel, patch))
+
+
+@app.post("/brands/{brand_key}/campaigns/{campaign_id}/deliverables/{index}", tags=["campaigns"], response_model=CampaignOut)
+def update_deliverable(brand_key: str, campaign_id: str, index: int, body: DeliverablePatch) -> dict[str, Any]:
+    """Edit a deliverable's title/body (export-only content, so approval is not affected)."""
+    patch = {k: v for k, v in body.model_dump(exclude_unset=True).items() if v is not None}
+    with _campaign_errors():
+        return asdict(_campaigns().edit_deliverable(brand_key, campaign_id, index, patch))
+
+
+@app.post("/brands/{brand_key}/campaigns/{campaign_id}/regenerate-image", tags=["campaigns"], response_model=CampaignOut)
+def regenerate_image(brand_key: str, campaign_id: str, body: RegenerateImageRequest) -> dict[str, Any]:
+    """Generate a new image for one format (synchronous, ~5-40s with a hosted model) and switch the
+    channels using that format to it. Older images stay available. Revokes approval if it changes
+    an approved variant."""
+    with _campaign_errors():
+        return asdict(
+            _campaigns().regenerate_image(
+                brand_key, campaign_id, format=body.format, prompt=body.prompt, style=body.style, seed=body.seed
+            )
+        )
+
+
+@app.post("/brands/{brand_key}/campaigns/{campaign_id}/approve", tags=["campaigns"], response_model=CampaignOut)
+def approve_campaign(
+    brand_key: str,
+    campaign_id: str,
+    x_admin_token: str | None = Header(default=None, description=ADMIN_HEADER_DOC),
+) -> dict[str, Any]:
+    """Approve the campaign exactly as it is now: each enabled variant's content hash is recorded, and
+    only that content can be published. Needs X-Admin-Token when ADMIN_TOKEN is set (401 otherwise)."""
+    _configured, actor = _check_admin(x_admin_token)
+    if actor is None:
+        raise HTTPException(status_code=401, detail="Missing or wrong X-Admin-Token")
+    with _campaign_errors():
+        return asdict(_campaigns().approve(brand_key, campaign_id, actor=actor))
+
+
+@app.post("/brands/{brand_key}/campaigns/{campaign_id}/publish", tags=["campaigns"], response_model=CampaignOut)
+def publish_campaign(
+    brand_key: str,
+    campaign_id: str,
+    body: PublishRequest,
+    x_admin_token: str | None = Header(default=None, description=ADMIN_HEADER_DOC),
+) -> dict[str, Any]:
+    """Publish (or export) to the given channels. Each attempt is logged as an event, whatever the
+    outcome (AC-10): "published", "exported" (export / WhatsApp / a channel without credentials),
+    "failed", or "blocked" (not approved, edited since approval, validation, missing admin token).
+
+    With ADMIN_TOKEN set, X-Admin-Token is required (401). Without ADMIN_TOKEN only sandbox, export
+    and whatsapp are allowed: other channels in the request are logged "blocked" and the rest is
+    published (200); if no requested channel is allowed → 403 (the refused attempts are still logged).
+    Campaign status counts only published/failed attempts since approval."""
+    from app.distribution.gate import LOCAL_CHANNELS
+
+    service = _campaigns()
+    configured, actor = _check_admin(x_admin_token)
+    channels = list(dict.fromkeys(body.channels))
+    with _campaign_errors():
+        if configured and actor is None:
+            service.record_blocked(brand_key, campaign_id, channels, "Missing or wrong X-Admin-Token", actor="anonymous")
+            raise HTTPException(status_code=401, detail="Missing or wrong X-Admin-Token")
+        refused: dict[str, str] = {}
+        if not configured:
+            msg = "Set ADMIN_TOKEN to publish to real channels"
+            refused = {c: msg for c in channels if c not in LOCAL_CHANNELS}
+            if len(refused) == len(channels):  # nothing allowed at all → 403 (attempts still logged)
+                service.record_blocked(brand_key, campaign_id, channels, msg, actor=actor or "user")
+                raise HTTPException(status_code=403, detail=msg)
+        # Mixed request: allowed channels go out, refused ones are logged "blocked" (200).
+        return asdict(service.publish(brand_key, campaign_id, channels, actor=actor or "user", refused=refused))
+
+
+@app.get(
+    "/brands/{brand_key}/campaigns/{campaign_id}/export.zip",
+    tags=["campaigns"],
+    response_class=Response,
+    responses={200: {"content": {"application/zip": {}}, "description": "Images, copy per channel, deliverables, README"}},
+)
+def export_campaign(brand_key: str, campaign_id: str) -> Response:
+    """Download the export pack (works in any status; sends nothing anywhere)."""
+    with _campaign_errors():
+        data = _campaigns().export_zip(brand_key, campaign_id)
+    return Response(
+        content=data,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{campaign_id}.zip"'},
+    )
+
+
+@app.delete("/brands/{brand_key}/campaigns/{campaign_id}", tags=["campaigns"], response_model=CampaignDeleteResponse)
+def delete_campaign(
+    brand_key: str,
+    campaign_id: str,
+    x_admin_token: str | None = Header(default=None, description=ADMIN_HEADER_DOC),
+) -> dict[str, Any]:
+    """Delete a campaign and its images (its audit-log entries stay). Needs X-Admin-Token when
+    ADMIN_TOKEN is set."""
+    _configured, actor = _check_admin(x_admin_token)
+    if actor is None:
+        raise HTTPException(status_code=401, detail="Missing or wrong X-Admin-Token")
+    with _campaign_errors():
+        if not _campaigns().delete_campaign(brand_key, campaign_id, actor=actor):
+            raise HTTPException(status_code=404, detail=f"Unknown campaign '{campaign_id}'")
+    return {"campaign_id": campaign_id, "deleted": True}
+
+
+_MEDIA_DIR_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
+_MEDIA_FILE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}\.(png|jpg|jpeg)$")
+_MEDIA_TYPES = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg"}
+
+
+@app.get(
+    "/media/{campaign_id}/{filename}",
+    tags=["campaigns"],
+    response_class=FileResponse,
+    responses={200: {"content": {"image/png": {}, "image/jpeg": {}}, "description": "A generated image"}},
+)
+def get_media(campaign_id: str, filename: str) -> FileResponse:
+    """A generated campaign image (PNG, or its JPEG copy for Instagram). Public on purpose: Instagram
+    fetches images from PUBLIC_BASE_URL/media/... Only plain file names inside the media root."""
+    from app.distribution import store as campaign_store
+
+    match = _MEDIA_FILE_RE.match(filename)
+    if not _MEDIA_DIR_RE.match(campaign_id) or not match:
+        raise HTTPException(status_code=404, detail="Not found")
+    root = campaign_store.media_root().resolve()
+    path = (root / campaign_id / filename).resolve()
+    if not path.is_relative_to(root) or not path.is_file():
+        raise HTTPException(status_code=404, detail="Not found")
+    return FileResponse(path, media_type=_MEDIA_TYPES[match.group(1).lower()])

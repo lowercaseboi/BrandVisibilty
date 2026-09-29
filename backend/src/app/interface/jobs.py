@@ -19,6 +19,14 @@ calling one provider (or, with provider_id None, every provider) — including m
 through a retry wait — and the run is scored and saved with what was collected. The
 pipeline's per-provider progress is kept on the job as `providers`.
 
+Job kinds: "analysis" (a tracking run, the default — everything above) and "campaign"
+(Campaign Studio generation: copy + images, `submit_task`). Each kind has its own FIFO queue
+and worker thread, so drafting a campaign never waits behind a multi-minute tracking run, while
+runs of the same kind still execute one at a time. A task reports simple progress stages through
+`on_progress(message, done, total)`; once started it always runs to completion (a late cancel is
+ignored, like the end of an analysis run), because a half-generated campaign is worse than a
+finished one the user can delete.
+
 Single-worker only: the queue and job table above live in this process's memory (the
 files on disk are a restart-safety net, not a way to share state between workers), so
 `check_single_worker()` refuses to start if WEB_CONCURRENCY/UVICORN_WORKERS > 1.
@@ -42,6 +50,11 @@ from app import paths
 
 # (brand_key, providers, samples, round, on_progress, should_skip, on_provider) -> snapshot record
 RunFn = Callable[..., dict]
+# on_progress(message, done, total) -> result dict ({"message": ...} optional)
+ProgressFn = Callable[[str, int, int], None]
+TaskFn = Callable[[ProgressFn], dict]
+
+JOB_KINDS = ("analysis", "campaign")
 
 TERMINAL_STATUSES = frozenset({"completed", "partial", "failed", "cancelled", "interrupted"})
 MAX_FINISHED_JOBS = 100
@@ -106,8 +119,9 @@ class JobManager:
         self._jobs: dict[str, dict[str, Any]] = {}
         self._order: list[str] = []
         self._lock = threading.Lock()
-        self._queue: queue.Queue[tuple[str, dict[str, Any]]] = queue.Queue()
-        self._worker: threading.Thread | None = None
+        self._queues: dict[str, queue.Queue[tuple[str, dict[str, Any]]]] = {k: queue.Queue() for k in JOB_KINDS}
+        self._workers: dict[str, threading.Thread] = {}
+        self._tasks: dict[str, TaskFn] = {}  # job_id -> callable, for non-analysis jobs (not persisted)
         self._cancel_requested: set[str] = set()
         self._skip_providers: dict[str, set[str]] = {}
         self._skip_all: set[str] = set()
@@ -126,14 +140,54 @@ class JobManager:
             "error": None,
             "providers": [],
             "created_at": time.time(),
+            "kind": "analysis",
         }
         with self._lock:
             self._jobs[job_id] = job
             self._order.append(job_id)
             self._persist_locked(job_id, force=True)
             submitted = self._copy(job)
-        self._ensure_worker()
-        self._queue.put((job_id, {"providers": providers, "samples": samples, "round": round}))
+        self._ensure_worker("analysis")
+        self._queues["analysis"].put((job_id, {"providers": providers, "samples": samples, "round": round}))
+        return submitted
+
+    def submit_task(
+        self,
+        brand_key: str,
+        *,
+        kind: str,
+        fn: TaskFn,
+        message: str = "Queued",
+        extra: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Queue a non-analysis job (e.g. kind="campaign"). `fn(on_progress)` runs on that kind's
+        worker; it returns a dict (an optional "message" becomes the final job message) or raises
+        (job "failed"). `extra` fields (e.g. {"campaign_id": ...}) are stored on the job record."""
+        if kind not in JOB_KINDS or kind == "analysis":
+            raise ValueError(f"unknown task kind {kind!r}")
+        job_id = uuid.uuid4().hex
+        job = {
+            "job_id": job_id,
+            "brand_key": brand_key,
+            "status": "queued",
+            "message": message,
+            "done": 0,
+            "total": 0,
+            "run_id": None,
+            "error": None,
+            "providers": [],
+            "created_at": time.time(),
+            "kind": kind,
+            **(extra or {}),
+        }
+        with self._lock:
+            self._jobs[job_id] = job
+            self._order.append(job_id)
+            self._tasks[job_id] = fn
+            self._persist_locked(job_id, force=True)
+            submitted = self._copy(job)
+        self._ensure_worker(kind)
+        self._queues[kind].put((job_id, {}))
         return submitted
 
     @staticmethod
@@ -194,7 +248,7 @@ class JobManager:
                 snapshot = self._copy(job)
                 self._prune_locked()
                 return snapshot
-            if job["status"] == "running":
+            if job["status"] == "running" and job.get("kind", "analysis") == "analysis":
                 self._cancel_requested.add(job_id)
                 job["message"] = "Cancelling after the current call…"
                 self._persist_locked(job_id, force=True)
@@ -251,6 +305,7 @@ class JobManager:
             del self._jobs[job_id]
             self._order.remove(job_id)
             self._last_persist.pop(job_id, None)
+            self._tasks.pop(job_id, None)
             with contextlib.suppress(OSError):
                 _job_path(job_id).unlink()
 
@@ -276,6 +331,7 @@ class JobManager:
             for record in records:
                 job_id = record["job_id"]
                 record.setdefault("providers", [])
+                record.setdefault("kind", "analysis")
                 if record.get("status") in ("queued", "running"):
                     record["status"] = "interrupted"
                     record["message"] = "Interrupted"
@@ -285,23 +341,54 @@ class JobManager:
                 self._persist_locked(job_id, force=True)
             self._prune_locked()
 
-    def _ensure_worker(self) -> None:
+    def _ensure_worker(self, kind: str = "analysis") -> None:
         with self._lock:
-            if self._worker is None or not self._worker.is_alive():
-                self._worker = threading.Thread(target=self._loop, name="pipeline-jobs", daemon=True)
-                self._worker.start()
+            worker = self._workers.get(kind)
+            if worker is None or not worker.is_alive():
+                name = "pipeline-jobs" if kind == "analysis" else f"{kind}-jobs"
+                worker = threading.Thread(target=self._loop, args=(kind,), name=name, daemon=True)
+                self._workers[kind] = worker
+                worker.start()
 
-    def _loop(self) -> None:
+    def _loop(self, kind: str = "analysis") -> None:
+        q = self._queues[kind]
         while True:
-            job_id, kwargs = self._queue.get()
+            job_id, kwargs = q.get()
             try:
                 with self._lock:
                     job = self._jobs.get(job_id)
                     runnable = job is not None and job["status"] != "cancelled"
                 if runnable:
-                    self._execute(job_id, kwargs)
+                    if kind == "analysis":
+                        self._execute(job_id, kwargs)
+                    else:
+                        self._execute_task(job_id)
             finally:
-                self._queue.task_done()
+                q.task_done()
+
+    def _execute_task(self, job_id: str) -> None:
+        with self._lock:
+            fn = self._tasks.pop(job_id, None)
+        self._update(job_id, status="running", message="Starting")
+        if fn is None:  # pragma: no cover - defensive: the callable was lost
+            self._finish(job_id, status="failed", message="Failed", error="task callable missing")
+            return
+
+        def on_progress(message: str, done: int, total: int) -> None:
+            with self._lock:
+                self._jobs[job_id].update(message=message, done=done, total=total)
+                self._persist_locked(job_id, force=True)
+
+        try:
+            result = fn(on_progress) or {}
+        except Exception as exc:  # noqa: BLE001 - surface any failure on the job, never crash the worker
+            self._finish(job_id, status="failed", message="Failed", error=f"{type(exc).__name__}: {exc}")
+            return
+        with self._lock:
+            job = self._jobs[job_id]
+            if job["total"] and job["done"] < job["total"]:
+                job["done"] = job["total"]
+        self._finish(job_id, status="completed", message=str(result.get("message") or "Done"))
 
     def _execute(self, job_id: str, kwargs: dict[str, Any]) -> None:
         brand_key = self._jobs[job_id]["brand_key"]

@@ -7,6 +7,7 @@ import { useT } from "./i18n";
 import { BrandListPage } from "./pages/BrandListPage";
 import { AnalysisModule } from "./pages/brand/AnalysisModule";
 import { BoardModule } from "./pages/brand/BoardModule";
+import { CampaignStudio } from "./pages/brand/CampaignStudio";
 import { BrandLayout, LegacyEvidenceRedirect, LegacyQuestionsRedirect } from "./pages/brand/BrandLayout";
 import { DetailsModule } from "./pages/brand/DetailsModule";
 import { GapsModule } from "./pages/brand/GapsModule";
@@ -75,6 +76,7 @@ export default function App() {
                   <Route path="analysis" element={<AnalysisModule />} />
                   <Route path="gaps" element={<GapsModule />} />
                   <Route path="recommendations" element={<BoardModule />} />
+                  <Route path="recommendations/:campaignId" element={<CampaignStudio />} />
                   <Route path="questions" element={<LegacyQuestionsRedirect />} />
                   <Route path="runs/:runId/evidence" element={<LegacyEvidenceRedirect />} />
                 </Route>

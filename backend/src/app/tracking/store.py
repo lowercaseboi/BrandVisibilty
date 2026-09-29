@@ -191,6 +191,12 @@ def delete_brand_data(brand_key: str) -> None:
     shutil.rmtree(observations_dir(brand_key), ignore_errors=True)
     (paths.DATA_DIR / "questions" / f"{brand_key}.json").unlink(missing_ok=True)
     (paths.DATA_DIR / "boards" / f"{brand_key}.json").unlink(missing_ok=True)
+    # Campaign Studio data: campaigns, their media and the brand's audit log. Imported here, not
+    # at module level: app.distribution.store depends only on app.paths + types, but keeping the
+    # import local means this module never pulls in the distribution package for plain reads.
+    from app.distribution.store import delete_brand_campaigns
+
+    delete_brand_campaigns(brand_key)
 
 
 def brand_keys_with_data() -> set[str]:

@@ -11,6 +11,7 @@ import "./styles/hub.css";
 import "./styles/brandinfo.css";
 import "./styles/analysis.css";
 import "./styles/board.css";
+import "./styles/campaign.css";
 import App from "./App.tsx";
 import { LanguageProvider } from "./i18n";
 import { DetailsProvider } from "./settings/details";

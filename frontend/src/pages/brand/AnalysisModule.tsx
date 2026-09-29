@@ -6,6 +6,7 @@ import { ModuleShell } from "../../components/module/ModuleShell";
 import { ProviderTable } from "../../components/ProviderTable";
 import { RunPanel } from "../../components/RunPanel";
 import { TrendChart } from "../../components/TrendChart";
+import { usePublishMarkers } from "../../components/campaign/usePublishMarkers";
 import { HonestyBanners } from "../../components/dashboard/Banners";
 import { CompetitorBars } from "../../components/dashboard/CompetitorBars";
 import { ScoreHero } from "../../components/dashboard/ScoreHero";
@@ -33,6 +34,7 @@ export function AnalysisModule() {
   const list = useListFormat();
   const { brandKey, brandName, latest: snapshot, history, questions, providers, labelOf, reload } = useBrandData();
 
+  const publishMarkers = usePublishMarkers(brandKey);
   const idx = snapshot ? history.findIndex((s) => s.run_id === snapshot.run_id) : -1;
   const previous = idx > 0 ? history[idx - 1] : null;
   const askedIds = snapshot
@@ -79,7 +81,7 @@ export function AnalysisModule() {
               </div>
               <span className="count">{t.n("dashboard.trend.count", analysisCount)}</span>
             </div>
-            <TrendChart snapshots={history.length ? history : [snapshot]} currentRunId={snapshot.run_id} labelOf={labelOf} />
+            <TrendChart snapshots={history.length ? history : [snapshot]} currentRunId={snapshot.run_id} labelOf={labelOf} events={publishMarkers} />
           </section>
 
           <CollapsibleSection

@@ -1,13 +1,21 @@
-import { useCallback, useEffect, useId, useMemo, useRef } from "react";
-import type { BoardColumn } from "../../api/types";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { createCampaign, listCampaigns } from "../../api/client";
+import type { BoardColumn, Campaign } from "../../api/types";
 import { buildBoard, clearLegacyDone, migrateLegacyDone, removeCard, setStatus } from "../../components/board/boardModel";
 import { RecList } from "../../components/board/RecList";
 import { useBoardState } from "../../components/board/useBoardState";
+import {
+  CampaignIndexContext,
+  campaignHref,
+  indexCampaigns,
+  syncBoardWithCampaigns,
+} from "../../components/campaign/CampaignIndex";
+import type { CampaignIndexValue } from "../../components/campaign/CampaignIndex";
 import type { BoardStatus } from "../../components/board/useBoardState";
 import { groupSuggestions, useShortDate } from "../../components/dashboard/helpers";
 import { ModuleShell } from "../../components/module/ModuleShell";
 import { brandHref } from "../../components/module/modules";
-import { TransitionLink } from "../../components/module/transition";
+import { TransitionLink, useTransitionNavigate } from "../../components/module/transition";
 import { toast } from "../../components/Toaster";
 import { useT } from "../../i18n";
 import { useBrandData } from "./BrandContext";
@@ -76,6 +84,49 @@ export function BoardModule() {
     [commit, state, columns],
   );
 
+  // Campaign Studio: one list of this brand's campaigns, so each card can show "Open campaign".
+  // Card statuses follow their campaigns (drafted → In progress, published → Done).
+  const [campaigns, setCampaigns] = useState<Campaign[] | null>(null);
+  const [creating, setCreating] = useState<string | null>(null);
+  const go = useTransitionNavigate();
+  useEffect(() => {
+    let cancelled = false;
+    listCampaigns(brandKey)
+      .then((list) => !cancelled && setCampaigns(list))
+      .catch(() => !cancelled && setCampaigns([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [brandKey]);
+
+  // Once per loaded list (a failed save reverts the board; retrying in a loop would hammer the API).
+  const syncedFor = useRef<Campaign[] | null>(null);
+  useEffect(() => {
+    if (status !== "ready" || !latest || !campaigns?.length || syncedFor.current === campaigns) return;
+    syncedFor.current = campaigns;
+    const next = syncBoardWithCampaigns(state, columns, campaigns);
+    if (next !== state) commit(next).catch(() => {});
+  }, [status, latest, campaigns, state, columns, commit]);
+
+  const campaignIndex = useMemo<CampaignIndexValue>(() => {
+    const byKey = indexCampaigns(campaigns ?? []);
+    return {
+      find: (cardKey, recId) => byKey.get(cardKey) ?? (recId ? byKey.get(recId) : undefined) ?? null,
+      creating,
+      create: (cardKey, recId) => {
+        if (creating) return;
+        setCreating(cardKey);
+        createCampaign(brandKey, recId)
+          .then(({ campaign }) => {
+            setCampaigns((prev) => [campaign, ...(prev ?? [])]);
+            go(campaignHref(brandKey, campaign.campaign_id));
+          })
+          .catch((err: unknown) => toast(t("board.campaign.toast.createFailed", { error: err instanceof Error ? err.message : String(err) })))
+          .finally(() => setCreating(null));
+      },
+    };
+  }, [campaigns, creating, brandKey, go, t]);
+
   const onRemove = useCallback(
     (key: string) => {
       commit(removeCard(state, key)).catch(() => {});
@@ -110,15 +161,17 @@ export function BoardModule() {
             </button>
           </p>
         )}
-        <RecList
-          columns={columns}
-          brandKey={brandKey}
-          runId={latest.run_id}
-          entities={entities}
-          labelOf={labelOf}
-          onStatus={onStatus}
-          onRemove={onRemove}
-        />
+        <CampaignIndexContext.Provider value={campaignIndex}>
+          <RecList
+            columns={columns}
+            brandKey={brandKey}
+            runId={latest.run_id}
+            entities={entities}
+            labelOf={labelOf}
+            onStatus={onStatus}
+            onRemove={onRemove}
+          />
+        </CampaignIndexContext.Provider>
       </section>
     );
 

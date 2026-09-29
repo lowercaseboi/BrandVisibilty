@@ -70,6 +70,10 @@ export interface Job {
   run_id: string | null;
   error: string | null;
   providers?: ProviderProgress[];
+  /** "analysis" (a run) or "campaign" (Campaign Studio drafting); absent from older servers. */
+  kind?: "analysis" | "campaign";
+  /** The campaign being drafted when kind === "campaign". */
+  campaign_id?: string | null;
 }
 
 export interface StartRunRequest {
@@ -335,4 +339,196 @@ export interface BoardCardState {
 export interface BoardState {
   brand_key: string;
   cards: Record<string, BoardCardState>;
+}
+
+// ---------------------------------------------------------------------------
+// Campaign Studio (PRD §11.5 / AC-10). Mirrors backend/src/app/distribution/types.py exactly:
+// JSON field names are the dataclass field names.
+// ---------------------------------------------------------------------------
+
+export type ChannelId = "facebook_page" | "instagram" | "x" | "google_business" | "whatsapp" | "export" | "sandbox";
+
+export const CHANNEL_IDS: ChannelId[] = [
+  "facebook_page",
+  "instagram",
+  "x",
+  "google_business",
+  "whatsapp",
+  "export",
+  "sandbox",
+];
+
+/** connected: can publish now · export_only: no credentials / no API (copy + download) · disabled: off in config. */
+export type ChannelMode = "connected" | "export_only" | "disabled";
+
+/** generating → ready → approved → published | partially_published | failed. Any edit to an approved
+ * campaign drops it back to "ready" (approval revoked). */
+export type CampaignStatus = "generating" | "ready" | "approved" | "published" | "partially_published" | "failed";
+
+export type DeliverableKind =
+  | "social_post"
+  | "article"
+  | "faq"
+  | "profile_copy"
+  | "video_script"
+  | "review_request"
+  | "listing"
+  | "outreach_email"
+  | "community_answer";
+
+export type ImageFormat = "square" | "portrait" | "landscape" | "story" | "gbp";
+
+/** Output image sizes, px [width, height]. */
+export const IMAGE_SIZES: Record<ImageFormat, [number, number]> = {
+  square: [1080, 1080],
+  portrait: [1080, 1350],
+  landscape: [1200, 675],
+  story: [1080, 1920],
+  gbp: [1200, 900],
+};
+
+/** Per-channel hard limits used by validation (characters). */
+export const TEXT_LIMITS: Record<ChannelId, number> = {
+  facebook_page: 63_206,
+  instagram: 2_200,
+  x: 280,
+  google_business: 1_500,
+  whatsapp: 4_096,
+  export: 1_000_000,
+  sandbox: 1_000_000,
+};
+
+/** blocked = the approval gate refused. */
+export type EventOutcome = "published" | "failed" | "exported" | "blocked";
+
+/** One generated image (base scene from an image provider + our text overlay). */
+export interface Asset {
+  asset_id: string;
+  format: ImageFormat;
+  /** Relative to DATA_DIR/media, e.g. "<campaign_id>/<asset_id>.png"; served at GET /media/{path}. */
+  path: string;
+  /** "gemini" | "cloudflare" | "template" */
+  provider: string;
+  prompt: string;
+  seed: number | null;
+  overlay_text: string | null;
+  created_at: string;
+}
+
+/** Copy for one channel. `approved_hash` is set on approval; an edit that changes the content makes
+ * the campaign unpublishable until re-approved. */
+export interface Variant {
+  channel: ChannelId;
+  text: string;
+  hashtags: string[];
+  link: string | null;
+  asset_id: string | null;
+  alt_text: string | null;
+  enabled: boolean;
+  approved_hash: string | null;
+  /** Validation problems (too long, unsupported claim…). */
+  issues: string[];
+}
+
+/** Non-post output of the kit (article, FAQ + JSON-LD, profile copy, script, email…). */
+export interface Deliverable {
+  kind: DeliverableKind;
+  title: string;
+  /** markdown */
+  body: string;
+  /** e.g. {"jsonld": "..."} or {"qr_url": "..."} */
+  extra: Record<string, string>;
+}
+
+/** One publish/export attempt on one channel (AC-10: logged regardless of outcome). */
+export interface DistributionEvent {
+  event_id: string;
+  campaign_id: string;
+  recommendation_id: string;
+  channel: ChannelId;
+  outcome: EventOutcome;
+  at: string;
+  external_url: string | null;
+  external_id: string | null;
+  error: string | null;
+  content_hash: string | null;
+}
+
+export interface AuditLogEntry {
+  entry_id: string;
+  actor: string;
+  action: string;
+  target_ref: string;
+  at: string;
+  context: Record<string, string>;
+}
+
+export interface Campaign {
+  campaign_id: string;
+  brand_key: string;
+  recommendation_id: string;
+  /** AC-7: never empty. */
+  gap_id: string;
+  action: string;
+  /** Board card key (`action|competitor_id`) so the board status can follow. */
+  suggestion_key: string;
+  status: CampaignStatus;
+  created_at: string;
+  updated_at: string;
+  headline: string;
+  variants: Variant[];
+  assets: Asset[];
+  deliverables: Deliverable[];
+  events: DistributionEvent[];
+  /** "gemini:<model>" | "groq:<model>" | "template" */
+  drafted_by: string;
+  approved_at: string | null;
+  /** Generation job while status === "generating". */
+  job_id: string | null;
+}
+
+export interface ChannelStatus {
+  channel: ChannelId;
+  label: string;
+  mode: ChannelMode;
+  detail: string;
+  /** X free-tier posts left this month, when known. */
+  quota_remaining: number | null;
+}
+
+export interface PublishResult {
+  ok: boolean;
+  external_url: string | null;
+  external_id: string | null;
+  error: string | null;
+}
+
+/** POST /brands/{k}/campaigns → 202. Poll `job` with getJob until terminal, then refetch the campaign. */
+export interface CreateCampaignResponse {
+  campaign: Campaign;
+  job: Job;
+}
+
+/** PATCH /brands/{k}/campaigns/{cid}/variants/{channel} */
+export interface VariantPatch {
+  text?: string;
+  hashtags?: string[];
+  link?: string | null;
+  enabled?: boolean;
+  asset_id?: string | null;
+  alt_text?: string | null;
+}
+
+/** POST /brands/{k}/campaigns/{cid}/deliverables/{index} */
+export interface DeliverablePatch {
+  title?: string;
+  body?: string;
+}
+
+/** POST /brands/{k}/campaigns/{cid}/regenerate-image */
+export interface RegenerateImageRequest {
+  format: ImageFormat;
+  prompt?: string;
+  style?: string;
+  seed?: number;
 }
