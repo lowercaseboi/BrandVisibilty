@@ -2,11 +2,12 @@ import type { Snapshot } from "../../api/types";
 import { RATING_KEY, ratingFromRange, scoreBandClass, scoreRange } from "../../format";
 import { T, useFormat, useT } from "../../i18n";
 import { Details } from "../../settings/details";
+import { MeasuredNote } from "../MeasuredNote";
 import { MetricStrip } from "../MetricStrip";
 import { humanizeId, toScore } from "./helpers";
 
-// A wide range means the score could move a lot by chance; suggest asking more times.
-const WIDE_RANGE = 0.25;
+// A wide range (in points) means the score could move a lot by chance; suggest asking more times.
+const WIDE_RANGE = 25;
 
 /**
  * Mention rate (share of responses naming each brand) for you and every competitor, on one
@@ -58,7 +59,7 @@ export function ScoreHero({ snapshot, previous }: { snapshot: Snapshot; previous
   const mentioned = self?.answers_mentioning ?? snapshot.mentioned_count ?? 0;
   const first = self?.answers_ranked_first;
 
-  const wide = hi - lo > WIDE_RANGE * 100;
+  const wide = hi - lo > WIDE_RANGE;
   const samples = snapshot.sampling_config?.samples_per_query ?? 0;
 
   // Only compare with the previous check when it measured the same thing.
@@ -85,6 +86,7 @@ export function ScoreHero({ snapshot, previous }: { snapshot: Snapshot; previous
           {rating.upper && (
             <p className="score-rating-upper">{t("pages.rating.couldBe", { rating: t(RATING_KEY[rating.upper]) })}</p>
           )}
+          <MeasuredNote analysis={a} className="score-measured" />
           {change !== null && (
             <p className={`score-change ${change > 0 ? "is-up" : change < 0 ? "is-down" : ""}`}>
               {change > 0

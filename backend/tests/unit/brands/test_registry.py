@@ -1,13 +1,13 @@
 import pytest
 
+from app import paths
 from app.brands import registry
 from app.querysets.generator import generate_draft
-from app.tracking import store
 
 
 @pytest.fixture(autouse=True)
 def tmp_data_dir(tmp_path, monkeypatch):
-    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
     return tmp_path
 
 

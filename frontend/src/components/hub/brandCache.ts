@@ -24,3 +24,13 @@ export function peekBrandSummary(brandKey: string): BrandSummary | undefined {
 export function forgetBrand(brandKey: string): void {
   if (brands) brands = brands.filter((b) => b.brand_key !== brandKey);
 }
+
+/**
+ * Patch one brand's cached summary with what its hub just loaded (e.g. a finished run makes
+ * `has_data` true; a question edit changes `question_count`), so the list's first frame — and the
+ * morph back into it — isn't stale until the list's own refetch lands. No-op before the list loads.
+ */
+export function patchBrandSummary(brandKey: string, patch: Partial<Pick<BrandSummary, "has_data" | "question_count">>): void {
+  if (!brands) return;
+  brands = brands.map((b) => (b.brand_key === brandKey ? { ...b, ...patch } : b));
+}

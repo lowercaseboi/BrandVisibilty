@@ -17,6 +17,8 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
+from app.tracking.snapshot import legacy_run_id
+
 NEW_RECORD = {
     "brand_key": "gajanan_vada_pav",
     "brand": "Gajanan Vada Pav",
@@ -112,7 +114,10 @@ def client(monkeypatch: pytest.MonkeyPatch):
 
     store = types.ModuleType("app.tracking.store")
     store.load_snapshots = lambda key: list(records.get(key, []))
-    store.get_snapshot = lambda key, run_id: next((r for r in records.get(key, []) if r.get("run_id") == run_id), None)
+    store.get_snapshot = lambda key, run_id, include_raw=True: next(
+        (r for r in records.get(key, []) if (r["run_id"] if "run_id" in r else legacy_run_id(r)) == run_id), None
+    )
+    store.legacy_inline_brands = list
     store.brand_keys_with_data = lambda: set(records)
 
     registry = types.ModuleType("app.brands.registry")
@@ -319,9 +324,9 @@ def test_run_without_round_lets_the_pipeline_pick_it(client: TestClient) -> None
 @pytest.fixture
 def real_client(tmp_path, monkeypatch: pytest.MonkeyPatch):
     """The real brands registry + question-set module over a temp DATA_DIR."""
-    from app.tracking import store
+    from app import paths
 
-    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
     sys.modules.pop("app.interface.main", None)
     main = importlib.import_module("app.interface.main")
     try:

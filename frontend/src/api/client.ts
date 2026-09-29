@@ -96,17 +96,6 @@ function deleteJson<T>(path: string): Promise<T> {
 
 const b = encodeURIComponent;
 
-// The backend reports composite_score / ci_low / ci_high on a 0-100 scale (scorer.py);
-// the UI works in 0-1 fractions like the other metrics, so convert once here.
-// `trend_verdict` (AC-8) is deliberately left on the 0-100 scale: it speaks in points.
-function toFractions(s: Snapshot): Snapshot {
-  const a = s.analysis_result;
-  return {
-    ...s,
-    analysis_result: { ...a, composite_score: a.composite_score / 100, ci_low: a.ci_low / 100, ci_high: a.ci_high / 100 },
-  };
-}
-
 export function listBrands(): Promise<BrandSummary[]> {
   return getJson("/brands");
 }
@@ -156,13 +145,13 @@ export function peekLatestSnapshot(brandKey: string): Snapshot | undefined {
 }
 
 export async function getLatestSnapshot(brandKey: string): Promise<Snapshot> {
-  const snap = toFractions(await getJson<Snapshot>(`/brands/${b(brandKey)}/snapshots/latest`));
+  const snap = await getJson<Snapshot>(`/brands/${b(brandKey)}/snapshots/latest`);
   latestCache.set(brandKey, snap);
   return snap;
 }
 
-export async function getSnapshots(brandKey: string): Promise<Snapshot[]> {
-  return (await getJson<Snapshot[]>(`/brands/${b(brandKey)}/snapshots`)).map(toFractions);
+export function getSnapshots(brandKey: string): Promise<Snapshot[]> {
+  return getJson<Snapshot[]>(`/brands/${b(brandKey)}/snapshots`);
 }
 
 /** AC-8 trend verdict (0-100 scale). The newest snapshot from getSnapshots/getLatestSnapshot

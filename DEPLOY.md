@@ -27,7 +27,10 @@ are noted at the bottom.
   presenting live.
 - **Ephemeral disk.** `/data` is container-local and resets on every deploy or restart.
   `SEED_DEMO=1` reseeds the 3 pilot brands' synthetic snapshots on the next start, so the
-  dashboard is never empty, but any run you kick off yourself is lost on restart. The
+  dashboard is never empty, but any run you kick off yourself is lost on restart.
+  If you attach a persistent disk that already holds history from before the
+  observations split, run `python scripts/migrate_split_observations.py --data-dir /data`
+  once from the Render shell (the log warns on startup until you do; see RUNNING.md). The
   commented-out `disk:` block in `render.yaml` adds a persistent volume, but that needs a
   paid plan.
 
@@ -74,3 +77,11 @@ settings) for the new CORS config to take effect.
 - Any static host works for the frontend in place of Vercel (Netlify, GitHub Pages, Render
   static sites) as long as it builds `frontend/` with `npm run build`, serves `frontend/dist`,
   rewrites unknown paths to `index.html` for the SPA routes, and sets `VITE_API_BASE`.
+
+## Run exactly one backend worker
+
+Analysis runs go through an in-process job queue (`app/interface/jobs.py`), so the API must run as a
+single worker. Job records are persisted under `DATA_DIR/jobs/` and a run cut off by a restart shows
+as "interrupted", but several workers would each keep their own queue and job table. The backend
+refuses to start when `WEB_CONCURRENCY` or `UVICORN_WORKERS` is greater than 1 — don't pass
+`--workers N` to uvicorn.

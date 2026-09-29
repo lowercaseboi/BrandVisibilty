@@ -104,6 +104,19 @@ make down     # stop (data kept in the docker volume)
 make reset    # stop and wipe all snapshots (re-seeds synthetic data on next `make up`)
 ```
 
+### Upgrading old snapshot history (one-time)
+Snapshot lines no longer inline every raw LLM answer: each run's answers live in
+`DATA_DIR/tracking/<brand_key>/<run_id>.observations.jsonl`, and `<brand_key>.jsonl` keeps only the
+light snapshot (scores, gaps, recommendations, counts). Old history still loads, but the backend logs a
+one-line warning at startup until you split it. Stop the backend, then:
+```bash
+cd backend && uv run python scripts/migrate_split_observations.py              # local backend/data (or $DATA_DIR)
+uv run python scripts/migrate_split_observations.py --data-dir /path --dry-run  # preview only
+docker compose run --rm backend python scripts/migrate_split_observations.py --data-dir /data  # Docker volume
+```
+It is idempotent (safe to re-run) and keeps the original file as `<brand_key>.jsonl.bak`.
+When sharing runs, copy the whole `tracking/` folder (the per-brand subfolders hold the answers).
+
 ## Option 2: Local without Docker (for development)
 Requirements: [uv](https://docs.astral.sh/uv/) (`curl -LsSf https://astral.sh/uv/install.sh | sh`) and Node 22.
 

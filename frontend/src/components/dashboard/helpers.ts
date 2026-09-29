@@ -6,10 +6,10 @@ import type { Formatter, Lang, MessageKey, TFunction, Vars } from "../../i18n";
 
 const LOCALES: Record<Lang, string> = { en: "en-IN", hi: "hi-IN", mr: "mr-IN" };
 
-/** Composite fraction (0..1) -> whole score out of 100. */
-export function toScore(fraction: number | null | undefined): number {
-  if (fraction === null || fraction === undefined || Number.isNaN(fraction)) return 0;
-  return Math.round(Math.max(0, Math.min(1, fraction)) * 100);
+/** Composite score (0–100 points, as the backend sends it) -> whole points, clamped; missing -> 0. */
+export function toScore(points: number | null | undefined): number {
+  if (points === null || points === undefined || Number.isNaN(points)) return 0;
+  return Math.round(Math.max(0, Math.min(100, points)));
 }
 
 /** Effort level for the three-step meter: 1 -> 1 (low), 2–4 -> 2 (medium), 5+ -> 3 (high). */

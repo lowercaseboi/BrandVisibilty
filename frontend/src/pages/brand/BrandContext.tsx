@@ -13,6 +13,7 @@ import {
 } from "../../api/client";
 import type { BrandProfile, ProviderInfo, QuestionSet, Snapshot } from "../../api/types";
 import { useProviderLabel } from "../../components/dashboard/helpers";
+import { patchBrandSummary } from "../../components/hub/brandCache";
 
 /**
  * Everything the brand hub and its four modules share, loaded once per brand by BrandLayout.
@@ -88,6 +89,12 @@ export function BrandDataProvider({ brandKey, children }: { brandKey: string; ch
     let cancelled = false;
     loadBrand(brandKey)
       .then((d) => {
+        // getLatestSnapshot has refreshed api/client's latestCache; bring the cached brand list in
+        // line too (a run just finished, or the question list changed).
+        patchBrandSummary(brandKey, {
+          has_data: d.latest !== null || d.history.length > 0,
+          ...(d.questions ? { question_count: d.questions.scored_count } : {}),
+        });
         if (!cancelled) {
           setLoaded(d);
           setError(null);

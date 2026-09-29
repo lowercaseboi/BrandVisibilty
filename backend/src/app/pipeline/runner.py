@@ -21,6 +21,7 @@ from datetime import UTC, datetime
 
 import httpx
 
+from app import paths
 from app.analysis.gap_detector import detect_gaps
 from app.analysis.mention_detector import detect_mentions
 from app.analysis.scorer import score
@@ -247,7 +248,7 @@ def _collect_provider(
     run.report(state="running")
 
     alias_table = brand.alias_table()
-    replay_path = store.DATA_DIR / "replay" / f"{brand.brand_key}.json"
+    replay_path = paths.DATA_DIR / "replay" / f"{brand.brand_key}.json"
     records: list[tuple[dict, Observation]] = []
     consecutive_failures = 0
     groups = [("q", "question", queries, True), ("p", "brand-named question", unscored_queries, False)]

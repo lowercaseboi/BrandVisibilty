@@ -18,6 +18,7 @@ import json
 from datetime import UTC, datetime
 from typing import Any
 
+from app import paths
 from app.analysis.mention_detector import detect_mentions
 from app.brands.registry import SELF_ENTITY_ID, BrandConfig
 from app.querysets.generator import (
@@ -28,7 +29,6 @@ from app.querysets.generator import (
     generate_draft,
 )
 from app.querysets.templates import ALL_TEMPLATES
-from app.tracking import store
 
 CUSTOM_TEMPLATE_SET_VERSION = "v1-custom"
 MIN_QUESTIONS = 1
@@ -49,7 +49,7 @@ def _normalise(text: str) -> str:
 def _path(brand_key: str):
     if not brand_key or "/" in brand_key or "\\" in brand_key or brand_key.startswith("."):
         raise ValueError(f"Invalid brand_key {brand_key!r}")
-    return store.DATA_DIR / "questions" / f"{brand_key}.json"
+    return paths.DATA_DIR / "questions" / f"{brand_key}.json"
 
 
 def names_brand(text: str, brand: BrandConfig) -> bool:

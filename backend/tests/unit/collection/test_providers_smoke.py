@@ -126,13 +126,13 @@ def test_replay_roundtrip(tmp_path):
 
 
 def test_replay_recorder_and_reader_share_one_data_dir(tmp_path, monkeypatch):
-    # The runner records to store.DATA_DIR/replay/<brand>.json; the registry's replay provider
+    # The runner records to paths.DATA_DIR/replay/<brand>.json; the registry's replay provider
     # must read from exactly there, even when DATA_DIR is redirected (review finding #6).
-    from app.tracking import store
+    from app import paths
 
-    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
     brand = _Brand()
-    recorded_path = store.DATA_DIR / "replay" / f"{brand.brand_key}.json"
+    recorded_path = paths.DATA_DIR / "replay" / f"{brand.brand_key}.json"
     assert registry.data_dir() == tmp_path
     assert registry.replay_cache_path(brand.brand_key) == recorded_path
 

@@ -22,7 +22,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from app.tracking import store  # noqa: E402  (stdlib-only module)
+from app import paths
+from app.tracking import store
 
 # --- colour ---------------------------------------------------------------------------
 
@@ -292,7 +293,7 @@ def _highlight(text: str, spans: list[tuple[int, int, str]]) -> str:
 
 
 def show_evidence(s: dict, n: int) -> None:
-    obs = s.get("raw_observations") or []
+    obs = store.load_observations(s.get("brand_key") or "", s.get("run_id") or "") or []
     entities = s.get("entities") or {}
     # Most informative first: brand named, then competitor-only, then no mentions.
     def rank(o: dict) -> int:
@@ -368,7 +369,7 @@ def show_history(brand_key: str, snaps: list[dict]) -> None:
 def show_all() -> int:
     keys = sorted(store.brand_keys_with_data())
     if not keys:
-        print(f"No snapshots under {store.DATA_DIR / 'tracking'} — run scripts/run_tracking_loop.py first.")
+        print(f"No snapshots under {paths.DATA_DIR / 'tracking'} — run scripts/run_tracking_loop.py first.")
         return 1
     rule("All brands (latest snapshot)")
     rows = []

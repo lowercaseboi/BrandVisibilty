@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 import pytest
 
+from app import paths
 from app.collection.retry import Skipped
 from app.collection.types import CollectionResult
 from app.tracking import store
@@ -69,7 +70,7 @@ def _install_fakes(monkeypatch, rounds=None):
 
 
 def test_run_pipeline_partial_run_is_saved(tmp_path, monkeypatch):
-    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
     _install_fakes(monkeypatch)
     from app.pipeline.runner import run_pipeline
 
@@ -92,7 +93,7 @@ def test_run_pipeline_partial_run_is_saved(tmp_path, monkeypatch):
 
 
 def test_run_pipeline_raises_when_nothing_collected(tmp_path, monkeypatch):
-    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
     _install_fakes(monkeypatch)
     from app.pipeline.runner import run_pipeline
 
@@ -102,7 +103,7 @@ def test_run_pipeline_raises_when_nothing_collected(tmp_path, monkeypatch):
 
 
 def test_provider_failing_repeatedly_is_abandoned(tmp_path, monkeypatch):
-    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
     _install_fakes(monkeypatch)
     from app.pipeline import runner
 
@@ -120,7 +121,7 @@ def test_provider_failing_repeatedly_is_abandoned(tmp_path, monkeypatch):
 
 
 def test_progress_messages_are_human_readable(tmp_path, monkeypatch):
-    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
     _install_fakes(monkeypatch)
     from app.pipeline.runner import run_pipeline
 
@@ -165,7 +166,7 @@ def _save_custom_questions(extra_brand_named=True):
 
 
 def test_custom_questions_brand_named_are_asked_but_not_scored(tmp_path, monkeypatch):
-    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
     _install_fakes(monkeypatch)
     from app.pipeline.runner import run_pipeline
 
@@ -202,7 +203,7 @@ def test_custom_questions_brand_named_are_asked_but_not_scored(tmp_path, monkeyp
 
 
 def test_failed_brand_named_calls_do_not_affect_status(tmp_path, monkeypatch):
-    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
     _install_fakes(monkeypatch)
     from app.pipeline.runner import run_pipeline
 
@@ -214,7 +215,7 @@ def test_failed_brand_named_calls_do_not_affect_status(tmp_path, monkeypatch):
 
 
 def test_round_none_auto_increments_for_synthetic(tmp_path, monkeypatch):
-    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
     rounds = []
     _install_fakes(monkeypatch, rounds)
     from app.pipeline.runner import run_pipeline
@@ -231,7 +232,7 @@ def _latest_by_provider(payloads: list[dict]) -> dict[str, dict]:
 
 
 def test_skipping_one_provider_mid_run_keeps_its_answers(tmp_path, monkeypatch):
-    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
     _install_fakes(monkeypatch)
     from app.pipeline.runner import run_pipeline
 
@@ -261,7 +262,7 @@ def test_skipping_one_provider_mid_run_keeps_its_answers(tmp_path, monkeypatch):
 
 
 def test_skipped_provider_without_answers_is_missing(tmp_path, monkeypatch):
-    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
     _install_fakes(monkeypatch)
     from app.pipeline.runner import run_pipeline
 
@@ -272,7 +273,7 @@ def test_skipped_provider_without_answers_is_missing(tmp_path, monkeypatch):
 
 
 def test_skip_all_scores_what_was_collected(tmp_path, monkeypatch):
-    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
     _install_fakes(monkeypatch)
     from app.pipeline.runner import run_pipeline
 
@@ -287,7 +288,7 @@ def test_skip_all_scores_what_was_collected(tmp_path, monkeypatch):
 
 
 def test_skip_all_before_any_answer_fails_the_run(tmp_path, monkeypatch):
-    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
     _install_fakes(monkeypatch)
     from app.pipeline.runner import run_pipeline
 
@@ -297,7 +298,7 @@ def test_skip_all_before_any_answer_fails_the_run(tmp_path, monkeypatch):
 
 
 def test_provider_stuck_on_rate_limit_is_auto_skipped(tmp_path, monkeypatch):
-    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
     _install_fakes(monkeypatch)
     from app.pipeline import runner
 
@@ -338,7 +339,7 @@ def test_provider_stuck_on_rate_limit_is_auto_skipped(tmp_path, monkeypatch):
 
 
 def test_waiting_payload_carries_rounded_up_wait_seconds(tmp_path, monkeypatch):
-    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
     _install_fakes(monkeypatch)
     from app.pipeline import runner
 
@@ -362,7 +363,7 @@ def test_waiting_payload_carries_rounded_up_wait_seconds(tmp_path, monkeypatch):
 
 
 def test_snapshot_mention_summary_counts_scored_answers_only(tmp_path, monkeypatch):
-    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
     _install_fakes(monkeypatch)
     from app.brands.registry import get_brand
     from app.pipeline.runner import run_pipeline
@@ -393,7 +394,7 @@ def test_daily_quota_exhausted_skips_the_provider_at_once(tmp_path, monkeypatch)
     """A daily-quota 429 must not be retried or counted towards 3-in-a-row: stop that provider now."""
     from app.collection.types import QuotaExhausted
 
-    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
     _install_fakes(monkeypatch)
     from app.pipeline import runner
 

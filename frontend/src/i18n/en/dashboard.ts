@@ -336,6 +336,7 @@ export const dashboard = {
   "run.done.partial": "Analysis complete with some responses missing. Results use the responses received.",
   "run.done.cancelled": "Analysis cancelled. No results were saved.",
   "run.done.failed": "The analysis failed. Please try again in a few minutes.",
+  "run.done.interrupted": "The server restarted before this run finished. Run it again.",
   "run.error.start": "The analysis could not be started. Please try again.",
   "run.error.poll": "Lost connection to the analysis. Refresh the page to check its status.",
   "run.error.cancel": "The analysis could not be cancelled.",

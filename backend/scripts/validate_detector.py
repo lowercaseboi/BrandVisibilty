@@ -169,7 +169,8 @@ def cmd_export(args: argparse.Namespace) -> int:
         if not snapshots:
             continue
         snapshot = snapshots[-1]  # most recent job
-        all_rows.extend(_candidate_rows(brand, snapshot.get("raw_observations") or []))
+        raw = store.load_observations(brand.brand_key, snapshot["run_id"]) or []
+        all_rows.extend(_candidate_rows(brand, raw))
 
     if not all_rows:
         print("No observations with response text found to sample from.")

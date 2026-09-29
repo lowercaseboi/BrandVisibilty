@@ -27,14 +27,14 @@ function Card({
 
 // PRD: "a trend claim always carries its confidence interval in the UI, not
 // just the headline number" — so the composite score is never shown alone.
-// Values arrive as 0..1 fractions (api/client.ts converts the backend's 0-100 composite).
+// composite_score / ci_low / ci_high are 0-100 points; the components are 0-1 fractions (api/types.ts).
 export function MetricCards({ analysis }: { analysis: AnalysisResult }) {
   const t = useT();
   const fmt = useFormat();
   const lo = analysis.ci_low ?? 0;
   const hi = analysis.ci_high ?? 0;
   const score = analysis.composite_score ?? 0;
-  const pts = (x: number) => fmt.number(x * 100, 1);
+  const pts = (x: number) => fmt.number(x, 1);
   const pct = (x: number | null | undefined) => (x === null || x === undefined ? "—" : fmt.percent(x, 1));
   // Same band the rating word elsewhere uses (from the low end of the range), so this number's
   // colour always agrees with it.
@@ -60,8 +60,8 @@ export function MetricCards({ analysis }: { analysis: AnalysisResult }) {
           </span>
         </div>
         <div className="ci-bar" aria-hidden="true">
-          <div className="ci-bar-range" style={{ left: `${lo * 100}%`, width: `${Math.max(0.5, (hi - lo) * 100)}%` }} />
-          <div className="ci-bar-point" style={{ left: `${score * 100}%` }} />
+          <div className="ci-bar-range" style={{ left: `${lo}%`, width: `${Math.max(0.5, hi - lo)}%` }} />
+          <div className="ci-bar-point" style={{ left: `${score}%` }} />
           <span className="ci-bar-min">0</span>
           <span className="ci-bar-max">100</span>
         </div>

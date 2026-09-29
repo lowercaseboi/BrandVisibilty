@@ -39,7 +39,7 @@ export interface ProviderInfo {
   kind: ProviderKind;
 }
 
-export type JobStatus = "queued" | "running" | "completed" | "partial" | "failed" | "cancelled";
+export type JobStatus = "queued" | "running" | "completed" | "partial" | "failed" | "cancelled" | "interrupted";
 
 export type ProviderState = "queued" | "running" | "waiting" | "skipped" | "done";
 
@@ -117,14 +117,28 @@ export interface ProviderBreakdown {
   mentioned_count: number;
 }
 
+/**
+ * Scales, exactly as the backend sends them (no conversion in api/client.ts):
+ * - `composite_score`, `ci_low`, `ci_high`: 0–100 points (scorer.py), like every score in
+ *   `TrendVerdict`. Round with `scoreOutOf100` / `toScore` for display.
+ * - `coverage`, `prominence`, `share_of_voice` (and `ProviderBreakdown.coverage`): 0–1 fractions,
+ *   shown as percentages via `fmt.percent`.
+ * The composite is renormalised over whichever components are defined (not null); see
+ * `measuredParts` in format.ts.
+ */
 export interface AnalysisResult {
+  /** 0–1. Always defined (0 when nothing was collected). */
   coverage: number;
-  // null when Coverage = 0 — DESIGN §1.6/PRD §222: Prominence is undefined,
+  // 0–1, null when Coverage = 0 — DESIGN §1.6/PRD §222: Prominence is undefined,
   // never a misleading 0, for a brand with no mentions.
   prominence: number | null;
+  /** 0–1, null when no answer mentioned the brand or any competitor. */
   share_of_voice: number | null;
+  /** 0–100 points. */
   composite_score: number;
+  /** 0–100 points. */
   ci_low: number;
+  /** 0–100 points. */
   ci_high: number;
   per_provider_coverage: ProviderBreakdown[];
 }
@@ -240,7 +254,7 @@ export type TrendStatus =
   | "declining";
 
 /** PRD §11.6 / AC-8 trend statistics over the latest comparable segment (same comparability_key,
- * admissible runs only). Scores and slopes are on the 0–100 scale — `toFractions` leaves them alone.
+ * admissible runs only). Scores and slopes are on the 0–100 scale, like `AnalysisResult.composite_score`.
  * 2–3 runs: last two compared by CI overlap; 4+: Theil–Sen slope with a bootstrap CI. */
 export interface TrendVerdict {
   status: TrendStatus;

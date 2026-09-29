@@ -14,6 +14,7 @@ import unicodedata
 from dataclasses import dataclass
 from typing import Any
 
+from app import paths
 from app.analysis.types import EntityAlias
 from app.querysets.templates import BrandParams
 from app.tracking import store
@@ -180,7 +181,7 @@ _PILOTS_BY_KEY: dict[str, BrandConfig] = {b.brand_key: b for b in _PILOTS}
 
 
 def _brands_path():
-    return store.DATA_DIR / "brands.json"
+    return paths.DATA_DIR / "brands.json"
 
 
 def _load_user_specs() -> list[dict]:

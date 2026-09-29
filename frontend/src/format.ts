@@ -160,13 +160,29 @@ export function scoreBandClass(band: RatingBand): "low" | "mid" | "high" {
   return "high";
 }
 
-/** 0–1 score -> whole points out of 100, as shown in the plain view. */
-export function scoreOutOf100(score0to1: number): number {
-  return Math.round(Math.min(1, Math.max(0, score0to1)) * 100);
+/** A 0–100 score (composite / CI bound, see api/types.ts) -> whole points, clamped to 0–100. */
+export function scoreOutOf100(points: number): number {
+  return Math.round(Math.min(100, Math.max(0, points)));
 }
 
 /**
- * Likely range of a snapshot's composite as whole points [lo, hi] out of 100, with the point score
+ * How many of the composite's three parts (coverage, prominence, share of voice) were measurable
+ * in this result. The backend renormalises the composite over the defined ones (scorer.py
+ * `_composite`), so a score on fewer than 3 parts isn't directly comparable with a full one.
+ * null / undefined / NaN = not defined.
+ */
+export const COMPOSITE_PARTS = 3;
+export function measuredParts(a: {
+  coverage?: number | null;
+  prominence?: number | null;
+  share_of_voice?: number | null;
+}): number {
+  const ok = (x: number | null | undefined) => typeof x === "number" && Number.isFinite(x);
+  return [a.coverage, a.prominence, a.share_of_voice].filter(ok).length;
+}
+
+/**
+ * Likely range of a snapshot's composite (0–100 points) as whole points [lo, hi], with the point score
  * as a fallback for a missing or broken confidence interval.
  */
 export function scoreRange(a: { composite_score: number; ci_low?: number | null; ci_high?: number | null }): [number, number] {

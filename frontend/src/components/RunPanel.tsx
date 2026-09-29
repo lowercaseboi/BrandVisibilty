@@ -9,7 +9,7 @@ import { brandHref } from "./module/modules";
 import { useListFormat, useProviderLabel } from "./dashboard/helpers";
 import { runCalls } from "./runMath";
 
-const TERMINAL = new Set<JobStatus>(["completed", "partial", "failed", "cancelled"]);
+const TERMINAL = new Set<JobStatus>(["completed", "partial", "failed", "cancelled", "interrupted"]);
 const SKIPPABLE = new Set(["queued", "running", "waiting"]);
 const SKIP_ALL = "__all__";
 // Rough time per AI call; AIs run in parallel, so the estimate doesn't grow with the number of AIs.
@@ -27,6 +27,7 @@ const DONE_KEY: Partial<Record<JobStatus, MessageKey>> = {
   partial: "dashboard.run.done.partial",
   cancelled: "dashboard.run.done.cancelled",
   failed: "dashboard.run.done.failed",
+  interrupted: "dashboard.run.done.interrupted",
 };
 
 type PanelError = { key: MessageKey; tech?: string };

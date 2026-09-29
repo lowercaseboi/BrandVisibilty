@@ -1,11 +1,12 @@
 import pytest
 
-from app.tracking import board, store
+from app import paths
+from app.tracking import board
 
 
 @pytest.fixture(autouse=True)
 def tmp_data_dir(tmp_path, monkeypatch):
-    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
     return tmp_path
 
 

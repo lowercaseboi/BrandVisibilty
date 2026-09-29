@@ -3,6 +3,9 @@
 Older JSONL lines written by `scripts/run_tracking_loop.py` predate the contract and
 lack run_id/status/admission/etc. `normalize_snapshot` fills safe, clearly-labelled
 defaults so the UI never crashes on them. It never touches stored data.
+
+Records come from `app.tracking.store`: light (no `raw_observations`) for history views,
+with the run's observations attached only when a caller asks for them (`include_raw`).
 """
 
 from __future__ import annotations
@@ -16,6 +19,7 @@ from typing import Any
 
 from app.analysis.summary import mention_summary
 from app.analysis.trend import TrendPoint, compute_trend
+from app.tracking.snapshot import legacy_run_id
 
 _LEGACY_OBS_ID = re.compile(r"^(?:(?P<provider>[^:]+):)?(?P<query>[qp]\d+)-s\d+$")
 
@@ -36,11 +40,14 @@ def _gap_id(gap: dict[str, Any]) -> str:
 def normalize_snapshot(record: dict[str, Any], *, include_raw: bool = False) -> dict[str, Any]:
     snap = dict(record)
     collected_at = snap.get("collected_at") or snap.get("collection_started_at") or ""
-    is_legacy = "run_id" not in snap
+    # Store-internal fields: `legacy_record` marks a pre-contract record whose derived run
+    # id was pinned when its observations were split out; `observations_file` points at them.
+    is_legacy = "run_id" not in snap or bool(snap.pop("legacy_record", False))
+    snap.pop("observations_file", None)
 
     snap.setdefault("brand_key", "")
     snap.setdefault("brand", snap["brand_key"])
-    snap.setdefault("run_id", _sha1(collected_at or json.dumps(record, sort_keys=True, default=str)))
+    snap.setdefault("run_id", legacy_run_id(record))
     snap.setdefault("status", "completed")
     snap.setdefault("data_origin", "live")
     snap.setdefault("collection_started_at", collected_at)

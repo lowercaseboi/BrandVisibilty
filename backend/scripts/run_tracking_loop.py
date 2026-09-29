@@ -5,7 +5,8 @@ end... the collection loop (Provider adapters + Scorer) needs to start running a
 2-3 real brands as soon as those two pieces exist." This script is that loop — now a thin
 CLI over `app.pipeline.runner.run_pipeline` (the same pipeline the HTTP API runs), so the
 CLI and the API can never drift apart. Still deliberately minimal: no DB, no Celery; it
-appends one snapshot per brand to DATA_DIR/tracking/<brand_key>.jsonl.
+appends one snapshot per brand to DATA_DIR/tracking/<brand_key>.jsonl (raw answers go to
+DATA_DIR/tracking/<brand_key>/<run_id>.observations.jsonl).
 
 Run: uv run python scripts/run_tracking_loop.py --brand gajanan_vada_pav --providers auto --samples 3
      (--brand all runs every registered brand; --record also saves live responses for replay)

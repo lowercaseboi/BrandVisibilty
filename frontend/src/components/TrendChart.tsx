@@ -139,8 +139,10 @@ export function TrendChart({
   const H = narrow ? 200 : 240;
   const innerW = W - PAD.left - PAD.right;
   const innerH = H - PAD.top - PAD.bottom;
-  const maxVal = Math.min(1, Math.max(0.25, ...snapshots.map((s) => s.analysis_result.ci_high ?? 0)) + 0.05);
-  const yMax = Math.ceil(maxVal * 10) / 10;
+  // Scores are 0-100 points: fit the axis to the highest CI bound (at least 25) plus headroom,
+  // rounded up to the next 10.
+  const maxVal = Math.min(100, Math.max(25, ...snapshots.map((s) => s.analysis_result.ci_high ?? 0)) + 5);
+  const yMax = Math.ceil(maxVal / 10) * 10;
   const x = (i: number) => PAD.left + (i / (n - 1)) * innerW;
   const y = (v: number) => PAD.top + innerH - (Math.max(0, Math.min(yMax, v ?? 0)) / yMax) * innerH;
 
@@ -165,7 +167,7 @@ export function TrendChart({
   });
 
   const ticks: number[] = [];
-  for (let v = 0; v <= yMax + 1e-9; v += yMax <= 0.5 ? 0.1 : 0.2) ticks.push(v);
+  for (let v = 0; v <= yMax; v += yMax <= 50 ? 10 : 20) ticks.push(v);
 
   const labelEvery = Math.max(1, Math.ceil(n / (narrow ? 3 : 6)));
   // Several checks on one day would all read "25 Sept": label them by time instead,
@@ -213,7 +215,7 @@ export function TrendChart({
           <g key={v}>
             <line x1={PAD.left} x2={W - PAD.right} y1={y(v)} y2={y(v)} className="trend-grid" />
             <text x={PAD.left - 8} y={y(v) + 4} className="trend-axis" textAnchor="end">
-              {fmt.number(Math.round(v * 100))}
+              {fmt.number(v)}
             </text>
           </g>
         ))}

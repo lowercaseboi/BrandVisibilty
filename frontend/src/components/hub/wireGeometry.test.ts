@@ -98,7 +98,7 @@ describe("stacked (mobile) layout", () => {
 
 describe("sparkPoints", () => {
   it("spans the box left → right, higher scores higher up", () => {
-    const pts = sparkPoints([0.2, 0.5, 0.35], 100, 40, 4);
+    const pts = sparkPoints([20, 50, 35], 100, 40, 4);
     expect(pts[0].x).toBe(4);
     expect(pts[2].x).toBe(96);
     expect(pts[1].y).toBeLessThan(pts[2].y);
@@ -108,7 +108,7 @@ describe("sparkPoints", () => {
   });
 
   it("centres a flat series vertically", () => {
-    const pts = sparkPoints([0.4, 0.4, 0.4], 100, 40, 0);
+    const pts = sparkPoints([40, 40, 40], 100, 40, 0);
     for (const p of pts) expect(p.y).toBe(20);
   });
 

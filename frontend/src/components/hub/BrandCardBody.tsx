@@ -3,6 +3,7 @@ import type { Snapshot } from "../../api/types";
 import { RATING_KEY, ratingFromRange, scoreOutOf100, scoreRange } from "../../format";
 import { useFormat, useT } from "../../i18n";
 import { Details } from "../../settings/details";
+import { MeasuredNote } from "../MeasuredNote";
 import { MetricStrip } from "../MetricStrip";
 import { ScoreRing } from "../ScoreRing";
 
@@ -70,7 +71,13 @@ export function BrandCardBody({
     const when = fmt.relativeTime(snap.collection_completed_at);
     label = t("pages.brands.scoreLabel", { score: fmt.number(score) });
     ring = <ScoreRing score={score} band={r.band} play={play} instant={instantRing} />;
-    rating = <span className={`pg-rating pg-rating-${r.band}`}>{t(RATING_KEY[r.band])}</span>;
+    rating = (
+      <>
+        <span className={`pg-rating pg-rating-${r.band}`}>{t(RATING_KEY[r.band])}</span>
+        {/* On the list the card is a link, so the tip can't be a nested button there. */}
+        <MeasuredNote analysis={snap.analysis_result} className="pg-measured" interactive={corner === "live"} />
+      </>
+    );
     if (r.upper) upper = <p className="pg-rating-upper">{t("pages.rating.couldBe", { rating: t(RATING_KEY[r.upper]) })}</p>;
     meta = (
       <>

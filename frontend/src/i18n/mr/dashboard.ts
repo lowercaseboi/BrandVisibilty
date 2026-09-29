@@ -269,6 +269,7 @@ export const dashboard: Record<keyof typeof enDashboard, string> = {
   "run.done.partial": "विश्लेषण पूर्ण, पण काही प्रतिसाद मिळाले नाहीत. निकाल मिळालेल्या प्रतिसादांवर आधारित आहेत.",
   "run.done.cancelled": "विश्लेषण रद्द केले. कोणतेही निकाल सेव्ह झाले नाहीत.",
   "run.done.failed": "विश्लेषण अयशस्वी झाले. कृपया काही मिनिटांनी पुन्हा प्रयत्न करा.",
+  "run.done.interrupted": "The server restarted before this run finished. Run it again.",
   "run.error.start": "विश्लेषण सुरू करता आले नाही. कृपया पुन्हा प्रयत्न करा.",
   "run.error.poll": "विश्लेषणाशी संपर्क तुटला. स्थिती पाहण्यासाठी पान रीफ्रेश करा.",
   "run.error.cancel": "विश्लेषण रद्द करता आले नाही.",

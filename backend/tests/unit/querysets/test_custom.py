@@ -2,20 +2,20 @@
 
 import pytest
 
+from app import paths
 from app.brands.registry import get_brand
 from app.querysets import custom
 from app.querysets.generator import freeze, generate_draft
-from app.tracking import store
 
 
 @pytest.fixture
 def brand(tmp_path, monkeypatch):
-    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
     return get_brand("gajanan_vada_pav")
 
 
 def _file(brand):
-    return store.DATA_DIR / "questions" / f"{brand.brand_key}.json"
+    return paths.DATA_DIR / "questions" / f"{brand.brand_key}.json"
 
 
 def test_defaults_when_no_file(brand):
@@ -113,7 +113,7 @@ PILOTS = ("gajanan_vada_pav", "va_mayekar_opticians", "perfume_pilot")
 
 @pytest.mark.parametrize("brand_key", PILOTS)
 def test_defaults_have_no_enabled_duplicates(tmp_path, monkeypatch, brand_key):
-    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
     questions = custom.get_questions(get_brand(brand_key))["questions"]
     enabled = [q["text"].casefold() for q in questions if q["enabled"]]
     assert enabled and len(enabled) == len(set(enabled))
@@ -123,7 +123,7 @@ def test_defaults_have_no_enabled_duplicates(tmp_path, monkeypatch, brand_key):
 
 @pytest.mark.parametrize("brand_key", PILOTS)
 def test_defaults_plus_one_custom_question_saves(tmp_path, monkeypatch, brand_key):
-    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
     brand = get_brand(brand_key)
     defaults = custom.get_questions(brand)
     items = [{k: q[k] for k in ("text", "intent_type", "source", "enabled")} for q in defaults["questions"]]

@@ -1,16 +1,19 @@
 """Pydantic request/response models for the HTTP API (docs/CONTRACT.md §2, §7).
 
-Snapshots are returned as plain dicts: the stored record is already contract-shaped
-(CONTRACT §5) and `app.interface.snapshots.normalize_snapshot` fills legacy gaps.
+Snapshots are built as plain dicts: the stored record is already contract-shaped
+(CONTRACT §5) and `app.interface.snapshots.normalize_snapshot` fills legacy gaps. The
+`Snapshot*` / `Observation*` models below describe those payloads for OpenAPI; they allow
+extra keys and their routes use `response_model_exclude_unset`, so nothing the normaliser
+emits is dropped or added.
 """
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-JobStatus = Literal["queued", "running", "completed", "partial", "failed", "cancelled"]
+JobStatus = Literal["queued", "running", "completed", "partial", "failed", "cancelled", "interrupted"]
 
 
 class BrandSummary(BaseModel):
@@ -336,3 +339,146 @@ class BoardState(BaseModel):
 
     brand_key: str
     cards: dict[str, BoardCardState] = Field(default_factory=dict)
+
+
+# --------------------------------------------------------------------------- snapshots
+# Response models for GET /brands/{k}/snapshots/latest, /snapshots, /runs and
+# /snapshots/{run_id}/observations. They mirror `normalize_snapshot`'s output exactly: every
+# model allows extra keys (the payload is additive by contract), and the routes serialise with
+# `response_model_exclude_unset=True`, so optional fields absent from a record stay absent.
+
+
+class _OpenModel(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+
+class SamplingConfig(_OpenModel):
+    temperature: float | None = None
+    system_prompt: str | None = None
+    samples_per_query: int
+
+
+class ProviderCoverage(_OpenModel):
+    provider_id: str
+    coverage: float = Field(description="0–1 fraction")
+    observation_count: int
+    mentioned_count: int
+
+
+class SnapshotAnalysis(_OpenModel):
+    """Scales: `coverage` / `prominence` / `share_of_voice` are 0–1 fractions;
+    `composite_score` / `ci_low` / `ci_high` are 0–100 points. The composite is renormalised
+    over whichever components are defined (not null)."""
+
+    coverage: float = Field(description="0–1; share of scored responses that mention the brand")
+    prominence: float | None = Field(description="0–1; null when the brand is never mentioned")
+    share_of_voice: float | None = Field(description="0–1; null when no response names the brand or a competitor")
+    composite_score: float = Field(description="0–100 points")
+    ci_low: float = Field(description="0–100 points (bootstrap 95% CI)")
+    ci_high: float = Field(description="0–100 points (bootstrap 95% CI)")
+    per_provider_coverage: list[ProviderCoverage]
+
+
+class SnapshotGap(_OpenModel):
+    gap_id: str
+    gap_type: str
+    evidence_refs: list[str]
+    detail: dict[str, Any]
+    is_inferred: bool
+
+
+class SnapshotRecommendation(_OpenModel):
+    recommendation_id: str
+    gap_id: str = Field(description="Never null (PRD AC-7): every recommendation traces to a gap")
+    action: str | None = None
+    action_class: str | None = None
+    priority: float | None = None
+    delta_composite: float | None = None
+    confidence: float | None = None
+    effort: int | None = None
+    reasoning: str | None = None
+    evidence_refs: list[str] | None = None
+    drafted_by: str | None = None
+
+
+class SnapshotAdmission(_OpenModel):
+    admissible: bool
+    status: str
+    reasons: list[str]
+    query_coverage: float
+    sample_completeness: float
+    missing_query_ids: list[str]
+    missing_providers: list[str]
+    collection_span_days: int
+    policy_version: str
+
+
+class MentionCounts(_OpenModel):
+    answers_mentioning: int
+    answers_ranked_first: int
+
+
+class MentionSummaryOut(_OpenModel):
+    total_answers: int
+    entities: dict[str, MentionCounts]
+
+
+class Snapshot(_OpenModel):
+    """One tracking run, without its raw observations (CONTRACT §5)."""
+
+    brand_key: str
+    brand: str
+    run_id: str
+    status: str = Field(examples=["completed", "partial"])
+    data_origin: str = Field(examples=["live", "synthetic", "replay"])
+    providers: list[str]
+    comparability_key: str
+    collection_started_at: str
+    collection_completed_at: str
+    collection_span_days: int
+    query_set_content_hash: str
+    query_set_template_version: str
+    sampling_config: SamplingConfig
+    observation_count: int
+    unscored_observation_count: int
+    mentioned_count: int
+    cluster_count: int
+    analysis_result: SnapshotAnalysis
+    gaps: list[SnapshotGap]
+    recommendations: list[SnapshotRecommendation]
+    admission: SnapshotAdmission
+    entities: dict[str, str]
+    mention_summary: MentionSummaryOut
+    trend_verdict: TrendVerdict | None = Field(
+        default=None, description="Only on the newest snapshot of a list (and on /snapshots/latest)"
+    )
+
+
+class ObservationMention(_OpenModel):
+    entity_id: str
+    entity_kind: str
+    rank: int | None = None
+    is_passing_mention: bool | None = None
+    char_start: int | None = None
+    char_end: int | None = None
+
+
+class Observation(_OpenModel):
+    observation_id: str
+    provider_id: str
+    query_id: str
+    query_text: str
+    intent_type: str | None
+    model_version: str | None
+    response_text: str
+    mentions: list[ObservationMention]
+    scored: bool = Field(description="False for brand-named questions: shown, never scored")
+
+
+class ObservationsResponse(_OpenModel):
+    """`GET /brands/{brand_key}/snapshots/{run_id}/observations` — the evidence behind every gap."""
+
+    brand_key: str
+    run_id: str
+    entities: dict[str, str]
+    raw_observations: list[Observation]

@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 
+from app import paths
 from app.analysis.types import AnalysisResult, EntityAlias, ProviderBreakdown
 from app.tracking import store
 from app.tracking.snapshot import build_snapshot, comparability_key, data_origin
@@ -49,7 +50,7 @@ def test_build_snapshot_contract_keys_and_admission():
 
 
 def test_store_round_trip_skips_corrupt_lines(tmp_path, monkeypatch):
-    monkeypatch.setattr(store, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
     assert store.load_snapshots("demo") == [] and store.brand_keys_with_data() == set()
     first, second = _snapshot([_raw("synthetic", 0, 0)]), _snapshot([_raw("gemini", 1, 0)])
     store.append_snapshot(first)

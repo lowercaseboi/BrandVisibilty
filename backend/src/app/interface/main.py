@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import asdict
 from typing import Any
@@ -20,11 +21,13 @@ from app.interface.schemas import (
     CreateBrandRequest,
     HealthResponse,
     Job,
+    ObservationsResponse,
     ProviderInfoOut,
     QuestionSet,
     RunRequest,
     SaveQuestionsRequest,
     SkipRequest,
+    Snapshot,
     TrendVerdict,
     UpdateBrandRequest,
 )
@@ -135,6 +138,7 @@ def _run_fn():
 
 
 jobs = JobManager(_run_fn)
+jobs.recover_from_restart()  # mark any job left "queued"/"running" by a previous process as interrupted
 
 
 # --------------------------------------------------------------------------- helpers
@@ -150,8 +154,27 @@ def _brand_summary(cfg: Any, data_keys: set[str]) -> BrandSummary:
     )
 
 
-def _normalized_snapshots(brand_key: str, *, include_raw: bool = False) -> list[dict[str, Any]]:
-    return [normalize_snapshot(r, include_raw=include_raw) for r in store.load_snapshots(brand_key)]
+def _normalized_snapshots(brand_key: str) -> list[dict[str, Any]]:
+    """Light history (no raw observations are read) — see app.tracking.store."""
+    return [normalize_snapshot(r) for r in store.load_snapshots(brand_key)]
+
+
+def _warn_legacy_snapshot_layout() -> None:
+    """One line at startup if any history still inlines raw observations (pre-split
+    layout). Such data still works, just slower; the fix is a one-time command."""
+    try:
+        legacy = store.legacy_inline_brands()
+    except OSError:
+        return
+    if legacy:
+        logging.getLogger("app.tracking").warning(
+            "Snapshot history for %s uses the old inline-observations layout; run "
+            "`uv run python scripts/migrate_split_observations.py` (backend/) to split it.",
+            ", ".join(legacy),
+        )
+
+
+_warn_legacy_snapshot_layout()
 
 
 # --------------------------------------------------------------------------- meta
@@ -302,7 +325,9 @@ def reset_questions(brand_key: str) -> dict[str, Any]:
 # --------------------------------------------------------------------------- snapshots
 
 
-@app.get("/brands/{brand_key}/snapshots/latest", tags=["snapshots"])
+@app.get(
+    "/brands/{brand_key}/snapshots/latest", tags=["snapshots"], response_model=Snapshot, response_model_exclude_unset=True
+)
 def latest_snapshot(brand_key: str) -> dict[str, Any]:
     """Most recent snapshot (without raw observations). 404 if the brand has no data yet."""
     snapshots = _normalized_snapshots(brand_key)
@@ -312,7 +337,9 @@ def latest_snapshot(brand_key: str) -> dict[str, Any]:
     return with_trend_verdict(snapshots)[-1]
 
 
-@app.get("/brands/{brand_key}/snapshots", tags=["snapshots"])
+@app.get(
+    "/brands/{brand_key}/snapshots", tags=["snapshots"], response_model=list[Snapshot], response_model_exclude_unset=True
+)
 def list_snapshots(brand_key: str) -> list[dict[str, Any]]:
     """All snapshots, oldest first, without raw observations (for trend charts). The newest one
     also carries `trend_verdict` (AC-8, see `GET /brands/{brand_key}/trend`)."""
@@ -327,23 +354,32 @@ def get_trend(brand_key: str) -> dict[str, Any]:
     return trend_verdict(_normalized_snapshots(brand_key))
 
 
-@app.get("/brands/{brand_key}/runs", tags=["snapshots"], include_in_schema=False)
+@app.get(
+    "/brands/{brand_key}/runs",
+    tags=["snapshots"],
+    include_in_schema=False,
+    response_model=list[Snapshot],
+    response_model_exclude_unset=True,
+)
 def list_runs_alias(brand_key: str) -> list[dict[str, Any]]:
     # Alias kept for frontend/src/api/client.ts `getRuns`.
     return with_trend_verdict(_normalized_snapshots(brand_key))
 
 
-@app.get("/brands/{brand_key}/snapshots/{run_id}/observations", tags=["snapshots"])
+@app.get(
+    "/brands/{brand_key}/snapshots/{run_id}/observations",
+    tags=["snapshots"],
+    response_model=ObservationsResponse,
+    response_model_exclude_unset=True,
+)
 def snapshot_observations(brand_key: str, run_id: str) -> dict[str, Any]:
     """Raw provider responses and detected mentions for one run — the evidence behind every gap."""
-    record = store.get_snapshot(brand_key, run_id)
-    if record is not None:
-        snap = normalize_snapshot(record, include_raw=True)
-    else:
-        # Legacy records have a derived run_id the store doesn't know about.
-        snap = next((s for s in _normalized_snapshots(brand_key, include_raw=True) if s["run_id"] == run_id), None)
-    if snap is None:
+    # Reads just this run's observations file (or a legacy line's inline copy; legacy
+    # records are matched by their derived run_id too).
+    record = store.get_snapshot(brand_key, run_id, include_raw=True)
+    if record is None:
         raise HTTPException(status_code=404, detail=f"No snapshot '{run_id}' for brand '{brand_key}'")
+    snap = normalize_snapshot(record, include_raw=True)
     return {
         "brand_key": brand_key,
         "run_id": snap["run_id"],

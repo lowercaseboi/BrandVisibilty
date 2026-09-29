@@ -10,15 +10,15 @@ export interface Pt {
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
 /**
- * A sparkline's polyline points for scores (0–1) in a w×h box with `pad` px inset, oldest → newest.
- * The y range is padded around the data (at least 10 points on the 0–100 scale) so a flat series
+ * A sparkline's polyline points for scores (0–100 points) in a w×h box with `pad` px inset, oldest → newest.
+ * The y range is padded around the data (at least 10 points) so a flat series
  * sits mid-box instead of hugging an edge.
  */
 export function sparkPoints(values: number[], w: number, h: number, pad = 3): Pt[] {
   if (values.length === 0) return [];
   const lo = Math.min(...values);
   const hi = Math.max(...values);
-  const span = Math.max(hi - lo, 0.1);
+  const span = Math.max(hi - lo, 10);
   const mid = (lo + hi) / 2;
   const min = mid - span / 2;
   const innerW = w - pad * 2;

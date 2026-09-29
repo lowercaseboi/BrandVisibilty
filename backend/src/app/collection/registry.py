@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
+from app import paths
 from app.collection.providers.anthropic import AnthropicAdapter
 from app.collection.providers.gemini import GeminiAdapter
 from app.collection.providers.openai_compat import OpenAICompatibleAdapter
@@ -62,11 +63,11 @@ class ProviderInfo:
 
 def data_dir() -> Path:
     """The one data root, shared with the tracking store (so the replay recorder, which writes
-    under `store.DATA_DIR`, and the replay reader always agree — including when tests
-    monkeypatch it). Imported here, not at module level, to avoid an import cycle."""
-    from app.tracking import store
-
-    return store.DATA_DIR
+    under `paths.DATA_DIR`, and the replay reader always agree — including when tests
+    monkeypatch it). `app.paths` is a leaf module with no `app` imports of its own, so this
+    no longer needs the lazy import that avoiding a cycle through `app.tracking.store` used
+    to require."""
+    return paths.DATA_DIR
 
 
 def replay_cache_path(brand_key: str) -> Path:

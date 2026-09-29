@@ -122,6 +122,110 @@ def test_finished_jobs_are_pruned(monkeypatch):
     assert manager.get(ids[0]) is None
 
 
+def test_job_state_is_persisted_to_disk_and_matches_get(tmp_path, monkeypatch):
+    """Every state change is written to DATA_DIR/jobs/<job_id>.json; the file's contents match
+    what get() returns once the run has settled into a stable (throttle-safe) state."""
+    import json
+
+    from app.interface import jobs as jobs_module
+
+    monkeypatch.setattr(jobs_module.paths, "DATA_DIR", tmp_path)
+    gate, started, calls = threading.Event(), threading.Event(), []
+    manager = JobManager(lambda: _gated_run(gate, started, calls, done_before_gate=0))
+    job = manager.submit("a", providers="auto", samples=1, round=1)
+    assert started.wait(5)
+
+    job_file = tmp_path / "jobs" / f"{job['job_id']}.json"
+    assert job_file.exists()
+    on_disk = json.loads(job_file.read_text())
+    assert on_disk["status"] == "running"
+    assert on_disk["job_id"] == job["job_id"]
+    assert on_disk["brand_key"] == "a"
+
+    gate.set()
+    final = _wait(manager, job["job_id"], {"completed"})
+    on_disk = json.loads(job_file.read_text())
+    assert on_disk["status"] == "completed" and on_disk["run_id"] == final["run_id"] == "run-a"
+
+
+def test_interrupted_jobs_are_marked_on_restart(tmp_path, monkeypatch):
+    """A job left "queued" or "running" by a previous process becomes "interrupted" once a new
+    JobManager calls recover_from_restart(); a job that had already finished is restored as-is,
+    and both are served by get()/list() after the "restart"."""
+    import json
+
+    from app.interface import jobs as jobs_module
+
+    monkeypatch.setattr(jobs_module.paths, "DATA_DIR", tmp_path)
+    jobs_dir = tmp_path / "jobs"
+    jobs_dir.mkdir(parents=True)
+    stale_running = {
+        "job_id": "stale-running",
+        "brand_key": "a",
+        "status": "running",
+        "message": "Starting run",
+        "done": 1,
+        "total": 4,
+        "run_id": None,
+        "error": None,
+        "providers": [],
+        "created_at": 1.0,
+    }
+    stale_queued = {**stale_running, "job_id": "stale-queued", "status": "queued", "created_at": 2.0}
+    finished = {**stale_running, "job_id": "done-job", "status": "completed", "run_id": "run-x", "created_at": 3.0}
+    for record in (stale_running, stale_queued, finished):
+        (jobs_dir / f"{record['job_id']}.json").write_text(json.dumps(record))
+
+    manager = JobManager(lambda: None)
+    manager.recover_from_restart()
+
+    for job_id in ("stale-running", "stale-queued"):
+        job = manager.get(job_id)
+        assert job["status"] == "interrupted"
+        assert job["error"] == "server restarted before the run finished"
+        on_disk = json.loads((jobs_dir / f"{job_id}.json").read_text())
+        assert on_disk["status"] == "interrupted"
+
+    done = manager.get("done-job")
+    assert done["status"] == "completed" and done["run_id"] == "run-x"
+    assert [j["job_id"] for j in manager.list("a")] == ["stale-running", "stale-queued", "done-job"]
+
+
+def test_pruning_removes_old_finished_job_files(tmp_path, monkeypatch):
+    from app.interface import jobs as jobs_module
+
+    monkeypatch.setattr(jobs_module.paths, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(jobs_module, "MAX_FINISHED_JOBS", 2)
+    manager = JobManager(lambda: (lambda brand_key, **kw: {"run_id": brand_key, "status": "completed"}))
+    ids = [manager.submit(k, providers="auto", samples=1)["job_id"] for k in "abcd"]
+    _wait(manager, ids[-1], {"completed"})
+
+    jobs_dir = tmp_path / "jobs"
+    remaining = {p.stem for p in jobs_dir.glob("*.json")}
+    assert remaining == {ids[-2], ids[-1]}
+    assert not (jobs_dir / f"{ids[0]}.json").exists()
+    assert not (jobs_dir / f"{ids[1]}.json").exists()
+
+
+def test_single_worker_guard_rejects_multiple_workers(monkeypatch):
+    import pytest
+
+    from app.interface import jobs as jobs_module
+
+    monkeypatch.setenv("WEB_CONCURRENCY", "3")
+    with pytest.raises(jobs_module.MultipleWorkersError):
+        JobManager(lambda: None)
+    monkeypatch.delenv("WEB_CONCURRENCY", raising=False)
+
+    monkeypatch.setenv("UVICORN_WORKERS", "2")
+    with pytest.raises(jobs_module.MultipleWorkersError):
+        JobManager(lambda: None)
+    monkeypatch.delenv("UVICORN_WORKERS", raising=False)
+
+    monkeypatch.setenv("WEB_CONCURRENCY", "1")
+    JobManager(lambda: None)  # does not raise
+
+
 def test_cancel_interrupts_a_provider_waiting_on_a_rate_limit():
     started = threading.Event()
 

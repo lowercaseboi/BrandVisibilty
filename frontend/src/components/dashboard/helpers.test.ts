@@ -19,10 +19,11 @@ describe("effortLevel", () => {
 });
 
 describe("toScore", () => {
-  it("clamps to 0-1 and rounds to whole points", () => {
-    expect(toScore(0.5)).toBe(50);
+  it("clamps 0-100 points and rounds to whole points", () => {
+    expect(toScore(50)).toBe(50);
+    expect(toScore(45.066)).toBe(45);
     expect(toScore(-1)).toBe(0);
-    expect(toScore(2)).toBe(100);
+    expect(toScore(200)).toBe(100);
   });
 
   it("null/undefined/NaN -> 0", () => {

@@ -51,4 +51,11 @@ export const hub = {
   "preview.board.col.in_progress": "In progress",
   "preview.board.col.done": "Done",
   "preview.board.col.rejected": "Rejected",
+
+  // Shown under a score when the composite could only use some of its three parts
+  // (coverage, prominence, share of voice). {n} is 1 or 2.
+  "measured.note": "Measured on {n} of 3 parts",
+  "measured.label": "Why only some parts?",
+  "measured.explainer":
+    "The score combines three parts: mentions, position in the answer, and share against competitors. Some couldn't be measured this time (e.g. nothing to rank when the brand wasn't mentioned), so the score uses only the parts that could and isn't directly comparable with a fully measured score.",
 };

@@ -14,6 +14,7 @@ from collections.abc import Sequence
 from dataclasses import asdict
 from datetime import datetime
 
+from app.analysis.summary import mention_summary
 from app.analysis.types import AnalysisResult, EntityAlias
 
 ADMISSION_POLICY_VERSION = "v0"
@@ -21,6 +22,10 @@ MIN_QUERY_COVERAGE = 0.8
 MIN_SAMPLE_COMPLETENESS = 0.7
 
 OFFLINE_PROVIDERS = {"synthetic", "replay"}
+
+# Raw observations live beside the snapshot history, one file per run:
+# DATA_DIR/tracking/<brand_key>/<run_id>.observations.jsonl (see app.tracking.store).
+OBSERVATIONS_SUFFIX = ".observations.jsonl"
 
 
 def _alias_table_signature(entity_alias_table: Sequence[EntityAlias]) -> str:
@@ -181,3 +186,43 @@ def build_snapshot(
         "entities": dict(entities),
         "raw_observations": raw_observations,
     }
+
+
+def legacy_run_id(record: dict) -> str:
+    """The run id a pre-contract record (no `run_id`, written by the old tracking script) is
+    known by: sha1 of its collection time, or of the whole record when it has none. Hashes
+    the record *as stored*, raw observations included, so compute it before splitting."""
+    collected_at = record.get("collected_at") or record.get("collection_started_at") or ""
+    basis = collected_at or json.dumps(record, sort_keys=True, default=str)
+    return hashlib.sha1(basis.encode("utf-8")).hexdigest()
+
+
+def split_observations(record: dict) -> tuple[dict, list[dict] | None]:
+    """Split a stored snapshot record into (light record, raw observations).
+
+    Returns `(copy, None)` when the record carries no inline `raw_observations` (already in
+    the split layout). Otherwise the light record gets every summary field that used to be
+    derived from the raw answers at read time (observation/unscored/cluster counts and the
+    per-entity `mention_summary`, scored answers only — PRD §10.1), computed exactly as
+    `interface.snapshots.normalize_snapshot` would, so normalising the light record gives
+    the same API payload as normalising the original. A pre-contract record also gets its
+    derived `run_id` pinned (plus `legacy_record: True` so it still normalises as legacy),
+    because that id may hash the raw answers that are about to leave the line.
+    Pure: no I/O. Fields a record already has are never overwritten.
+    """
+    light = {k: v for k, v in record.items() if k != "raw_observations"}
+    if "raw_observations" not in record:
+        return light, None
+    raw = list(record.get("raw_observations") or [])
+    if "run_id" not in light:
+        light["run_id"] = legacy_run_id(record)
+        light["legacy_record"] = True
+    light.setdefault("observation_count", len(raw))
+    light.setdefault("unscored_observation_count", sum(1 for o in raw if o.get("scored") is False))
+    light.setdefault("cluster_count", len({o.get("query_id") or o.get("query_text") for o in raw}) if raw else 0)
+    if not isinstance(light.get("mention_summary"), dict):
+        entities = dict(light.get("entities") or {})
+        entities.setdefault("self", light["brand"] if "brand" in light else light.get("brand_key", ""))
+        scored = [o for o in raw if isinstance(o, dict) and o.get("scored") is not False]
+        light["mention_summary"] = mention_summary(scored, entities)
+    return light, raw

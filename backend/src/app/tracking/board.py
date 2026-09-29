@@ -14,14 +14,14 @@ import json
 import os
 from pathlib import Path
 
-from app.tracking import store
+from app import paths
 
 MAX_CARDS = 500
 MAX_KEY_LEN = 300
 
 
 def _boards_dir() -> Path:
-    return store.DATA_DIR / "boards"
+    return paths.DATA_DIR / "boards"
 
 
 def _path_for(brand_key: str) -> Path:
