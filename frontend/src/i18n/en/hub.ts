@@ -14,6 +14,9 @@ export const hub = {
   "module.recommendations.blurb": "What to do next, with a status you track per suggestion",
   "loading": "Loading brand…",
   "error.load": "Couldn't load this brand.",
+  "notFound.title": "Brand not found",
+  "notFound.body": "There's no brand called “{key}” in this workspace. It may have been deleted, or the link has a typo.",
+  "notFound.back": "See all brands",
 
   // ---- Hub page (centre card + four module cards joined by live wires)
   "centre.label": "{brand}: visibility summary",

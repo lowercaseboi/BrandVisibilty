@@ -81,8 +81,8 @@ image format for Instagram feed posts, with an aspect ratio between 4:5 and 1.91
 ## 2. Meta: Facebook Page + Instagram
 
 **What you end up with:** `META_PAGE_ID`, `META_PAGE_TOKEN` (a Page access token that doesn't
-expire) and `IG_USER_ID`. `META_GRAPH_VERSION` defaults to `v21.0`. Meta retires each Graph API
-version about two years after its release, so if requests start failing with a version error, set
+expire) and `IG_USER_ID`. `META_GRAPH_VERSION` defaults to `v25.0` (released 2026-02-18, supported
+until 2028-07-29). Meta retires each Graph API version about two years after its release, so if requests start failing with a version error, set
 it to the current version shown in the Graph API Explorer.
 
 ### 2.1 Prerequisites
@@ -137,11 +137,11 @@ Find your **App ID** and **App Secret** under *App settings → Basic* (click *S
 
 ```bash
 # 1) short-lived user token → long-lived user token (~60 days)
-curl -s "https://graph.facebook.com/v21.0/oauth/access_token?grant_type=fb_exchange_token&client_id=APP_ID&client_secret=APP_SECRET&fb_exchange_token=SHORT_LIVED_TOKEN"
+curl -s "https://graph.facebook.com/v25.0/oauth/access_token?grant_type=fb_exchange_token&client_id=APP_ID&client_secret=APP_SECRET&fb_exchange_token=SHORT_LIVED_TOKEN"
 # → {"access_token":"EAAB...LONG_USER_TOKEN", "token_type":"bearer", "expires_in":5183...}
 
 # 2) list your Pages with *Page* tokens (derived from a long-lived user token → they don't expire)
-curl -s "https://graph.facebook.com/v21.0/me/accounts?access_token=LONG_USER_TOKEN"
+curl -s "https://graph.facebook.com/v25.0/me/accounts?access_token=LONG_USER_TOKEN"
 # → {"data":[{"name":"Gajanan Vada Pav","id":"1234567890","access_token":"EAAB...PAGE_TOKEN", ...}]}
 ```
 
@@ -158,7 +158,7 @@ step 2 with the extended token.
 ### 2.5 Find the Instagram user id
 
 ```bash
-curl -s "https://graph.facebook.com/v21.0/META_PAGE_ID?fields=instagram_business_account&access_token=PAGE_TOKEN"
+curl -s "https://graph.facebook.com/v25.0/META_PAGE_ID?fields=instagram_business_account&access_token=PAGE_TOKEN"
 # → {"instagram_business_account":{"id":"17841400000000000"},"id":"1234567890"}
 ```
 
@@ -168,10 +168,10 @@ username or the number shown in the Instagram app.
 ### 2.6 Read-only check (posts nothing)
 
 ```bash
-curl -s "https://graph.facebook.com/v21.0/META_PAGE_ID?fields=name&access_token=PAGE_TOKEN"
-curl -s "https://graph.facebook.com/v21.0/IG_USER_ID?fields=username&access_token=PAGE_TOKEN"
+curl -s "https://graph.facebook.com/v25.0/META_PAGE_ID?fields=name&access_token=PAGE_TOKEN"
+curl -s "https://graph.facebook.com/v25.0/IG_USER_ID?fields=username&access_token=PAGE_TOKEN"
 # IG publishing quota for the last 24 h (limit is on the order of 100 API posts/day — verify in current docs)
-curl -s "https://graph.facebook.com/v21.0/IG_USER_ID/content_publishing_limit?access_token=PAGE_TOKEN"
+curl -s "https://graph.facebook.com/v25.0/IG_USER_ID/content_publishing_limit?access_token=PAGE_TOKEN"
 ```
 
 Put the three values in `.env.local`, restart the backend and check `GET /channels`:
@@ -516,12 +516,12 @@ in that order.
 | Instagram "container ERROR" / aspect-ratio error | Image outside 4:5 to 1.91:1, or wrong format | Use the square or portrait asset (JPEG). |
 | Instagram "still processing after N checks" | Meta is slow to process the image | Nothing was posted, so just retry. |
 | IG post works for you but teammates can't see it | App in Development mode *(verify in current docs)* | Add them to *App roles*, or switch the app to Live. |
-| X **401** | Wrong or mismatched keys, or an extra space pasted into `.env.local` | Re-copy all four values. |
+| X **401** | Wrong or mismatched keys, an extra space pasted into `.env.local`, or the user revoked the app | Re-copy all four values, or reconnect the brand's X account. |
 | X **403** "not permitted" | Access token created while the app was Read-only, or a duplicate post | Set **Read and write**, **regenerate** the access token and secret; if it's a duplicate, change the text. |
 | X **429** / "monthly post limit reached" | X's rate limit or your `X_MONTHLY_POST_LIMIT` | Wait (the monthly count resets on the 1st, UTC) or raise the limit if your tier allows. |
 | X post too long, though it looks short | X counts every link as 23 characters, and emoji or CJK characters as 2 | Shorten the text or remove hashtags; the Studio counter uses X's rules. |
 | GBP **403** "API has not been used" / **429** with quota 0 | API access not approved yet, or the API isn't enabled | Section 4.1 (wait for approval), then 4.2 step 1. |
-| GBP **401** | Access token expired (they last about an hour) | Get a fresh one from the OAuth Playground (4.2 step 4). |
+| GBP **401** | Access token expired or revoked (they last about an hour) | Connected with the button: it refreshes automatically; if the event still says "reconnect", connect again. Manual/.env token: get a fresh one from the OAuth Playground (4.2 step 4). |
 | GBP post "REJECTED" | Google content policy (phone numbers, spammy text) | Edit the copy and publish again. |
 | Gemini image 429 / quota | No free image quota | Nothing to fix: it falls back to Cloudflare or the template. Or set `IMAGE_PROVIDERS=cloudflare,template`. |
 | Cloudflare 401/403 | Token missing the Workers AI permission, or the account ID is wrong | Recreate the token from the Workers AI template and check the ID in the dashboard URL. |
@@ -531,4 +531,65 @@ in that order.
 | Account shows **expired** | Token past its expiry with no way to refresh (LinkedIn after ~60 days, a manual GBP token after an hour), or `SECRET_KEY` changed | Connect again. |
 | LinkedIn **403** | Token lacks `w_member_social` / `w_organization_social`, or the member isn't an admin of that Page | Re-check the app's products (5.1) and reconnect. |
 | LinkedIn **426** / version error | `LINKEDIN_API_VERSION` is sunset | Set a recent `YYYYMM` (5.2). |
+| Event **blocked** "Not posted — …" on a channel you connected | The account is saved but can't post: token expired with no refresh, `SECRET_KEY` changed, Instagram without a public `PUBLIC_BASE_URL`, incomplete account | Do what the message says, then run `check_channels.py` (section 9). Nothing was sent. |
+| Event **exported** with "Not posted: this brand has no … account connected" | Neither the brand nor the server `.env` has credentials for that channel | Connect the account (section 6) and publish again. |
+| Event **failed** "… reconnect the account in Details → Connected accounts" | The platform rejected the stored token (revoked, password changed, app removed) | Reconnect in Details → Connected accounts. |
 | Publish button asks for a token | `ADMIN_TOKEN` set on the server | Paste the same `ADMIN_TOKEN` value you put in `.env.local`. |
+
+---
+
+## 9. Verify before you post
+
+Two ways to check that a brand's accounts will really post, **without posting anything**:
+
+**From a terminal** (run from `backend/`, with the same `.env` / `.env.local` as the server — in
+particular the same `SECRET_KEY`, or stored tokens can't be decrypted):
+
+```bash
+uv run python scripts/check_channels.py --brand gajanan_vada_pav            # all channels
+uv run python scripts/check_channels.py --brand gajanan_vada_pav --channel instagram
+uv run python scripts/check_channels.py --brand gajanan_vada_pav --offline  # no network calls
+```
+
+For every channel it prints where the credentials come from (brand account via Connect / manual,
+the server `.env` fallback, or nothing), the account state, what a publish would do —
+**WOULD POST**, **EXPORT ONLY** (nothing connected: export pack), **REFUSED** (connected but
+unusable, with the reason) or **SHARE LINK** (WhatsApp) — and then one cheap **read-only** call per
+connected account: the Page name (Facebook), `@username` (Instagram), `@handle` (X, `GET /2/users/me`),
+the member (LinkedIn userinfo) or the location title (Google). An expired token with a refresh
+token is refreshed first, exactly as publishing would. Exit code 1 if any test call failed. Tokens
+are never printed.
+
+**From the API** (no admin token needed, nothing is sent or logged):
+`POST /brands/{brand}/campaigns/{id}/preflight` with `{"channels": [...]}` answers, per channel,
+`action` = `publish` / `export` / `blocked`, a plain-language `detail`, and the public `image_url`
+a platform would fetch. `POST /brands/{brand}/accounts/{channel}/test` is the per-account probe.
+
+### What "published" means
+
+A publish event is **published** only when the platform accepted the post and returned its id; the
+event carries the post's URL (`external_url`). Otherwise it is **failed** (the platform said no —
+the error says why, and "reconnect" when the token was rejected), **blocked** (refused before any
+call: not approved, edited since approval, text too long, no `ADMIN_TOKEN`, or an account that is
+saved but can't post) or **exported** (nothing sent: export pack, or WhatsApp). **WhatsApp never
+posts by itself** — it has no posting API, so its event holds a `wa.me` share link with the message
+filled in; you open it and press send.
+
+### Minimal steps to post for real
+
+1. `.env.local`: `ADMIN_TOKEN`, `SECRET_KEY`, and for Instagram / Google images a public
+   `PUBLIC_BASE_URL` (section 1). Restart the backend.
+2. Connect each account in **Details → Connected accounts** (Connect button — needs the platform
+   app keys + `OAUTH_REDIRECT_BASE`, section 6 — or the manual form):
+   - **Facebook Page**: Page id + a non-expiring **Page** token (2.3–2.4) with `pages_manage_posts`.
+   - **Instagram**: the IG business account id + the linked Page's token with
+     `instagram_content_publish`; the account must be Business/Creator and linked to the Page.
+   - **X**: Connect (OAuth 2.0 with `tweet.write media.write offline.access`), or the four OAuth 1.0a
+     values from an app set to **Read and write** (regenerate the access token after switching).
+   - **LinkedIn**: Connect (`w_member_social`, plus `w_organization_social` for a company Page), or
+     author URN + access token.
+   - **Google Business Profile**: only after Google approves API access (4.1); then Connect.
+3. `uv run python scripts/check_channels.py --brand <brand>` → every channel you want shows
+   **WOULD POST** and **OK**.
+4. In Campaign Studio: approve the campaign, publish (with the admin token). Each channel's event
+   links to the live post.

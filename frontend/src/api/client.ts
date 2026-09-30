@@ -355,3 +355,23 @@ export async function listBrandChannels(brandKey: string): Promise<ChannelStatus
     throw err;
   }
 }
+
+/** One channel's dry run (POST …/preflight): what publishing would do now, and why. */
+export interface PreflightPlan {
+  channel: ChannelId;
+  action: "publish" | "export" | "blocked";
+  detail: string;
+  image_url: string | null;
+  has_image: boolean;
+}
+
+/** Dry run of publish: contacts no platform, logs nothing, needs no admin token. Resolves to null
+ * on an older backend without the endpoint (404/405). */
+export async function preflightCampaign(brandKey: string, campaignId: string, channels: ChannelId[]): Promise<PreflightPlan[] | null> {
+  try {
+    return await postJson<PreflightPlan[]>(`${campaignPath(brandKey, campaignId)}/preflight`, { channels });
+  } catch (err) {
+    if (err instanceof ApiError && (err.status === 404 || err.status === 405)) return null;
+    throw err;
+  }
+}

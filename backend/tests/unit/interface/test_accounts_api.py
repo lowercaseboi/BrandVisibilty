@@ -13,6 +13,8 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from app.distribution.accounts import WHATSAPP_DETAIL
+
 BRAND = "gajanan_vada_pav"
 ADMIN = "s3cret-admin"
 PAGE_TOKEN = "EAAB-PAGE-TOKEN-SUPER-SECRET"
@@ -63,7 +65,7 @@ def test_list_accounts_shape(api) -> None:
     assert accts["x"]["state"] == "needs_setup" and accts["x"]["oauth_available"] is False
     assert accts["google_business"]["state"] == "pending_approval"
     assert accts["whatsapp"] == {**accts["whatsapp"], "state": "connected", "method": None,
-                                 "detail": "No account needed — posts via a share link"}
+                                 "detail": WHATSAPP_DETAIL}
     assert api.get("/brands/nope/accounts").status_code == 404
 
 

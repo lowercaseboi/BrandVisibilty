@@ -36,7 +36,18 @@ export function Stepper({ current, reachable, onGo }: { current: StepId; reachab
 }
 
 /** Sticky bottom bar: Back on the left, a short note, the step's primary action on the right. */
-export function ActionBar({ back, note, children }: { back?: { label: string; onClick: () => void }; note?: ReactNode; children?: ReactNode }) {
+export function ActionBar({
+  back,
+  note,
+  noteTone,
+  children,
+}: {
+  back?: { label: string; onClick: () => void };
+  note?: ReactNode;
+  /** "warn": the note says why the primary action can't be used yet. */
+  noteTone?: "warn";
+  children?: ReactNode;
+}) {
   const t = useT();
   return (
     <div className="action-bar" role="region" aria-label={t("board.campaign.bar.label")}>
@@ -45,7 +56,10 @@ export function ActionBar({ back, note, children }: { back?: { label: string; on
           <span aria-hidden="true">←</span> <span className="action-bar-back">{back.label}</span>
         </button>
       )}
-      <p className="action-bar-note">{note}</p>
+      <p className={`action-bar-note${noteTone ? ` is-${noteTone}` : ""}`} aria-live="polite">
+        {noteTone === "warn" && <span aria-hidden="true">⚠ </span>}
+        {note}
+      </p>
       <div className="action-bar-main">{children}</div>
     </div>
   );

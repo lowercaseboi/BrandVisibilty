@@ -3,6 +3,7 @@ import type { Campaign } from "../../api/types";
 import { useFormat, useT } from "../../i18n";
 import { campaignHref } from "../campaign/CampaignIndex";
 import { channelName, statusView } from "../campaign/campaignModel";
+import { useListFormat } from "../dashboard/helpers";
 import { TransitionLink } from "../module/transition";
 
 /**
@@ -13,6 +14,7 @@ export function CampaignsStrip({ brandKey, campaigns }: { brandKey: string; camp
   const t = useT();
   const fmt = useFormat();
   const headingId = useId();
+  const listFmt = useListFormat();
   if (!campaigns?.length) return null;
   const list = [...campaigns].sort((a, b) => (b.updated_at ?? "").localeCompare(a.updated_at ?? ""));
   return (
@@ -34,7 +36,7 @@ export function CampaignsStrip({ brandKey, campaigns }: { brandKey: string; camp
                 {t(sv.key)}
               </span>
               <strong className="cs-mini-title">{title}</strong>
-              <span className="muted small">{on.length ? on.join(" · ") : t("board.campaigns.noChannels")}</span>
+              <span className="muted small">{on.length ? listFmt(on) : t("board.campaigns.noChannels")}</span>
               <span className="muted small">
                 <time dateTime={c.updated_at} title={c.updated_at}>
                   {t("board.campaigns.updated", { when: fmt.relativeTime(c.updated_at) || c.updated_at })}

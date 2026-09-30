@@ -132,6 +132,9 @@ class DistributionEvent:
     external_id: str | None = None
     error: str | None = None
     content_hash: str | None = None  # what exactly was sent
+    # Plain-language note on what actually happened, e.g. "WhatsApp has no posting API — this is a
+    # share link; nothing was sent" or "Not posted: no account connected — use the export pack".
+    note: str | None = None
 
 
 @dataclass

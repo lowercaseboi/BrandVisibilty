@@ -19,6 +19,10 @@ export function mentionLabel(m: Mention, text: string, entities: Record<string, 
   return span || humanize(m.entity_id);
 }
 
+// Markdown bold markers ("**Name**") are dropped per piece, as in the spotlight, so the two views
+// read the same and the mention offsets stay valid.
+const clean = (s: string) => s.replace(/\*\*/g, "");
+
 /** Wraps each mention span (char_start..char_end) in a coloured <mark>. */
 export function highlightMentions(
   text: string,
@@ -35,7 +39,7 @@ export function highlightMentions(
     const start = Math.max(m.char_start, cursor);
     const end = Math.min(m.char_end, text.length);
     if (end <= start) return; // overlapping or out of range
-    if (start > cursor) out.push(text.slice(cursor, start));
+    if (start > cursor) out.push(clean(text.slice(cursor, start)));
     out.push(
       <mark
         key={i}
@@ -46,12 +50,12 @@ export function highlightMentions(
           n: m.rank,
         })}
       >
-        {text.slice(start, end)}
+        {clean(text.slice(start, end))}
       </mark>,
     );
     cursor = end;
   });
-  if (cursor < text.length) out.push(text.slice(cursor));
+  if (cursor < text.length) out.push(clean(text.slice(cursor)));
   return out;
 }
 

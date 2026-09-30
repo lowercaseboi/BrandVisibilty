@@ -20,7 +20,6 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
 
 import httpx
 
@@ -32,15 +31,20 @@ from app.distribution.channels.base import (
     image_mime,
     length_issues,
     normalize_hashtags,
+    public_url_problem,
     response_json,
     setting,
 )
 from app.distribution.types import Campaign, ChannelStatus, PublishResult, Variant
 
 GRAPH_BASE = "https://graph.facebook.com"
+# Graph API version when META_GRAPH_VERSION isn't set. Each version lives ~2 years: v25.0 was
+# released 2026-02-18 and expires 2028-07-29 (developers.facebook.com/docs/graph-api/changelog/versions).
+DEFAULT_GRAPH_VERSION = "v25.0"
 
 _GRAPH_HINTS = {
-    190: "the access token is invalid or expired — generate a new long-lived Page token (CHANNEL_SETUP.md §Meta).",
+    190: "the access token was rejected (invalid, expired or revoked) — {reconnect}.",
+    102: "the session is no longer valid — {reconnect}.",
     10: "missing permission — the token needs pages_manage_posts / instagram_content_publish.",
     200: "missing permission — the token needs pages_manage_posts / instagram_content_publish.",
     4: "rate limit reached — wait a while and retry.",
@@ -64,6 +68,8 @@ def graph_json(resp: httpx.Response) -> dict[str, Any]:
         if hint is None and isinstance(code, int) and 200 <= code < 300:
             hint = _GRAPH_HINTS[200]
         return _raise(f"Graph API error {code}: {msg}" + (f" Hint: {hint}" if hint else ""))
+    if resp.status_code == 401:
+        return _raise("Graph API returned HTTP 401 — the token was rejected; {reconnect}.")
     return _raise(f"Graph API returned HTTP {resp.status_code}.")
 
 
@@ -72,8 +78,9 @@ def _raise(msg: str) -> dict[str, Any]:
 
 
 class _MetaAdapter(HttpAdapter):
+    env_fix = "generate a new long-lived Page token and set META_PAGE_TOKEN"
     def _base(self) -> str:
-        version = setting(self.settings, "meta_graph_version", "v21.0")
+        version = setting(self.settings, "meta_graph_version", DEFAULT_GRAPH_VERSION)
         return f"{GRAPH_BASE}/{version}"
 
     def _token(self) -> str | None:
@@ -164,13 +171,8 @@ class InstagramAdapter(_MetaAdapter):
         return setting(self.settings, "public_base_url")
 
     def _public_url_problem(self) -> str | None:
-        base = self._public_base_url()
-        if not base:
-            return "needs PUBLIC_BASE_URL (public image hosting)"
-        host = (urlsplit(base).hostname or "").lower()
-        if host in {"localhost", "127.0.0.1", "0.0.0.0", "::1"} or host.endswith(".local"):
-            return "PUBLIC_BASE_URL points at this machine — Instagram can't fetch images from it (use the Render URL or a cloudflared tunnel)"
-        return None
+        problem = public_url_problem(self._public_base_url())
+        return problem.replace("the platform", "Instagram") if problem else None
 
     def status(self) -> ChannelStatus:
         ig, token = self._ig_user_id(), self._token()

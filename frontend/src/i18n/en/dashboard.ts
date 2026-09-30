@@ -212,6 +212,7 @@ export const dashboard = {
   // Label above the question text (the question stays in its own language).
   "sample.asked": "Question",
   "sample.answeredBy": "Response from {ai}",
+  "sample.response": "Response",
   "sample.caption": "A verbatim response from this analysis.",
   "sample.readMore": "Expand",
   "sample.readLess": "Collapse",

@@ -32,8 +32,9 @@ export interface BrandData {
   questions: QuestionSet | null;
   providers: ProviderInfo[] | null;
   labelOf: (providerId: string) => string;
-  /** "loading" only on the first load; later reloads keep showing the previous data. */
-  status: "loading" | "ready" | "error";
+  /** "loading" only on the first load; later reloads keep showing the previous data.
+   * "notfound": the backend knows no brand with this key (no profile, no data, not in the list). */
+  status: "loading" | "ready" | "error" | "notfound";
   error: string | null;
   /** Refetch everything (after a run completes, questions are saved, etc.). */
   reload(): void;
@@ -55,6 +56,7 @@ interface Loaded {
   history: Snapshot[];
   questions: QuestionSet | null;
   listName: string | null;
+  notFound: boolean;
 }
 
 const notFoundToNull = <T,>(err: unknown): T | null => {
@@ -63,8 +65,12 @@ const notFoundToNull = <T,>(err: unknown): T | null => {
 };
 
 async function loadBrand(brandKey: string): Promise<Loaded> {
+  let profileMissing = false;
   const [profile, latest, history, questions] = await Promise.all([
-    getBrand(brandKey).catch(() => null),
+    getBrand(brandKey).catch((e: unknown) => {
+      if (e instanceof ApiError && e.status === 404) profileMissing = true;
+      return null;
+    }),
     getLatestSnapshot(brandKey).catch((e: unknown) => notFoundToNull<Snapshot>(e)),
     getSnapshots(brandKey).catch(() => [] as Snapshot[]),
     getQuestions(brandKey).catch(() => null),
@@ -74,7 +80,9 @@ async function loadBrand(brandKey: string): Promise<Loaded> {
     const brands = await listBrands().catch(() => []);
     listName = brands.find((b) => b.brand_key === brandKey)?.brand ?? null;
   }
-  return { profile, latest, history, questions, listName };
+  // Only a definite 404 with nothing else known counts as "not found" (a network error stays an error).
+  const notFound = profileMissing && !latest && history.length === 0 && listName === null;
+  return { profile, latest, history, questions, listName, notFound };
 }
 
 export function BrandDataProvider({ brandKey, children }: { brandKey: string; children: ReactNode }) {
@@ -137,7 +145,7 @@ export function BrandDataProvider({ brandKey, children }: { brandKey: string; ch
       questions: loaded?.questions ?? null,
       providers,
       labelOf,
-      status: loaded ? "ready" : error ? "error" : "loading",
+      status: loaded ? (loaded.notFound ? "notfound" : "ready") : error ? "error" : "loading",
       error,
       reload,
       setProfile,

@@ -580,6 +580,11 @@ class DistributionEventOut(BaseModel):
     external_id: str | None = None
     error: str | None = None
     content_hash: str | None = Field(default=None, description="Hash of exactly what was (or would have been) sent")
+    note: str | None = Field(
+        default=None,
+        description="What actually happened, in plain words — e.g. WhatsApp: a share link, nothing sent; "
+        "exported: not posted, no account connected",
+    )
 
 
 class CampaignOut(BaseModel):
@@ -639,6 +644,19 @@ class RegenerateImageRequest(BaseModel):
 
 class PublishRequest(BaseModel):
     channels: list[ChannelIdLit] = Field(min_length=1)
+
+
+class PreflightOut(BaseModel):
+    """Dry run of one channel's publish: nothing is contacted, logged or changed."""
+
+    channel: ChannelIdLit
+    action: Literal["publish", "export", "blocked"] = Field(
+        description="publish: would post now · export: nothing would be sent (share link / export pack) · "
+        "blocked: would be refused, see detail"
+    )
+    detail: str = ""
+    image_url: str | None = Field(default=None, description="The public image URL a platform would fetch, when there is one")
+    has_image: bool = False
 
 
 class CampaignDeleteResponse(BaseModel):

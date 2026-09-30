@@ -27,6 +27,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -66,6 +67,43 @@ def _strip_query(value: Any) -> Any:
 for _name in ("httpx", "httpcore"):
     if not any(isinstance(f, _RedactUrlQuery) for f in logging.getLogger(_name).filters):
         logging.getLogger(_name).addFilter(_RedactUrlQuery())
+
+
+# --- outbound HTTP (one seam for every platform call) ---------------------------------------------
+
+# Tests (and scripts/check_channels.py --offline style tooling) can route every platform request —
+# adapters, token refresh, the "test connection" probe — through one transport, e.g. an
+# httpx.MockTransport. None = the real network.
+_TRANSPORT: httpx.BaseTransport | None = None
+
+
+def set_transport(transport: httpx.BaseTransport | None) -> httpx.BaseTransport | None:
+    """Route all outbound platform HTTP through `transport` (None restores the network). Returns
+    the previous transport so callers can restore it."""
+    global _TRANSPORT
+    previous, _TRANSPORT = _TRANSPORT, transport
+    return previous
+
+
+def new_client(timeout: httpx.Timeout) -> httpx.Client:
+    """A fresh client for platform calls (honours `set_transport`)."""
+    return httpx.Client(timeout=timeout, transport=_TRANSPORT) if _TRANSPORT is not None else httpx.Client(timeout=timeout)
+
+
+# --- public URLs ----------------------------------------------------------------------------------
+
+
+def public_url_problem(base: str | None) -> str | None:
+    """Why a platform can't fetch images from `base` (PUBLIC_BASE_URL), or None when it can."""
+    if not base:
+        return "needs PUBLIC_BASE_URL (public image hosting)"
+    parts = urlsplit(base)
+    host = (parts.hostname or "").lower()
+    if parts.scheme not in ("http", "https") or not host:
+        return "PUBLIC_BASE_URL must be a full http(s) URL, e.g. https://your-app.onrender.com"
+    if host in {"localhost", "127.0.0.1", "0.0.0.0", "::1"} or host.endswith(".local") or "." not in host:
+        return "PUBLIC_BASE_URL points at this machine — the platform can't fetch images from it (use the Render URL or a cloudflared tunnel)"
+    return None
 
 
 # --- credentials -----------------------------------------------------------------------------------
@@ -141,6 +179,16 @@ class ChannelCredentials:
         return self.method in ("oauth", "manual")
 
 
+def scrub(text: str | None, creds: ChannelCredentials | None) -> str | None:
+    """`text` with every credential value in `creds` replaced — a last line of defence so a
+    platform or library message that echoes a token never reaches an event, log or response."""
+    if not text or creds is None:
+        return text
+    for value in sorted((v for v in creds.fields.values() if isinstance(v, str) and len(v.strip()) >= 6), key=len, reverse=True):
+        text = text.replace(value.strip(), "[redacted]")
+    return text
+
+
 def env_credentials(channel: str, settings: Any) -> ChannelCredentials:
     names = ENV_FIELDS.get(channel, {})
     fields = {f: v for f, env in names.items() if (v := setting(settings, env))}
@@ -180,7 +228,11 @@ class ChannelAdapter(Protocol):
 
 
 class ChannelError(Exception):
-    """A failure with a message that is safe and useful to show the user."""
+    """A failure with a message that is safe and useful to show the user. A `RECONNECT`
+    placeholder in it is replaced with the right "reconnect" advice for the credentials in use."""
+
+
+RECONNECT = "{reconnect}"
 
 
 def setting(settings: Any, name: str, default: Any = None) -> Any:
@@ -265,6 +317,7 @@ class HttpAdapter:
     channel: ChannelId
     label: str
     timeout = httpx.Timeout(60.0, connect=10.0)
+    env_fix = "replace the token"  # how to fix rejected .env credentials (see reconnect_hint)
 
     def __init__(
         self,
@@ -291,6 +344,18 @@ class HttpAdapter:
             return "the connected account's token has expired — reconnect it in Details → Connected accounts"
         return None
 
+    def has_credentials(self) -> bool:
+        """Something is configured for this channel (a brand account, or any .env value) — as
+        opposed to nothing at all. Publishing a configured-but-unusable channel is refused with the
+        reason instead of quietly falling back to the export pack."""
+        return self.creds.from_brand or bool(self.creds.fields)
+
+    def reconnect_hint(self) -> str:
+        """What to do about rejected credentials, worded for where they came from."""
+        if self.creds.from_brand:
+            return "reconnect the account in Details → Connected accounts"
+        return f"{self.env_fix} in .env (see {SETUP_DOC}), or connect the brand's own account in Details"
+
     def _export_only(self, detail: str) -> ChannelStatus:
         return ChannelStatus(self.channel, self.label, "export_only", detail=detail)
 
@@ -312,7 +377,7 @@ class HttpAdapter:
         if self._client is not None:
             yield self._client
         else:
-            with httpx.Client(timeout=self.timeout) as client:
+            with new_client(self.timeout) as client:
                 yield client
 
     def status(self) -> ChannelStatus:  # pragma: no cover - abstract
@@ -339,13 +404,23 @@ class HttpAdapter:
         issues = self.validate(variant)
         if issues:
             return PublishResult(ok=False, error=" ".join(issues))
+        creds = self.creds  # before any refresh: the old token must be scrubbed too
+        result = self._guarded_publish(campaign=campaign, variant=variant, image_path=image_path, image_url=image_url)
+        if result.error:
+            result.error = scrub(scrub(result.error, creds), self.creds)
+        return result
+
+    def _guarded_publish(
+        self, *, campaign: Campaign, variant: Variant, image_path: Path | None, image_url: str | None
+    ) -> PublishResult:
         try:
             if self.creds.expired(self._now()):
                 with self._http() as client:
                     self._refresh_if_needed(client)
             return self._publish(campaign=campaign, variant=variant, image_path=image_path, image_url=image_url)
         except ChannelError as exc:
-            return PublishResult(ok=False, error=f"{self.label}: {exc}")
+            msg = str(exc).replace(RECONNECT, self.reconnect_hint())
+            return PublishResult(ok=False, error=f"{self.label}: {msg}")
         except httpx.TimeoutException:
             return PublishResult(ok=False, error=f"{self.label}: the request timed out — try again.")
         except httpx.HTTPError as exc:

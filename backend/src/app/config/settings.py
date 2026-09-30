@@ -111,7 +111,7 @@ class Settings(BaseSettings):
     meta_page_id: str | None = None
     meta_page_token: str | None = None
     ig_user_id: str | None = None
-    meta_graph_version: str = "v21.0"
+    meta_graph_version: str = "v25.0"  # see channels/meta.py DEFAULT_GRAPH_VERSION
     # X (user-context OAuth 1.0a). Free tier allows few posts/month; the adapter counts them.
     x_api_key: str | None = None
     x_api_secret: str | None = None

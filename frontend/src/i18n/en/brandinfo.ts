@@ -213,7 +213,7 @@ export const brandinfo = {
   "coverage.sub": "Where each question intent reaches, city by city.",
   "coverage.general": "General",
   "coverage.empty": "No questions yet — coverage appears once the question set is generated.",
-  "coverage.blindHint": "Empty cells are blind spots: no question of that intent mentions that city yet.",
+  "coverage.blindHint": "Shaded cells with 0 are blind spots: no question of that intent mentions that city yet.",
   "coverage.cellTitle_one": "{n} question for {intent} in {city}",
   "coverage.cellTitle_other": "{n} questions for {intent} in {city}",
   "coverage.cellTitleGeneral_one": "{n} question for {intent}, not tied to a city",

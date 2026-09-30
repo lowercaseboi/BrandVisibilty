@@ -172,7 +172,7 @@ export const pages: Record<keyof typeof enPages, string> = {
   "answers.legend.self": "आपका ब्रांड",
   "answers.legend.competitor": "प्रतिस्पर्धी",
   "answers.legend.discovered": "अन्य उल्लिखित ब्रांड",
-  "answers.legend.rank": "#1 = जवाब में सबसे पहले आया ब्रांड",
+  "answers.legend.rank": "= जवाब में सबसे पहले आया ब्रांड",
   "answers.search": "खोजें",
   "answers.searchPlaceholder": "प्रश्न और जवाब में खोजें…",
   "answers.type": "प्रश्न का प्रकार",

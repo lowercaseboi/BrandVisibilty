@@ -41,10 +41,12 @@ from app.distribution import accounts
 from app.distribution.channels.base import (
     ChannelCredentials,
     ChannelError,
+    new_client,
     oauth_app_configured,
     response_json,
     setting,
 )
+from app.distribution.channels.meta import DEFAULT_GRAPH_VERSION
 
 log = logging.getLogger(__name__)
 
@@ -94,7 +96,7 @@ class OAuthNotConfigured(Exception):
 
 def http_client() -> httpx.Client:
     """Factory for outbound calls (tests monkeypatch this with a MockTransport client)."""
-    return httpx.Client(timeout=httpx.Timeout(30.0, connect=10.0))
+    return new_client(httpx.Timeout(30.0, connect=10.0))
 
 
 def _settings(settings: Any = None) -> Any:
@@ -305,7 +307,7 @@ class _Provider:
 
 class MetaProvider(_Provider):
     def _version(self, s: Any) -> str:
-        return str(setting(s, "meta_graph_version", "v21.0"))
+        return str(setting(s, "meta_graph_version", DEFAULT_GRAPH_VERSION))
 
     def authorize_url(self, s, channel, redirect, state, challenge):
         q = {
@@ -694,7 +696,7 @@ def test_account(brand_key: str, channel: str, *, settings: Any = None, now: dat
 
     s = _settings(settings)
     if channel == "whatsapp":
-        return True, "No account needed — posts via a share link."
+        return True, "Nothing to test — WhatsApp needs no account: it only makes a wa.me share link (nothing is posted automatically)."
     with http_client() as client:
         adapter: Any = get_adapter(channel, brand_key, settings=s, client=client, **({"now": (lambda: _now(now))} if now else {}))
         if adapter.creds.problem:
@@ -725,7 +727,7 @@ def _fail(platform: str, resp: httpx.Response) -> tuple[bool, str]:
 
 def _probe(channel: str, adapter: Any, client: httpx.Client, s: Any) -> tuple[bool, str]:
     if channel in ("facebook_page", "instagram"):
-        graph = META_GRAPH.format(version=str(setting(s, "meta_graph_version", "v21.0")))
+        graph = META_GRAPH.format(version=str(setting(s, "meta_graph_version", DEFAULT_GRAPH_VERSION)))
         target = adapter.cred("page_id") if channel == "facebook_page" else adapter.cred("ig_user_id")
         fields = "id,name" if channel == "facebook_page" else "id,username"
         resp = client.get(f"{graph}/{target}", params={"fields": fields}, headers={"Authorization": f"Bearer {adapter.cred('page_token')}"})

@@ -106,7 +106,7 @@ def test_account_statuses_states() -> None:
     sts = {a.channel: a for a in accounts.account_statuses(BRAND, settings=s)}
     assert list(sts) == ["facebook_page", "instagram", "x", "linkedin", "google_business", "whatsapp"]
     assert sts["whatsapp"].state == "connected" and sts["whatsapp"].method is None
-    assert sts["whatsapp"].detail == "No account needed — posts via a share link"
+    assert sts["whatsapp"].detail == accounts.WHATSAPP_DETAIL and "no posting API" in sts["whatsapp"].detail
     assert sts["facebook_page"].state == "needs_setup" and not sts["facebook_page"].oauth_available
     assert sts["google_business"].state == "pending_approval" and "approval" in sts["google_business"].detail.lower()
     assert "PUBLIC_BASE_URL" in sts["instagram"].detail

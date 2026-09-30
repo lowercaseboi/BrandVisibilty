@@ -45,7 +45,10 @@ export function SampleAnswer({
         </div>
         <p className="sample-label">{t("dashboard.sample.asked")}</p>
         <blockquote className="sample-question">{obs.query_text}</blockquote>
-        <p className="sample-label">{t("dashboard.sample.answeredBy", { ai: labelOf(obs.provider_id) })}</p>
+        <p className="sample-label">
+          {/* Simulated data isn't an AI ("Response from Simulated data"); the badge above says what it is. */}
+          {obs.provider_id === "synthetic" ? t("dashboard.sample.response") : t("dashboard.sample.answeredBy", { ai: labelOf(obs.provider_id) })}
+        </p>
         <div className="sample-answer" id={bodyId}>
           {highlight(text, mentions, expanded ? text.length : cut, kindLabel)}
           {truncated && !expanded && <span aria-hidden="true">…</span>}

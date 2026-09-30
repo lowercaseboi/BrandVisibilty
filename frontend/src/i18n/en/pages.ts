@@ -20,7 +20,7 @@ export const pages = {
   "rating.top": "Category leader",
   // Small line under the rating when the high end of the range reaches a better band.
   // {rating} is one of the four rating words above, already translated.
-  "rating.couldBe": "Upper estimate: {rating}. Results vary between runs.",
+  "rating.couldBe": "Could be as high as {rating}: results vary between runs.",
 
   // ---------------------------------------------------------------- data origin labels
   // Generated responses used to demonstrate the product; not a real measurement.
@@ -65,7 +65,7 @@ export const pages = {
   "brands.scoreLabel": "Score {score} out of 100",
   // {when} is a relative time like "2 days ago".
   "brands.checked": "Updated {when}",
-  "brands.noChecks": "Not yet analysed",
+  "brands.noChecks": "Not analysed yet",
   "brands.hasResults": "Results available",
   "brands.thin_one": "Only {n} question — low precision",
   "brands.thin_other": "Only {n} questions — low precision",
@@ -201,7 +201,7 @@ export const pages = {
   "answers.legend.competitor": "Competitors",
   "answers.legend.discovered": "Other brands mentioned",
   // Explains the small position markers, e.g. "#1".
-  "answers.legend.rank": "#1 = first brand named in the response",
+  "answers.legend.rank": "= first brand named in the response",
   "answers.search": "Search",
   "answers.searchPlaceholder": "Search questions and responses…",
   "answers.type": "Question type",

@@ -559,7 +559,16 @@ def approve(brand_key: str, campaign_id: str, *, actor: str = "admin") -> Campai
     return updated
 
 
-def _event(campaign: Campaign, channel: ChannelId, outcome: str, *, variant: Variant | None, result: PublishResult | None = None, error: str | None = None) -> DistributionEvent:
+def _event(
+    campaign: Campaign,
+    channel: ChannelId,
+    outcome: str,
+    *,
+    variant: Variant | None,
+    result: PublishResult | None = None,
+    error: str | None = None,
+    note: str | None = None,
+) -> DistributionEvent:
     return DistributionEvent(
         event_id=_new_id("evt"),
         campaign_id=campaign.campaign_id,
@@ -571,6 +580,7 @@ def _event(campaign: Campaign, channel: ChannelId, outcome: str, *, variant: Var
         external_id=result.external_id if result else None,
         error=error if error is not None else (result.error if result else None),
         content_hash=gate.content_hash(variant) if variant else None,
+        note=note,
     )
 
 
@@ -581,6 +591,23 @@ def _asset_file(asset: Asset) -> Path | None:
 
 
 _JPEG_CHANNELS = frozenset({"instagram"})
+
+# Channels that post through an account (mirrors channels.base.ACCOUNT_CHANNELS; kept here so this
+# module doesn't import the channel package at import time).
+_ACCOUNT_CHANNELS = frozenset({"facebook_page", "instagram", "x", "linkedin", "google_business"})
+
+WHATSAPP_NOTE = (
+    "WhatsApp has no posting API: this is a wa.me share link with the message filled in. Nothing was sent — "
+    "open the link, pick a chat, group or your Channel, and press send (the status image is in the export pack)."
+)
+EXPORT_NOTE = "Nothing was sent anywhere: download the export pack for the images and copy."
+
+
+def _not_connected_note(label: str) -> str:
+    return (
+        f"Not posted: this brand has no {label} account connected (and the server has no fallback credentials). "
+        "The copy and image are in the export pack — or connect the account in Details → Connected accounts and publish again."
+    )
 
 
 def _jpeg_copy(png: Path) -> Path:
@@ -596,36 +623,112 @@ def _jpeg_copy(png: Path) -> Path:
     return jpg
 
 
-def _attempt(campaign: Campaign, channel: ChannelId, base_url: str | None) -> DistributionEvent:
-    """One channel: gate → adapter status/validate → publish. Never raises."""
+def _scrub(text: str | None, adapter: Any) -> str | None:
+    from app.distribution.channels.base import scrub
+
+    return scrub(text, getattr(adapter, "creds", None))
+
+
+class _Plan:
+    """What publishing one channel would do, decided without contacting any platform."""
+
+    def __init__(self, action: str, *, variant: Variant | None, reason: str | None = None, note: str | None = None,
+                 adapter: Any = None, image_path: Path | None = None, image_url: str | None = None) -> None:
+        self.action = action  # "publish" | "export" | "blocked"
+        self.variant = variant
+        self.reason = reason
+        self.note = note
+        self.adapter = adapter
+        self.image_path = image_path
+        self.image_url = image_url
+
+
+def _plan(campaign: Campaign, channel: ChannelId, base_url: str | None, *, convert_images: bool = True) -> _Plan:
+    """Gate → adapter status → validation → image. Raises only on adapter bugs (callers catch)."""
     variant = next((v for v in campaign.variants if v.channel == channel), None)
     ok, reason = gate.can_publish(campaign, channel)
     if not ok:
-        return _event(campaign, channel, "blocked", variant=variant, error=reason)
+        return _Plan("blocked", variant=variant, reason=reason)
     assert variant is not None
-    try:
-        adapter = _get_adapter(channel, campaign.brand_key)
-        mode = adapter.status().mode
-        if mode == "disabled":
-            return _event(campaign, channel, "blocked", variant=variant, error=f"The {channel} channel is disabled on this server")
-        if mode == "connected" and channel not in gate.EXPORT_CHANNELS:
-            issues = adapter.validate(variant)
-            if issues:
-                return _event(campaign, channel, "blocked", variant=variant, error="Fix before publishing: " + " ".join(issues))
-        asset = next((a for a in campaign.assets if a.asset_id == variant.asset_id), None)
-        image_path = _asset_file(asset) if asset else None
-        rel_path = asset.path if asset else None
-        if image_path is not None and asset is not None and channel in _JPEG_CHANNELS:
+    adapter = _get_adapter(channel, campaign.brand_key)
+    status = adapter.status()
+    mode = status.mode
+    if mode == "disabled":
+        return _Plan("blocked", variant=variant, reason=f"The {channel} channel is disabled on this server", adapter=adapter)
+    asset = next((a for a in campaign.assets if a.asset_id == variant.asset_id), None)
+    image_path = _asset_file(asset) if asset else None
+    rel_path = asset.path if asset else None
+    if image_path is not None and asset is not None and channel in _JPEG_CHANNELS:
+        if convert_images:
             image_path = _jpeg_copy(image_path)  # Meta requires JPEG for Instagram feed posts
-            rel_path = str(Path(asset.path).with_suffix(".jpg"))
-        image_url = f"{base_url}/media/{rel_path}" if rel_path and base_url else None
-        result = adapter.publish(campaign=campaign, variant=variant, image_path=image_path, image_url=image_url)
+        rel_path = str(Path(asset.path).with_suffix(".jpg"))
+    image_url = f"{base_url}/media/{rel_path}" if rel_path and base_url else None
+    if channel == "whatsapp":
+        return _Plan("export", variant=variant, note=WHATSAPP_NOTE, adapter=adapter, image_path=image_path, image_url=image_url)
+    if channel in gate.EXPORT_CHANNELS:
+        return _Plan("export", variant=variant, note=EXPORT_NOTE, adapter=adapter, image_path=image_path, image_url=image_url)
+    if mode != "connected":
+        if channel in _ACCOUNT_CHANNELS and getattr(adapter, "has_credentials", lambda: False)():
+            # Something is set up but can't be used (expired, missing PUBLIC_BASE_URL, incomplete
+            # account…): refuse with the reason rather than quietly "exporting".
+            detail = status.detail or "the account can't be used right now"
+            return _Plan("blocked", variant=variant, reason=f"Not posted — {detail}", adapter=adapter)
+        return _Plan("export", variant=variant, note=_not_connected_note(getattr(adapter, "label", channel)), adapter=adapter,
+                     image_path=image_path, image_url=image_url)
+    issues = adapter.validate(variant)
+    if issues:
+        return _Plan("blocked", variant=variant, reason="Fix before publishing: " + " ".join(issues), adapter=adapter)
+    return _Plan("publish", variant=variant, adapter=adapter, image_path=image_path, image_url=image_url)
+
+
+def _attempt(campaign: Campaign, channel: ChannelId, base_url: str | None) -> DistributionEvent:
+    """One channel: gate → adapter status/validate → publish. Never raises; never leaks a secret."""
+    variant = next((v for v in campaign.variants if v.channel == channel), None)
+    adapter: Any = None
+    try:
+        plan = _plan(campaign, channel, base_url)
+        adapter = plan.adapter
+        if plan.action == "blocked":
+            return _event(campaign, channel, "blocked", variant=plan.variant, error=plan.reason)
+        assert plan.variant is not None
+        result = adapter.publish(campaign=campaign, variant=plan.variant, image_path=plan.image_path, image_url=plan.image_url)
     except Exception as exc:  # noqa: BLE001 - an adapter bug must still produce a logged, failed attempt
-        return _event(campaign, channel, "failed", variant=variant, error=f"{type(exc).__name__}: {exc}")
+        log.warning("Publishing %s/%s raised %s", campaign.campaign_id, channel, type(exc).__name__)
+        return _event(campaign, channel, "failed", variant=variant, error=_scrub(f"{type(exc).__name__}: {exc}", adapter))
     if not result.ok:
-        return _event(campaign, channel, "failed", variant=variant, result=result, error=result.error or "Publishing failed")
-    exported = channel in gate.EXPORT_CHANNELS or mode != "connected"
-    return _event(campaign, channel, "exported" if exported else "published", variant=variant, result=result)
+        return _event(campaign, channel, "failed", variant=plan.variant, result=result,
+                      error=_scrub(result.error or "Publishing failed", adapter))
+    if plan.action == "export":
+        return _event(campaign, channel, "exported", variant=plan.variant, result=result, note=plan.note)
+    if not result.external_url and not result.external_id:
+        # A "connected" adapter that returned nothing to show for it didn't really post.
+        return _event(campaign, channel, "failed", variant=plan.variant, result=result,
+                      error="The platform accepted the request but returned no post id — check the account before retrying.")
+    return _event(campaign, channel, "published", variant=plan.variant, result=result)
+
+
+def preflight(brand_key: str, campaign_id: str, channels: list[ChannelId]) -> list[dict[str, Any]]:
+    """Dry run of `publish`: for each channel, what would happen (publish / export / blocked) and
+    why, the image URL a platform would fetch — without contacting any platform, logging an event
+    or changing the campaign."""
+    campaign = _load(brand_key, campaign_id)
+    base_url = _public_base_url()
+    out: list[dict[str, Any]] = []
+    for ch in [c for c in dict.fromkeys(channels) if c in CHANNEL_IDS]:
+        adapter: Any = None
+        try:
+            plan = _plan(campaign, ch, base_url, convert_images=False)
+            adapter = plan.adapter
+            detail = plan.reason or plan.note or ""
+            if plan.action == "publish":
+                st = adapter.status()
+                detail = f"Would post now as {st.detail}" if st.detail else "Would post now"
+            out.append({"channel": ch, "action": plan.action, "detail": detail, "image_url": plan.image_url,
+                        "has_image": plan.image_path is not None})
+        except Exception as exc:  # noqa: BLE001
+            out.append({"channel": ch, "action": "blocked", "detail": _scrub(f"{type(exc).__name__}: {exc}", adapter) or "",
+                        "image_url": None, "has_image": False})
+    return out
 
 
 def _status_after(campaign: Campaign) -> str:

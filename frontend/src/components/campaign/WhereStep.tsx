@@ -1,12 +1,12 @@
-import { mediaUrl } from "../../api/client";
-import { EmptyState } from "../EmptyState";
-import type { Asset, ChannelId } from "../../api/types";
+import { useId } from "react";
+import type { ChannelId } from "../../api/types";
 import { useFormat, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n";
-import { brandHref } from "../module/modules";
+import { ChannelIcon } from "../accounts/ChannelIcon";
+import { EmptyState } from "../EmptyState";
 import { TransitionLink } from "../module/transition";
-import { assetForVariant, charCount, composePost } from "./campaignModel";
-import type { Destination, DestinationKind } from "./studioFlow";
+import { rowState } from "./studioFlow";
+import type { Destination, DestinationBlock, DestinationKind, Picks, RowState } from "./studioFlow";
 
 const KIND_PILL: Record<DestinationKind, { key: MessageKey; tone: string }> = {
   post: { key: "board.campaign.mode.connected", tone: "ok" },
@@ -17,75 +17,71 @@ const KIND_PILL: Record<DestinationKind, { key: MessageKey; tone: string }> = {
   off: { key: "board.campaign.mode.disabled", tone: "muted" },
 };
 
-const KIND_LINE: Record<DestinationKind, MessageKey> = {
-  post: "board.campaign.where.post",
-  unconnected: "board.campaign.where.unconnected",
-  simulate: "board.campaign.where.simulate",
-  share: "board.campaign.where.share",
-  download: "board.campaign.where.download",
-  off: "board.campaign.where.off",
-};
-
-const BLOCK_LINE: Record<NonNullable<Destination["block"]>, MessageKey> = {
+const BLOCK_LINE: Record<DestinationBlock, MessageKey> = {
   disabled: "board.campaign.block.disabled",
+  no_variant: "board.campaign.block.no_variant",
   variant_off: "board.campaign.block.variant_off",
   has_issues: "board.campaign.block.has_issues",
   no_quota: "board.campaign.block.no_quota",
 };
 
-/** Short "what will be sent": the image it posts and the start of the text. */
-export function SendPreview({ d, assets }: { d: Destination; assets: Asset[] }) {
-  const t = useT();
-  const fmt = useFormat();
-  const asset = assetForVariant(assets, d.variant);
-  const post = composePost(d.variant);
-  return (
-    <div className="cs-send">
-      {asset ? <img src={mediaUrl(asset.path, asset.created_at)} alt={d.variant.alt_text ?? ""} /> : <span className="cs-send-noimg" aria-hidden="true" />}
-      <div>
-        <p className="cs-send-text">{post || "—"}</p>
-        <p className="muted small">
-          {t("board.campaign.where.chars", { n: fmt.number(charCount(d.channel, post)) })} ·{" "}
-          {asset ? t("board.campaign.where.withImage") : t("board.campaign.where.noImage")}
-        </p>
-      </div>
-    </div>
-  );
+/** The one plain line of what ticking this row will do. */
+function lineFor(d: Destination, state: RowState, t: ReturnType<typeof useT>): string {
+  if (d.block) return t(BLOCK_LINE[d.block]);
+  switch (d.kind) {
+    case "post":
+      return d.account ? t("board.campaign.where.post", { name: d.account }) : t("board.campaign.where.postChannel", { channel: d.status.label });
+    case "share":
+      return t("board.campaign.where.share");
+    case "download":
+      return t("board.campaign.where.download");
+    case "simulate":
+      return t("board.campaign.where.simulate");
+    case "off":
+      return t("board.campaign.where.off");
+    default:
+      return state === "export" ? t("board.campaign.where.exportLine") : t("board.campaign.where.unconnected");
+  }
 }
 
 /**
- * Step 2: every channel this campaign has copy for, as this brand would post to it — its
- * connection, exactly what will be sent, and a choice. An unconnected channel offers "Connect"
- * (Details → Connected accounts, returning here) or "Export instead"; WhatsApp and the export
- * pack never need an account.
+ * Step 2: a checklist of every channel — tick, icon + name, this brand's connection ("as <account>")
+ * and one line of what will happen. Ticking a channel that isn't connected never turns it into an
+ * export silently: the row asks "Connect <platform> in Details" (returning here, ticked) or
+ * "Export it instead".
  */
 export function WhereStep({
   dests,
-  picked,
-  assets,
-  brandKey,
-  returnTo,
+  picks,
+  connectHref,
   loading,
   error,
+  joined,
   onRetry,
   onToggle,
+  onExportInstead,
+  onSelectAll,
+  onSelectNone,
   onFix,
 }: {
   dests: Destination[];
-  picked: ChannelId[];
-  assets: Asset[];
-  brandKey: string;
-  /** Studio path (with ?step=where) the Details page sends the user back to after connecting. */
-  returnTo: string;
+  picks: Picks;
+  /** Details → Connected accounts, with ?return= back to this step. */
+  connectHref: string;
   loading: boolean;
   error: boolean;
+  /** Just back from Details with this channel connected (or still not). */
+  joined: { channel: ChannelId; ok: boolean } | null;
   onRetry: () => void;
   onToggle: (channel: ChannelId, on: boolean) => void;
+  onExportInstead: (channel: ChannelId, exportIt: boolean) => void;
+  onSelectAll: () => void;
+  onSelectNone: () => void;
   onFix: (channel: ChannelId) => void;
 }) {
   const t = useT();
   const fmt = useFormat();
-  const connectHref = `${brandHref(brandKey, "details")}?return=${encodeURIComponent(returnTo)}#accounts`;
+  const listId = useId();
 
   if (error)
     return (
@@ -106,59 +102,96 @@ export function WhereStep({
   if (loading) return <p className="status">{t("board.campaign.where.loading")}</p>;
   if (dests.length === 0) return <EmptyState compact as="p" title={t("board.campaign.channels.none")} />;
 
+  const joinedName = joined ? (dests.find((d) => d.channel === joined.channel)?.status.label ?? joined.channel) : "";
+
   return (
-    <ul className="cs-dests">
-      {dests.map((d) => {
-        const on = d.block === null && picked.includes(d.channel);
-        const pill = KIND_PILL[d.kind];
-        return (
-          <li key={d.channel} className={`card cs-dest${on ? " is-on" : ""}${d.block ? " is-blocked" : ""}`}>
-            <div className="field-head">
-              <h3 className="cs-subhead">{d.status.label}</h3>
-              <span className="status-pill" data-tone={pill.tone}>
-                {t(pill.key)}
-              </span>
-            </div>
-            <p className="cs-dest-line">{t(KIND_LINE[d.kind])}</p>
-            {/* The server's detail is setup advice for an unconnected channel; for a connected one it
-                says which account posts, which is worth showing. */}
-            {d.kind === "post" && (d.status.detail || d.status.quota_remaining != null) && (
-              <p className="muted small">
-                {d.status.detail}
-                {d.status.detail && d.status.quota_remaining != null && " · "}
-                {d.status.quota_remaining != null && t("board.campaign.where.quota", { n: fmt.number(d.status.quota_remaining) })}
-              </p>
-            )}
-            <SendPreview d={d} assets={assets} />
-            <div className="cs-dest-actions">
-              {d.block ? (
-                <>
-                  <span className="field-error">{t(BLOCK_LINE[d.block])}</span>
-                  {(d.block === "has_issues" || d.block === "variant_off") && (
-                    <button type="button" className="btn btn-secondary btn-small" onClick={() => onFix(d.channel)}>
-                      {t("board.campaign.where.fix")}
-                    </button>
-                  )}
-                </>
-              ) : d.kind === "unconnected" ? (
-                <>
-                  <TransitionLink to={connectHref} className="btn btn-primary btn-small">
-                    {t("board.campaign.where.connect", { channel: d.status.label })}
-                  </TransitionLink>
-                  <button type="button" className="btn btn-secondary btn-small" aria-pressed={on} onClick={() => onToggle(d.channel, !on)}>
-                    {on ? `✓ ${t("board.campaign.where.exporting")}` : t("board.campaign.where.exportInstead")}
-                  </button>
-                </>
-              ) : (
-                <label className="cs-check">
-                  <input type="checkbox" checked={on} onChange={(e) => onToggle(d.channel, e.target.checked)} />
-                  {t("board.campaign.where.include", { channel: d.status.label })}
+    <div className="cs-where">
+      {joined && (
+        <p className={`cs-note${joined.ok ? " is-ok" : " is-warn"}`} role="status">
+          {joined.ok ? t("board.campaign.where.joined", { channel: joinedName }) : t("board.campaign.where.joinedNot", { channel: joinedName })}
+        </p>
+      )}
+      <div className="cs-picks-tools" role="group" aria-labelledby={listId}>
+        <span id={listId} className="eyebrow">
+          {t("board.campaign.where.listLabel")}
+        </span>
+        <button type="button" className="btn btn-ghost btn-small" onClick={onSelectAll}>
+          {t("board.campaign.where.selectAll")}
+        </button>
+        <button type="button" className="btn btn-ghost btn-small" onClick={onSelectNone}>
+          {t("board.campaign.where.selectNone")}
+        </button>
+      </div>
+      <ul className="cs-picks" aria-labelledby={listId}>
+        {dests.map((d) => {
+          const state = rowState(d, picks);
+          const on = state !== "off" && state !== "blocked";
+          const pill = KIND_PILL[d.kind];
+          const inputId = `${listId}-${d.channel}`;
+          const lineId = `${inputId}-line`;
+          return (
+            <li key={d.channel} className="cs-pick" data-state={state}>
+              <div className="cs-pick-main">
+                <input
+                  id={inputId}
+                  type="checkbox"
+                  checked={on}
+                  disabled={!!d.block}
+                  aria-describedby={lineId}
+                  onChange={(e) => onToggle(d.channel, e.target.checked)}
+                />
+                <span className="cs-pick-icon" aria-hidden="true">
+                  <ChannelIcon channel={d.channel} size={20} />
+                </span>
+                <label htmlFor={inputId} className="cs-pick-name">
+                  {d.status.label}
                 </label>
+                <span className="cs-pick-status">
+                  <span className="status-pill" data-tone={d.block ? "muted" : pill.tone}>
+                    {t(pill.key)}
+                  </span>
+                  {d.account && <span className="muted small cs-pick-as">{t("board.campaign.where.as", { name: d.account })}</span>}
+                </span>
+              </div>
+              <p id={lineId} className={state === "connect" ? "sr-only" : "cs-pick-line"}>
+                {lineFor(d, state, t)}
+                {d.kind === "post" && !d.block && d.status.quota_remaining != null && (
+                  <span className="muted"> · {t("board.campaign.where.quota", { n: fmt.number(d.status.quota_remaining) })}</span>
+                )}
+              </p>
+              {(d.block === "has_issues" || d.block === "variant_off") && (
+                <div className="cs-pick-actions">
+                  <button type="button" className="btn btn-secondary btn-small" onClick={() => onFix(d.channel)}>
+                    {t("board.campaign.where.fix")}
+                  </button>
+                </div>
               )}
-            </div>
-          </li>
-        );
-      })}
-    </ul>
+              {state === "connect" && (
+                <div className="cs-pick-prompt" role="group" aria-label={t("board.campaign.where.connectPrompt", { channel: d.status.label })}>
+                  <p>{t("board.campaign.where.connectPrompt", { channel: d.status.label })}</p>
+                  <div className="cs-pick-actions">
+                    <TransitionLink to={connectHref} className="btn btn-primary btn-small">
+                      {t("board.campaign.where.connect", { channel: d.status.label })} <span aria-hidden="true">→</span>
+                    </TransitionLink>
+                    <button type="button" className="btn btn-secondary btn-small" onClick={() => onExportInstead(d.channel, true)}>
+                      {t("board.campaign.where.exportInstead")}
+                    </button>
+                  </div>
+                </div>
+              )}
+              {state === "export" && (
+                <div className="cs-pick-actions">
+                  <button type="button" className="btn btn-ghost btn-small" onClick={() => onExportInstead(d.channel, false)}>
+                    {t("board.campaign.where.connectInstead")}
+                  </button>
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <p className="cs-note">{t("board.campaign.where.waNote")}</p>
+    </div>
   );
 }
+

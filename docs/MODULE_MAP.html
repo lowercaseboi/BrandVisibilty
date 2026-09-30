@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Module Map — AI Visibility &amp; Brand Intelligence Platform</title>
+<style>
+  :root{
+    --bg:#0a0e17; --bg2:#0f1522; --card:#141b2b; --card2:#1a2334;
+    --line:#243049; --line2:#2f3d5c;
+    --tx:#e6edf7; --tx2:#9fb0c9; --tx3:#6b7f9c;
+    --p1:#f0b429; --p2:#4cc9f0; --p3:#52d17c; --p4:#a78bfa;
+    --ok:#52d17c; --warn:#f0b429; --bad:#ff6b6b; --none:#3d4a63;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Inter,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--tx);font-family:var(--sans);line-height:1.6;
+       padding:0 0 80px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+
+  /* ---------- header ---------- */
+  header{border-bottom:1px solid var(--line);background:
+    radial-gradient(900px 300px at 15% -10%,rgba(240,180,41,.10),transparent),
+    radial-gradient(700px 260px at 85% -20%,rgba(167,139,250,.10),transparent),var(--bg2);
+    padding:52px 0 40px;margin-bottom:44px}
+  h1{font-size:clamp(28px,4.4vw,44px);line-height:1.1;letter-spacing:-.02em;font-weight:700}
+  h1 span{background:linear-gradient(92deg,var(--p1),var(--p2) 55%,var(--p4));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{color:var(--tx2);max-width:64ch;margin-top:14px;font-size:16px}
+  .meta{margin-top:20px;display:flex;flex-wrap:wrap;gap:8px}
+  .pill{font:500 12px/1 var(--mono);padding:6px 11px;border-radius:99px;
+    border:1px solid var(--line2);color:var(--tx2);background:rgba(255,255,255,.02)}
+  .pill.live{border-color:rgba(82,209,124,.4);color:var(--ok)}
+
+  /* ---------- sections ---------- */
+  section{margin-bottom:52px}
+  h2{font-size:13px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--tx3);margin-bottom:6px;display:flex;align-items:center;gap:10px}
+  h2::after{content:"";flex:1;height:1px;background:var(--line)}
+  .lede{color:var(--tx2);margin-bottom:22px;max-width:70ch;font-size:14.5px}
+
+  /* ---------- answer card ---------- */
+  .answer{background:linear-gradient(135deg,var(--card),var(--card2));
+    border:1px solid var(--line2);border-radius:16px;padding:30px 32px;margin-bottom:34px}
+  .answer .big{font-size:clamp(34px,6vw,58px);font-weight:800;letter-spacing:-.03em;line-height:1}
+  .answer .big em{font-style:normal;color:var(--p1)}
+  .answer h3{margin:16px 0 8px;font-size:18px;font-weight:650}
+  .answer p{color:var(--tx2);max-width:66ch}
+  .answer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+    gap:20px;margin-top:24px;padding-top:22px;border-top:1px solid var(--line)}
+  .answer .cols div strong{display:block;font-size:26px;font-weight:750;line-height:1.1}
+  .answer .cols div span{font-size:12.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em}
+
+  /* ---------- flow diagram ---------- */
+  .diagram{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:30px 24px;overflow-x:auto}
+  .flow{display:flex;align-items:stretch;gap:0;min-width:1060px;margin-bottom:26px}
+  .stage{flex:1;min-width:0;position:relative}
+  .box{border:1.5px solid;border-radius:11px;padding:12px 11px;height:100%;
+    background:rgba(255,255,255,.022);display:flex;flex-direction:column;gap:3px}
+  .box .code{font:700 11.5px/1.3 var(--mono);letter-spacing:.01em}
+  .box .role{font-size:11.5px;color:var(--tx3);line-height:1.35}
+  .box .num{margin-top:auto;font:600 10.5px/1 var(--mono);color:var(--tx3);letter-spacing:.04em}
+  .arrow{flex:0 0 26px;display:flex;align-items:center;justify-content:center;color:var(--line2);font-size:15px}
+  .ownertag{position:absolute;top:-9px;left:9px;font:700 9.5px/1 var(--mono);
+    padding:3px 6px;border-radius:5px;letter-spacing:.06em;background:var(--bg);border:1px solid}
+  .l1{border-color:var(--p1);color:var(--p1)} .l1 .ownertag{color:var(--p1);border-color:var(--p1)}
+  .l2{border-color:var(--p2);color:var(--p2)} .l2 .ownertag{color:var(--p2);border-color:var(--p2)}
+  .l3{border-color:var(--p3);color:var(--p3)} .l3 .ownertag{color:var(--p3);border-color:var(--p3)}
+  .l4{border-color:var(--p4);color:var(--p4)} .l4 .ownertag{color:var(--p4);border-color:var(--p4)}
+  .l5{border-color:var(--none);color:var(--tx3)} .l5 .ownertag{color:var(--tx3);border-color:var(--none)}
+  .legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12.5px;color:var(--tx2);
+    padding-top:20px;border-top:1px solid var(--line)}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:7px;vertical-align:-1px}
+
+  /* ---------- module cards ---------- */
+  .mods{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:18px}
+  .mod{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:20px 21px 18px;position:relative;overflow:hidden}
+  .mod::before{content:"";position:absolute;inset:0 auto 0 0;width:3px}
+  .m1::before{background:var(--p1)} .m2::before{background:var(--p2)}
+  .m3::before{background:var(--p3)} .m4::before{background:var(--p4)}
+  .mod-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:6px}
+  .mod-id{font:800 11px/1 var(--mono);padding:6px 8px;border-radius:6px;flex-shrink:0;
+    border:1px solid currentColor}
+  .mod h3{font-size:16.5px;font-weight:680;letter-spacing:-.01em}
+  .mod .path{font:500 11.5px/1.4 var(--mono);color:var(--tx3);margin-bottom:11px}
+  .mod .desc{font-size:13.5px;color:var(--tx2);margin-bottom:14px}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 0;
+    border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-bottom:13px}
+  .stats div{text-align:center}
+  .stats b{display:block;font:700 15px/1.2 var(--mono)}
+  .stats span{font-size:9.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em}
+  .bar{height:4px;background:var(--line);border-radius:99px;overflow:hidden;margin:2px 0 13px}
+  .bar i{display:block;height:100%;border-radius:99px}
+  .lbl{font-size:10.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em;
+    margin:12px 0 6px;font-weight:600}
+  .acs{display:flex;flex-wrap:wrap;gap:5px}
+  .ac{font:700 10.5px/1 var(--mono);padding:4px 7px;border-radius:5px;letter-spacing:.03em}
+  .ac.done{background:rgba(82,209,124,.14);color:var(--ok);border:1px solid rgba(82,209,124,.3)}
+  .ac.part{background:rgba(240,180,41,.14);color:var(--warn);border:1px solid rgba(240,180,41,.3)}
+  .ac.todo{background:rgba(255,107,107,.12);color:var(--bad);border:1px solid rgba(255,107,107,.28)}
+  .risk{margin-top:13px;padding:10px 12px;background:rgba(255,107,107,.055);
+    border-left:2px solid var(--bad);border-radius:0 7px 7px 0;font-size:12.5px;color:var(--tx2)}
+  .risk.ok{background:rgba(82,209,124,.05);border-left-color:var(--ok)}
+
+  /* ---------- matrix ---------- */
+  .mwrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:6px}
+  table{border-collapse:collapse;width:100%;min-width:840px}
+  th,td{padding:9px 7px;text-align:center;font-size:12px;border-bottom:1px solid var(--line)}
+  thead th{font:700 10.5px/1.3 var(--mono);color:var(--tx3);text-transform:uppercase;letter-spacing:.05em}
+  tbody th{text-align:left;font:700 11.5px/1.3 var(--mono);color:var(--tx2);white-space:nowrap;padding-left:12px}
+  td.cell{font-size:15px}
+  .y{color:var(--ok)} .n{color:var(--none)} .p{color:var(--warn)}
+  .key{font:600 11px/1.6 var(--mono);color:var(--tx3);padding:12px 14px 8px}
+  .key span{margin-right:16px}
+
+  /* ---------- people ---------- */
+  .people{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:16px}
+  .person{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .person .tag{font:800 10.5px/1 var(--mono);padding:5px 8px;border-radius:5px;
+    display:inline-block;margin-bottom:11px;letter-spacing:.05em}
+  .person h3{font-size:16px;font-weight:680;margin-bottom:3px}
+  .person .focus{font-size:12.5px;color:var(--tx3);margin-bottom:13px}
+  .person ul{list-style:none;font-size:13px;color:var(--tx2)}
+  .person li{padding:6px 0 6px 16px;position:relative;border-bottom:1px solid var(--line)}
+  .person li:last-child{border:0}
+  .person li::before{content:"▸";position:absolute;left:0;color:var(--tx3)}
+  .person .load{margin-top:13px;padding-top:12px;border-top:1px solid var(--line);
+    font:600 11.5px/1 var(--mono);color:var(--tx3)}
+
+  /* ---------- gaps ---------- */
+  .gap{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--bad);
+    border-radius:0 12px 12px 0;padding:16px 20px;margin-bottom:11px}
+  .gap h4{font-size:14.5px;font-weight:650;margin-bottom:5px;display:flex;gap:9px;align-items:center}
+  .gap p{font-size:13px;color:var(--tx2)}
+  .gap .mod-ref{font:600 10.5px/1 var(--mono);color:var(--tx3);background:var(--bg2);
+    padding:4px 7px;border-radius:5px;border:1px solid var(--line2);white-space:nowrap}
+
+  /* ---------- order ---------- */
+  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:14px;counter-reset:s}
+  .step{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:17px;position:relative}
+  .step::before{counter-increment:s;content:counter(s);position:absolute;top:-11px;left:16px;
+    font:800 11px/1 var(--mono);width:22px;height:22px;border-radius:6px;display:grid;place-items:center;
+    background:var(--bg2);border:1px solid var(--line2);color:var(--tx2)}
+  .step h4{font-size:14px;font-weight:650;margin:8px 0 5px}
+  .step p{font-size:12.5px;color:var(--tx2)}
+  .step .who{margin-top:10px;font:700 10px/1 var(--mono);letter-spacing:.05em}
+
+  /* ---------- table ---------- */
+  .inv{width:100%;border-collapse:collapse;font-size:13px}
+  .inv th{text-align:left;font:700 10.5px/1 var(--mono);color:var(--tx3);
+    text-transform:uppercase;letter-spacing:.06em;padding:11px 10px;border-bottom:1px solid var(--line2)}
+  .inv td{padding:10px;border-bottom:1px solid var(--line);color:var(--tx2)}
+  .inv td:first-child{font-family:var(--mono);font-size:12px;color:var(--tx);white-space:nowrap}
+  .inv tr:last-child td{border-bottom:0}
+  .inv .num{text-align:right;font-family:var(--mono)}
+
+  footer{border-top:1px solid var(--line);padding-top:24px;margin-top:20px;
+    color:var(--tx3);font-size:12.5px;display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between}
+  @media(max-width:640px){.wrap{padding:0 16px}.answer{padding:22px 20px}.stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>Module <span>Map</span></h1>
+    <p class="sub">How this project divides, how many modules it should have, and how four people
+      can own them. Numbers are measured from the working tree, not estimated.</p>
+    <div class="meta">
+      <span class="pill live">● verified against working tree</span>
+      <span class="pill">178 tests passing</span>
+      <span class="pill">4,908 backend LOC</span>
+      <span class="pill">8,545 frontend LOC</span>
+      <span class="pill">7 modules · 4 owners</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<!-- ============ THE ANSWER ============ -->
+<section>
+  <h2>The short answer</h2>
+  <div class="answer">
+    <div class="big">7 <em>modules</em></div>
+    <h3>Split the codebase at its existing seams — not by file count.</h3>
+    <p>
+      The code already has <strong>7 natural boundaries</strong> with clear contracts, because
+      <code style="font-family:var(--mono);font-size:13px">CLAUDE.md</code> already enforces a
+      purity rule that cuts the system in two: everything above the line is a pure function, everything
+      below does I/O. Don't invent new divisions — name the ones that exist, then hand them to four people.
+    </p>
+    <div class="cols">
+      <div><strong style="color:var(--p1)">4</strong><span>Backend modules</span></div>
+      <div><strong style="color:var(--p4)">3</strong><span>Owners per pair</span></div>
+      <div><strong style="color:var(--bad)">4</strong><span>Empty stub dirs</span></div>
+      <div><strong style="color:var(--warn)">3</strong><span>ACs unmet</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FLOW ============ -->
+<section>
+  <h2>Data flow &amp; module boundaries</h2>
+  <p class="lede">
+    One run, left to right. Each box is a module; the colour is who owns it.
+    The dashed box is the split that matters most: <strong>M1 above the line never touches I/O</strong>,
+    which is what makes the scoring testable and the whole project's claim defensible.
+  </p>
+  <div class="diagram">
+    <div class="flow">
+      <div class="stage">
+        <div class="box l2"><span class="ownertag">P2</span>
+          <span class="code">M2 · Query &amp;<br>Brand Engine</span>
+          <span class="role">Templates → frozen, hashed query set</span>
+          <span class="num">516 LOC · 39 tests</span>
+        </div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="stage">
+        <div class="box l3"><span class="ownertag">P3</span>
+          <span class="code">M3 · Collection<br>Layer</span>
+          <span class="role">7 provider adapters, retry, quota</span>
+          <span class="num">1,129 LOC · 37 tests</span>
+        </div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="stage" style="flex:1.25">
+        <div class="box l1"><span class="ownertag">P1</span>
+          <span class="code">M1 · Analysis Core<br><span style="opacity:.65;font-size:10.5px">pure — no I/O, no LLM</span></span>
+          <span class="role">Mention detector → scorer → gap detector</span>
+          <span class="num">726 LOC · 49 tests</span>
+        </div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="stage">
+        <div class="box l1"><span class="ownertag">P1</span>
+          <span class="code">M5 · Recommen-<br>dation Engine</span>
+          <span class="role">Counterfactual priority + gate</span>
+          <span class="num">479 LOC · 4 tests</span>
+        </div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="stage">
+        <div class="box l4"><span class="ownertag">P2</span>
+          <span class="code">M4 · Tracking &amp;<br>Persistence</span>
+          <span class="role">Snapshot + comparability key</span>
+          <span class="num">224 LOC · 4 tests</span>
+        </div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="stage">
+        <div class="box l4"><span class="ownertag">P4</span>
+          <span class="code">M6 · API<br>&amp; Jobs</span>
+          <span class="role">FastAPI + pipeline runner</span>
+          <span class="num">1,388 LOC · 42 tests</span>
+        </div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="stage">
+        <div class="box l4"><span class="ownertag">P4</span>
+          <span class="code">M7 · Frontend</span>
+          <span class="role">Dashboard, evidence, trends</span>
+          <span class="num">8,545 LOC · 13 tests</span>
+        </div>
+      </div>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--p1)"></i>P1 — rigour &amp; science</span>
+      <span><i style="background:var(--p2)"></i>P2 — instrument &amp; memory</span>
+      <span><i style="background:var(--p3)"></i>P3 — data coming in</span>
+      <span><i style="background:var(--p4)"></i>P4 — product surface</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MODULE CARDS ============ -->
+<section>
+  <h2>The seven modules</h2>
+  <p class="lede">Each card is a real boundary in the repo today, with a contract you can state in one sentence.</p>
+  <div class="mods">
+
+    <div class="mod m1">
+      <div class="mod-top">
+        <span class="mod-id" style="color:var(--p1)">M1</span>
+        <h3>Analysis Core</h3>
+      </div>
+      <div class="path">backend/src/app/analysis/</div>
+      <div class="desc">
+        The scientific heart. Scorer, mention detector, gap detector, mention summary and the shared
+        dataclasses. <strong>Pure functions only</strong> — no I/O, no LLM, no network. This is the
+        constraint that makes the scoring independently testable and is the single most valuable
+        thing in this repo.
+      </div>
+      <div class="stats">
+        <div><b>6</b><span>files</span></div>
+        <div><b>726</b><span>LOC</span></div>
+        <div><b>49</b><span>tests</span></div>
+        <div><b>97%</b><span>covered</span></div>
+      </div>
+      <div class="lbl">Acceptance criteria owned</div>
+      <div class="acs">
+        <span class="ac done">AC-5 ✓</span><span class="ac done">AC-6 ✓</span>
+        <span class="ac part">AC-8 ½</span><span class="ac todo">AC-12 ✗</span>
+      </div>
+      <div class="risk">AC-8 is half-built: the scorer computes a correct CI per run, but nothing
+        ever compares two runs. The Theil–Sen slope and CI-overlap test are missing. Also the
+        <code style="font-family:var(--mono);font-size:11.5px">trend.py</code> that should hold them
+        doesn't exist yet.</div>
+    </div>
+
+    <div class="mod m2">
+      <div class="mod-top">
+        <span class="mod-id" style="color:var(--p2)">M2</span>
+        <h3>Query &amp; Brand Engine</h3>
+      </div>
+      <div class="path">querysets/ + brands/</div>
+      <div class="desc">
+        Turns a brand setup into the frozen, content-hashed question set. Intent templates, draft
+        generation, the optional LLM phrasing step, the user-editable question list, and the pilot
+        brand registry. <strong>Contract: a query set is immutable once hashed.</strong>
+      </div>
+      <div class="stats">
+        <div><b>6</b><span>files</span></div>
+        <div><b>860</b><span>LOC</span></div>
+        <div><b>42</b><span>tests</span></div>
+        <div><b>90%</b><span>covered</span></div>
+      </div>
+      <div class="lbl">Acceptance criteria owned</div>
+      <div class="acs">
+        <span class="ac done">AC-1 ✓</span><span class="ac done">AC-3 ✓</span>
+      </div>
+      <div class="risk ok">Solid. Only note: the 3 pilot brands have just <strong>3 tests</strong> between
+        them — brand-registry validation (a whole AC-1 surface) is the thinnest test coverage in the repo.</div>
+    </div>
+
+    <div class="mod m3">
+      <div class="mod-top">
+        <span class="mod-id" style="color:var(--p3)">M3</span>
+        <h3>Collection Layer</h3>
+      </div>
+      <div class="path">backend/src/app/collection/</div>
+      <div class="desc">
+        The edge of the system and the only place unreliable things happen. Seven provider adapters
+        behind one interface (Gemini, OpenAI, Groq, OpenRouter, Anthropic, Ollama, any-compatible),
+        plus the synthetic and replay offline providers, retry with backoff, and quota-exhaustion
+        detection. <strong>Contract: one <code style="font-family:var(--mono);font-size:11.5px">query()</code> → one payload.</strong>
+      </div>
+      <div class="stats">
+        <div><b>11</b><span>files</span></div>
+        <div><b>1,129</b><span>LOC</span></div>
+        <div><b>37</b><span>tests</span></div>
+        <div><b>80%</b><span>covered</span></div>
+      </div>
+      <div class="lbl">Acceptance criteria owned</div>
+      <div class="acs">
+        <span class="ac done">AC-2 ✓</span><span class="ac done">AC-4 ✓</span>
+        <span class="ac done">AC-9 ✓</span><span class="ac part">AC-11 ½</span>
+      </div>
+      <div class="risk">
+        <code style="font-family:var(--mono);font-size:11.5px">collection/sources/</code> is an
+        <strong>empty package</strong> — there is no web/social collection, so SOURCE and REPRESENTATION
+        gaps can never fire. And every adapter still returns an empty
+        <code style="font-family:var(--mono);font-size:11.5px">QuotaState()</code>, so AC-11's
+        per-provider cost view has no data behind it.
+      </div>
+    </div>
+
+    <div class="mod m4">
+      <div class="mod-top">
+        <span class="mod-id" style="color:var(--p4)">M4</span>
+        <h3>Tracking &amp; Persistence</h3>
+      </div>
+      <div class="path">tracking/ + db/ + models/ + orchestration/</div>
+      <div class="desc">
+        Snapshot assembly and the append-only JSONL store, plus the comparability key that decides
+        which runs may be compared. <strong>Contract: history is never rewritten.</strong>
+        This module also owns the unmade migration to PostgreSQL and Celery.
+      </div>
+      <div class="stats">
+        <div><b>3</b><span>files</span></div>
+        <div><b>224</b><span>LOC</span></div>
+        <div><b>4</b><span>tests</span></div>
+        <div><b>90%</b><span>covered</span></div>
+      </div>
+      <div class="lbl">Acceptance criteria owned</div>
+      <div class="acs">
+        <span class="ac part">AC-4 ½</span><span class="ac part">AC-8 ½</span>
+      </div>
+      <div class="risk">
+        <code style="font-family:var(--mono);font-size:11.5px">db/</code>,
+        <code style="font-family:var(--mono);font-size:11.5px">models/</code>,
+        <code style="font-family:var(--mono);font-size:11.5px">orchestration/</code> and
+        <code style="font-family:var(--mono);font-size:11.5px">core/</code> are all
+        <strong>0-byte packages</strong> — while <code style="font-family:var(--mono);font-size:11.5px">sqlalchemy</code>,
+        <code style="font-family:var(--mono);font-size:11.5px">alembic</code>,
+        <code style="font-family:var(--mono);font-size:11.5px">celery</code>,
+        <code style="font-family:var(--mono);font-size:11.5px">redis</code> and
+        <code style="font-family:var(--mono);font-size:11.5px">psycopg</code> sit unused in
+        <code style="font-family:var(--mono);font-size:11.5px">pyproject.toml</code>. Build or delete.
+      </div>
+    </div>
+
+    <div class="mod m1">
+      <div class="mod-top">
+        <span class="mod-id" style="color:var(--p1)">M5</span>
+        <h3>Recommendation Engine</h3>
+      </div>
+      <div class="path">recommendation/ + distribution/</div>
+      <div class="desc">
+        Turns gaps into ranked, traceable actions. Priority is a real counterfactual: it mutates a copy
+        of the observations, re-runs the pure scorer, and takes the delta — not model judgment. A
+        validation gate then drops anything untraceable or outside the closed vocabulary.
+      </div>
+      <div class="stats">
+        <div><b>3</b><span>files</span></div>
+        <div><b>479</b><span>LOC</span></div>
+        <div><b>4</b><span>tests</span></div>
+        <div><b>88%</b><span>covered</span></div>
+      </div>
+      <div class="lbl">Acceptance criteria owned</div>
+      <div class="acs">
+        <span class="ac done">AC-7 ✓</span><span class="ac todo">AC-10 ✗</span>
+      </div>
+      <div class="risk">
+        <code style="font-family:var(--mono);font-size:11.5px">distribution/</code> is empty —
+        <strong>AC-10 has no code at all</strong>. The LLM drafter is a
+        <code style="font-family:var(--mono);font-size:11.5px">Protocol</code> with 0% coverage and no
+        implementation. 479 lines of ranking logic behind only 4 tests is the highest
+        risk-to-coverage ratio in the repo.
+      </div>
+    </div>
+
+    <div class="mod m4">
+      <div class="mod-top">
+        <span class="mod-id" style="color:var(--p4)">M6</span>
+        <h3>API &amp; Job Orchestration</h3>
+      </div>
+      <div class="path">interface/ + pipeline/ + config/</div>
+      <div class="desc">
+        The HTTP surface (11 endpoints), the background job manager, and the pipeline runner that wires
+        every module into one run. Best-tested module in the repo. <strong>Contract:
+        <code style="font-family:var(--mono);font-size:11.5px">CONTRACT.md §7</code> — frontend and
+        backend agree on it.</strong>
+      </div>
+      <div class="stats">
+        <div><b>9</b><span>files</span></div>
+        <div><b>1,388</b><span>LOC</span></div>
+        <div><b>42</b><span>tests</span></div>
+        <div><b>96%</b><span>covered</span></div>
+      </div>
+      <div class="lbl">Acceptance criteria owned</div>
+      <div class="acs">
+        <span class="ac done">AC-9 ✓</span><span class="ac part">AC-8 ½</span>
+      </div>
+      <div class="risk">
+        The job manager is a <strong>module-level singleton with in-memory state</strong> — one run at a
+        time, and a restart mid-run loses both the job and the run. Running
+        <code style="font-family:var(--mono);font-size:11.5px">uvicorn --workers &gt;1</code> would give
+        one job table per worker. No auth on any endpoint.
+      </div>
+    </div>
+
+    <div class="mod m4">
+      <div class="mod-top">
+        <span class="mod-id" style="color:var(--p4)">M7</span>
+        <h3>Frontend</h3>
+      </div>
+      <div class="path">frontend/src/</div>
+      <div class="desc">
+        Six pages, ~30 components, three languages, light and dark themes, inline-SVG charts with no UI
+        kit. Type-checks and builds clean. The demo surface — this is what a marker actually sees.
+      </div>
+      <div class="stats">
+        <div><b>63</b><span>files</span></div>
+        <div><b>8,545</b><span>LOC</span></div>
+        <div><b>13</b><span>tests</span></div>
+        <div><b>3</b><span>test files</span></div>
+      </div>
+      <div class="lbl">Acceptance criteria owned</div>
+      <div class="acs">
+        <span class="ac part">AC-8 ½</span><span class="ac part">AC-12 ½</span>
+      </div>
+      <div class="risk">
+        <strong>8,545 lines, 13 tests.</strong> The two largest components — <code style="font-family:var(--mono);font-size:11.5px">RunPanel.tsx</code>
+        (419) and <code style="font-family:var(--mono);font-size:11.5px">TrendChart.tsx</code> (270) —
+        have no tests. No <code style="font-family:var(--mono);font-size:11.5px">ErrorBoundary</code>,
+        so one throw against flaky providers takes down the SPA.
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ MATRIX ============ -->
+<section>
+  <h2>Module × acceptance criteria</h2>
+  <p class="lede">
+    Which module has to move for each acceptance criterion to be met. Three are unmet: AC-8 (partial),
+    AC-10 and AC-12 (absent). Note how concentrated the debt is — <strong>two of the three sit in M1 and M5</strong>.
+  </p>
+  <div class="mwrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="text-align:left;padding-left:12px">Module</th>
+          <th>AC-1</th><th>AC-2</th><th>AC-3</th><th>AC-4</th><th>AC-5</th><th>AC-6</th>
+          <th>AC-7</th><th>AC-8</th><th>AC-9</th><th>AC-10</th><th>AC-11</th><th>AC-12</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><th>M1 Analysis Core</th>
+          <td class="cell n">·</td><td class="cell n">·</td><td class="cell y">●</td><td class="cell n">·</td>
+          <td class="cell y">●</td><td class="cell y">●</td><td class="cell n">·</td><td class="cell p">◐</td>
+          <td class="cell n">·</td><td class="cell n">·</td><td class="cell n">·</td><td class="cell n">○</td></tr>
+        <tr><th>M2 Query &amp; Brand</th>
+          <td class="cell y">●</td><td class="cell n">·</td><td class="cell y">●</td><td class="cell n">·</td>
+          <td class="cell n">·</td><td class="cell n">·</td><td class="cell n">·</td><td class="cell n">·</td>
+          <td class="cell n">·</td><td class="cell n">·</td><td class="cell n">·</td><td class="cell n">·</td></tr>
+        <tr><th>M3 Collection</th>
+          <td class="cell n">·</td><td class="cell y">●</td><td class="cell n">·</td><td class="cell y">●</td>
+          <td class="cell n">·</td><td class="cell n">·</td><td class="cell n">·</td><td class="cell n">·</td>
+          <td class="cell y">●</td><td class="cell n">·</td><td class="cell p">◐</td><td class="cell n">·</td></tr>
+        <tr><th>M4 Tracking</th>
+          <td class="cell n">·</td><td class="cell n">·</td><td class="cell n">·</td><td class="cell p">◐</td>
+          <td class="cell n">·</td><td class="cell n">·</td><td class="cell n">·</td><td class="cell p">◐</td>
+          <td class="cell n">·</td><td class="cell n">·</td><td class="cell n">·</td><td class="cell n">·</td></tr>
+        <tr><th>M5 Recommendation</th>
+          <td class="cell n">·</td><td class="cell n">·</td><td class="cell n">·</td><td class="cell n">·</td>
+          <td class="cell n">·</td><td class="cell n">·</td><td class="cell y">●</td><td class="cell n">·</td>
+          <td class="cell n">·</td><td class="cell n">○</td><td class="cell n">·</td><td class="cell n">·</td></tr>
+        <tr><th>M6 API &amp; Jobs</th>
+          <td class="cell p">◐</td><td class="cell n">·</td><td class="cell n">·</td><td class="cell n">·</td>
+          <td class="cell p">◐</td><td class="cell p">◐</td><td class="cell p">◐</td><td class="cell p">◐</td>
+          <td class="cell y">●</td><td class="cell n">·</td><td class="cell n">·</td><td class="cell n">·</td></tr>
+        <tr><th>M7 Frontend</th>
+          <td class="cell n">·</td><td class="cell n">·</td><td class="cell n">·</td><td class="cell n">·</td>
+          <td class="cell p">◐</td><td class="cell p">◐</td><td class="cell p">◐</td><td class="cell p">◐</td>
+          <td class="cell n">·</td><td class="cell p">◐</td><td class="cell n">·</td><td class="cell p">◐</td></tr>
+      </tbody>
+    </table>
+    <div class="key">
+      <span><span class="y">●</span> fully met</span>
+      <span><span class="p">◐</span> partial / display only</span>
+      <span><span class="n">○</span> not started</span>
+      <span>· = not this module's job</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PEOPLE ============ -->
+<section>
+  <h2>How four people cover seven modules</h2>
+  <p class="lede">
+    Two modules are small enough to pair with a large one. The split is drawn so each person owns a
+    <em>coherent story</em> they can defend in the viva — not just a folder of files.
+  </p>
+  <div class="people">
+    <div class="person">
+      <span class="tag" style="color:var(--p1);background:rgba(240,180,41,.13);border:1px solid rgba(240,180,41,.35)">PERSON 1</span>
+      <h3>Rigour &amp; Science</h3>
+      <div class="focus">Owns M1 + M5 · 1,205 LOC</div>
+      <ul>
+        <li><strong>M1</strong> Analysis Core — the pure layer</li>
+        <li><strong>M5</strong> Recommendation Engine</li>
+        <li>Build <code>trend.py</code> → closes AC-8</li>
+        <li>Detector validation study → closes AC-12</li>
+        <li>Distribution / Dev.to → closes AC-10</li>
+      </ul>
+      <div class="load" style="color:var(--p1)">3 unmet ACs — highest leverage on the team</div>
+    </div>
+
+    <div class="person">
+      <span class="tag" style="color:var(--p2);background:rgba(76,201,240,.13);border:1px solid rgba(76,201,240,.35)">PERSON 2</span>
+      <h3>Instrument &amp; Memory</h3>
+      <div class="focus">Owns M2 + M4 · 1,084 LOC</div>
+      <ul>
+        <li><strong>M2</strong> Query &amp; Brand Engine</li>
+        <li><strong>M4</strong> Tracking &amp; Persistence</li>
+        <li>Decide: build or delete the Postgres/Celery stubs</li>
+        <li>Comparison-key &amp; history integrity</li>
+        <li>Thicken brand-registry tests (3 today)</li>
+      </ul>
+      <div class="load" style="color:var(--p2)">Cheapest cleanup: drop 5 unused deps</div>
+    </div>
+
+    <div class="person">
+      <span class="tag" style="color:var(--p3);background:rgba(82,209,124,.13);border:1px solid rgba(82,209,124,.35)">PERSON 3</span>
+      <h3>Data Coming In</h3>
+      <div class="focus">Owns M3 · 1,129 LOC</div>
+      <ul>
+        <li><strong>M3</strong> Collection Layer, all 7 adapters</li>
+        <li>Web/social source collection → unlocks 2 gap types</li>
+        <li>Populate real <code>QuotaState</code> → AC-11</li>
+        <li>Raise the weakest coverage in the repo (80%)</li>
+        <li>Anthropic adapter: 44% covered, different API shape</li>
+      </ul>
+      <div class="load" style="color:var(--p3)">Unblocks SOURCE + REPRESENTATION gaps</div>
+    </div>
+
+    <div class="person">
+      <span class="tag" style="color:var(--p4);background:rgba(167,139,250,.13);border:1px solid rgba(167,139,250,.35)">PERSON 4</span>
+      <h3>Product Surface</h3>
+      <div class="focus">Owns M6 + M7 · 9,933 LOC</div>
+      <ul>
+        <li><strong>M6</strong> API &amp; Job Orchestration</li>
+        <li><strong>M7</strong> Frontend, all six pages</li>
+        <li>ErrorBoundary + fix the <code>useAsync</code> warning</li>
+        <li>Wire the trend verdict into the chart</li>
+        <li>Stop committing <code>dist/</code></li>
+      </ul>
+      <div class="load" style="color:var(--p4)">Owns the live demo — largest surface</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ GAPS ============ -->
+<section>
+  <h2>Where each module lacks</h2>
+  <p class="lede">Ordered by cost-to-close, not by severity. The first three are days of work, not weeks.</p>
+
+  <div class="gap">
+    <h4>AC-8 · The trend is drawn but never tested <span class="mod-ref">M1</span> <span class="mod-ref">M7</span></h4>
+    <p>
+      A CI band is computed per run, but nothing compares two of them. PRD §11.6 requires
+      change-detected / no-change by CI overlap on two runs, and a Theil–Sen slope with a bootstrap CI
+      on four or more. <code style="font-family:var(--mono);font-size:12px">grep -ri theil</code> returns
+      nothing in either tree. This is the project's central claim — never assert a trend without its CI —
+      and the UI currently does exactly that. One pure function in M1 fixes the maths; M7 only renders it.
+    </p>
+  </div>
+
+  <div class="gap">
+    <h4>AC-10 · Distribution is an empty package <span class="mod-ref">M5</span></h4>
+    <p>
+      <code style="font-family:var(--mono);font-size:12px">app/distribution/</code> is a 0-byte
+      <code style="font-family:var(--mono);font-size:12px">__init__.py</code>. No Dev.to integration, no
+      human approval gate, no publish audit log, no manual-export fallback. A full acceptance criterion
+      with zero code.
+    </p>
+  </div>
+
+  <div class="gap">
+    <h4>AC-12 · The detector is never validated <span class="mod-ref">M1</span> <span class="mod-ref">M7</span></h4>
+    <p>
+      No labelling workflow, no precision/recall, no Cohen's kappa. The README says detection is
+      "reproducible and independently testable" — but <em>deterministic is not the same as accurate</em>.
+      PRD §11.7 asks for two independent annotators on ~10–15% of observations. This is the criterion
+      most likely to be graded on, because it is what proves the technical claim.
+    </p>
+  </div>
+
+  <div class="gap">
+    <h4>Two of five gap types are dead code in production <span class="mod-ref">M3</span></h4>
+    <p>
+      SOURCE and REPRESENTATION are fully implemented and tested in M1 — and can never fire, because
+      <code style="font-family:var(--mono);font-size:12px">collection/sources/</code> is empty and
+      nothing ever supplies <code style="font-family:var(--mono);font-size:12px">prompted_observations</code>
+      to the gap detector. The README advertises all five types. Right now the running system does three.
+    </p>
+  </div>
+
+  <div class="gap">
+    <h4>AC-11 · The quota interface is stubbed everywhere <span class="mod-ref">M3</span></h4>
+    <p>
+      All five adapters return <code style="font-family:var(--mono);font-size:12px">QuotaState(remaining_today=None,
+      daily_limit=None, exhausted=False)</code>. Quota <em>exhaustion detection</em> now works on daily-limit
+      429s — good — but quota <em>reporting</em> and the per-provider cost view have no data source.
+    </p>
+  </div>
+
+  <div class="gap">
+    <h4>Four empty packages, five unused dependencies <span class="mod-ref">M2</span> <span class="mod-ref">M4</span></h4>
+    <p>
+      <code style="font-family:var(--mono);font-size:12px">core/</code>,
+      <code style="font-family:var(--mono);font-size:12px">db/</code>,
+      <code style="font-family:var(--mono);font-size:12px">models/</code>,
+      <code style="font-family:var(--mono);font-size:12px">orchestration/</code> and
+      <code style="font-family:var(--mono);font-size:12px">normalization/</code> are all 0 bytes, while
+      sqlalchemy, alembic, celery, redis and psycopg ship in the image and are imported nowhere.
+      Scaffolding abandoned mid-thought — and reviewers read it as such.
+    </p>
+  </div>
+</section>
+
+<!-- ============ BUILD ORDER ============ -->
+<section>
+  <h2>Suggested build order</h2>
+  <p class="lede">
+    Strictly dependency-ordered. Steps 1–3 are independent of each other and can run in parallel across
+    the team; everything after step 3 needs step 1 landed.
+  </p>
+  <div class="steps">
+    <div class="step">
+      <h4>Trend statistics</h4>
+      <p><code>analysis/trend.py</code> — CI-overlap verdict for 2 runs, Theil–Sen + bootstrap CI for 4+.
+        Pure, ~150 LOC, testable in the same style as the scorer. Closes AC-8.</p>
+      <div class="who" style="color:var(--p1)">PERSON 1 → PERSON 4</div>
+    </div>
+    <div class="step">
+      <h4>Detector validation</h4>
+      <p>Sample ~30 observations, two annotators label independently, compute precision/recall and
+        Cohen's kappa. Can be manual to start. Closes AC-12.</p>
+      <div class="who" style="color:var(--p1)">PERSON 1 (+ PERSON 4 for UI)</div>
+    </div>
+    <div class="step">
+      <h4>Web source layer</h4>
+      <p>Implement <code>collection/sources/</code> and feed the gap detector. Unlocks SOURCE and
+        REPRESENTATION, making the README's five-type claim true.</p>
+      <div class="who" style="color:var(--p3)">PERSON 3</div>
+    </div>
+    <div class="step">
+      <h4>ErrorBoundary + useAsync</h4>
+      <p>~30 lines. Protects the live demo against a throw in any component, and removes the one lint
+        warning on the job-polling hot path.</p>
+      <div class="who" style="color:var(--p4)">PERSON 4</div>
+    </div>
+    <div class="step">
+      <h4>Stub or build</h4>
+      <p>Decide the fate of the 5 empty packages. Deleting the unused deps is a 5-minute commit;
+        building them is a week. Pick one, visibly.</p>
+      <div class="who" style="color:var(--p2)">PERSON 2</div>
+    </div>
+    <div class="step">
+      <h4>Distribution</h4>
+      <p>Dev.to publish behind a human approval gate, every attempt logged, manual export fallback.
+        Closes AC-10 — the last unmet criterion.</p>
+      <div class="who" style="color:var(--p1)">PERSON 1</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ INVENTORY ============ -->
+<section>
+  <h2>Measured inventory</h2>
+  <div class="mwrap">
+    <table class="inv">
+      <thead>
+        <tr><th>Module</th><th>Path</th><th class="num">Files</th><th class="num">LOC</th>
+        <th class="num">Tests</th><th class="num">Coverage</th><th>Owner</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>M1 Analysis Core</td><td>analysis/</td><td class="num">6</td><td class="num">726</td>
+          <td class="num">49</td><td class="num">97.3%</td><td style="color:var(--p1)">Person 1</td></tr>
+        <tr><td>M2 Query &amp; Brand</td><td>querysets/ + brands/</td><td class="num">6</td><td class="num">860</td>
+          <td class="num">42</td><td class="num">90%</td><td style="color:var(--p2)">Person 2</td></tr>
+        <tr><td>M3 Collection</td><td>collection/</td><td class="num">11</td><td class="num">1,129</td>
+          <td class="num">37</td><td class="num">80%</td><td style="color:var(--p3)">Person 3</td></tr>
+        <tr><td>M4 Tracking</td><td>tracking/ + 4 empty pkgs</td><td class="num">3</td><td class="num">224</td>
+          <td class="num">4</td><td class="num">90.3%</td><td style="color:var(--p4)">Person 2</td></tr>
+        <tr><td>M5 Recommendation</td><td>recommendation/ + distribution/</td><td class="num">3</td><td class="num">479</td>
+          <td class="num">4</td><td class="num">88.4%</td><td style="color:var(--p1)">Person 1</td></tr>
+        <tr><td>M6 API &amp; Jobs</td><td>interface/ + pipeline/ + config/</td><td class="num">9</td><td class="num">1,388</td>
+          <td class="num">42</td><td class="num">96%</td><td style="color:var(--p4)">Person 4</td></tr>
+        <tr><td>M7 Frontend</td><td>frontend/src/</td><td class="num">63</td><td class="num">8,545</td>
+          <td class="num">13</td><td class="num">—</td><td style="color:var(--p4)">Person 4</td></tr>
+        <tr style="border-top:2px solid var(--line2)"><td style="color:var(--tx)">TOTAL</td>
+          <td style="color:var(--tx3)">+ scripts/ 564 LOC</td><td class="num" style="color:var(--tx)">101</td>
+          <td class="num" style="color:var(--tx)">13,453</td><td class="num" style="color:var(--tx)">191</td>
+          <td class="num" style="color:var(--tx)">93%</td><td>4 people</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  <span>Generated from the working tree · 178 backend tests + 13 frontend tests passing</span>
+  <span>docs/MODULE_MAP.html</span>
+</footer>
+
+</div>
+</body>
+</html>

@@ -41,6 +41,7 @@ from app.interface.schemas import (
     OAuthStartResponse,
     ObservationsResponse,
     ProviderInfoOut,
+    PreflightOut,
     PublishRequest,
     QuestionSet,
     RegenerateImageRequest,
@@ -877,8 +878,12 @@ def publish_campaign(
     x_admin_token: str | None = Header(default=None, description=ADMIN_HEADER_DOC),
 ) -> dict[str, Any]:
     """Publish (or export) to the given channels. Each attempt is logged as an event, whatever the
-    outcome (AC-10): "published", "exported" (export / WhatsApp / a channel without credentials),
-    "failed", or "blocked" (not approved, edited since approval, validation, missing admin token).
+    outcome (AC-10): "published" (the platform returned the post; `external_url` links to it),
+    "exported" (nothing sent: export pack, WhatsApp share link, or a channel with no account at all —
+    `note` says which), "failed" (the platform refused; "reconnect" when the token was rejected), or
+    "blocked" (not approved, edited since approval, validation, missing admin token, or an account
+    that is saved but can't post — e.g. expired, or Instagram without a public PUBLIC_BASE_URL).
+    POST …/preflight shows what would happen without sending anything.
 
     With ADMIN_TOKEN set, X-Admin-Token is required (401). Without ADMIN_TOKEN only sandbox, export
     and whatsapp are allowed: other channels in the request are logged "blocked" and the rest is
@@ -902,6 +907,23 @@ def publish_campaign(
                 raise HTTPException(status_code=403, detail=msg)
         # Mixed request: allowed channels go out, refused ones are logged "blocked" (200).
         return asdict(service.publish(brand_key, campaign_id, channels, actor=actor or "user", refused=refused))
+
+
+@app.post("/brands/{brand_key}/campaigns/{campaign_id}/preflight", tags=["campaigns"], response_model=list[PreflightOut])
+def preflight_campaign(brand_key: str, campaign_id: str, body: PublishRequest) -> list[dict[str, Any]]:
+    """Dry run of POST …/publish: for each channel, whether it would post now (with the brand's
+    account), only export (WhatsApp share link / export pack / no account) or be refused — and why.
+    Contacts no platform, logs no event and changes nothing, so it needs no admin token. Without
+    ADMIN_TOKEN on the server, real channels are reported "blocked" (publish would refuse them)."""
+    from app.distribution.gate import LOCAL_CHANNELS
+
+    with _campaign_errors():
+        plans = _campaigns().preflight(brand_key, campaign_id, list(body.channels))
+    if _admin_token() is None:
+        for p in plans:
+            if p["channel"] not in LOCAL_CHANNELS and p["action"] != "blocked":
+                p["action"], p["detail"] = "blocked", "Set ADMIN_TOKEN on the server to publish to real channels"
+    return plans
 
 
 @app.get(

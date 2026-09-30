@@ -1,14 +1,25 @@
 import { describe, expect, it } from "vitest";
-import type { Campaign, ChannelStatus, DistributionEvent, Snapshot, Variant } from "../../api/types";
+import type { Campaign, ChannelId, ChannelStatus, DistributionEvent, Snapshot, Variant } from "../../api/types";
 import {
   currentStep,
   defaultPicks,
   fixFor,
   generationStage,
   needsTokenFirst,
+  awaitingConnect,
+  blockReason,
+  canRetry,
+  joinConnected,
   parseIssue,
+  parsePicks,
   parseStep,
   planDestinations,
+  resultKind,
+  rowState,
+  selectAll,
+  setExportInstead,
+  togglePick,
+  whereGate,
   reachableSteps,
   removeHashtag,
   removePhrase,
@@ -175,41 +186,106 @@ describe("where to post (incl. LinkedIn)", () => {
     variant({ channel: "sandbox" }),
   ];
 
-  it("shows each channel the campaign has copy for, as this brand would post to it", () => {
-    const d = planDestinations(campaign({ variants }), statuses);
+  it("lists every channel in a fixed order, as this brand would post to it", () => {
+    const d = planDestinations(campaign({ variants }), statuses, [
+      { channel: "linkedin", state: "connected", account_name: "Gajanan Vada Pav" },
+      { channel: "facebook_page", state: "not_connected", account_name: "Old page" },
+    ]);
     expect(d.map((x) => [x.channel, x.kind, x.block])).toEqual([
       ["facebook_page", "unconnected", null],
+      ["instagram", "off", "disabled"],
       ["x", "post", "no_quota"],
       ["linkedin", "post", null],
-      ["instagram", "off", "disabled"],
       ["google_business", "unconnected", "variant_off"],
       ["whatsapp", "share", null],
+      ["export", "download", "no_variant"],
       ["sandbox", "simulate", null],
     ]);
+    // The account that posts is named only for a connected channel.
+    expect(d.find((x) => x.channel === "linkedin")?.account).toBe("Gajanan Vada Pav");
+    expect(d.find((x) => x.channel === "facebook_page")?.account).toBeNull();
     // WhatsApp sends nothing to a platform, so it never waits for approval.
     expect(d.find((x) => x.channel === "whatsapp")?.needsApproval).toBe(false);
     expect(d.find((x) => x.channel === "linkedin")?.needsApproval).toBe(true);
   });
 
-  it("picks what posts, simulates or shares by default; an unconnected channel waits for Connect or Export instead", () => {
+  it("treats a channel the server didn't list as not connected (sandbox / export stay local)", () => {
+    const d = planDestinations(campaign({ variants: [variant({ channel: "x" }), variant({ channel: "sandbox" })] }), []);
+    expect(d.find((x) => x.channel === "x")?.kind).toBe("unconnected");
+    expect(d.find((x) => x.channel === "sandbox")?.kind).toBe("simulate");
+  });
+
+  it("never turns a ticked unconnected channel into an export without asking", () => {
     const d = planDestinations(campaign({ variants }), statuses);
     expect(defaultPicks(d)).toEqual(["linkedin", "whatsapp", "sandbox"]);
-    // "Export instead" on Facebook adds it; a blocked channel is never sent even if picked.
-    const sent = sendList(d, ["facebook_page", "x", "linkedin", "instagram"]).map((x) => x.channel);
-    expect(sent).toEqual(["facebook_page", "linkedin"]);
+    let picks = { on: ["facebook_page", "x", "linkedin", "instagram"] as ChannelId[], exportInstead: [] as ChannelId[] };
+    const fb = d.find((x) => x.channel === "facebook_page")!;
+    expect(rowState(fb, picks)).toBe("connect");
+    expect(sendList(d, picks).map((x) => x.channel)).toEqual(["linkedin"]);
+    expect(awaitingConnect(d, picks).map((x) => x.channel)).toEqual(["facebook_page"]);
+    expect(whereGate(d, picks)).toMatchObject({ count: 1, reason: "connect" });
+    // "Export it instead" is an explicit choice; then it's sent (the server exports it).
+    picks = setExportInstead(picks, "facebook_page", true);
+    expect(rowState(fb, picks)).toBe("export");
+    expect(sendList(d, picks).map((x) => x.channel)).toEqual(["facebook_page", "linkedin"]);
+    expect(whereGate(d, picks)).toMatchObject({ count: 2, reason: null });
+    // Unticking forgets the export choice; nothing chosen says so.
+    picks = togglePick(picks, "facebook_page", false);
+    expect(picks.exportInstead).toEqual([]);
+    expect(whereGate(d, { on: [], exportInstead: [] })).toMatchObject({ count: 0, reason: "none" });
+  });
+
+  it("select all ticks what can go out now; back from Details ticks the connected channel", () => {
+    const d = planDestinations(campaign({ variants }), statuses);
+    expect(selectAll(d, { on: ["instagram"], exportInstead: [] }).on).toEqual(["linkedin", "whatsapp", "sandbox"]);
+    expect(selectAll(d, { on: [], exportInstead: ["facebook_page"] }).on).toEqual(["facebook_page", "linkedin", "whatsapp", "sandbox"]);
+    expect(joinConnected({ on: ["sandbox"], exportInstead: ["x"] }, "x")).toEqual({ on: ["sandbox", "x"], exportInstead: [] });
+    expect(joinConnected({ on: [], exportInstead: [] }, "myspace" as ChannelId)).toEqual({ on: [], exportInstead: [] });
+  });
+
+  it("reads stored picks in the old list form and the new object form", () => {
+    expect(parsePicks('["x","nope"]')).toEqual({ on: ["x"], exportInstead: [] });
+    expect(parsePicks('{"on":["x"],"exportInstead":["facebook_page"]}')).toEqual({ on: ["x"], exportInstead: ["facebook_page"] });
+    expect(parsePicks("{bad")).toBeNull();
+    expect(parsePicks(null)).toBeNull();
   });
 
   it("a LinkedIn post over the 3,000 limit or with a claim can't be picked", () => {
     const long = variant({ channel: "linkedin", text: "a".repeat(3001) });
-    expect(planDestinations(campaign({ variants: [long] }), [chan("linkedin")])[0].block).toBe("has_issues");
+    expect(planDestinations(campaign({ variants: [long] }), [chan("linkedin")]).find((x) => x.channel === "linkedin")?.block).toBe("has_issues");
     const claim = variant({ channel: "linkedin", issues: ['Unsupported claim — superlative ("best") is not in the brand profile'] });
-    expect(planDestinations(campaign({ variants: [claim] }), [chan("linkedin")])[0].block).toBe("has_issues");
-    expect(planDestinations(campaign({ variants: [variant({ channel: "linkedin", text: "a".repeat(3000) })] }), [chan("linkedin")])[0].block).toBeNull();
+    expect(planDestinations(campaign({ variants: [claim] }), [chan("linkedin")]).find((x) => x.channel === "linkedin")?.block).toBe("has_issues");
+    expect(planDestinations(campaign({ variants: [variant({ channel: "linkedin", text: "a".repeat(3000) })] }), [chan("linkedin")]).find((x) => x.channel === "linkedin")?.block).toBeNull();
   });
 
   it("asks for the admin token up front only beyond sandbox, export and WhatsApp", () => {
     expect(needsTokenFirst(["sandbox", "whatsapp"])).toBe(false);
     expect(needsTokenFirst(["sandbox", "linkedin"])).toBe(true);
+  });
+});
+
+describe("results", () => {
+  it("says what each attempt really did", () => {
+    expect(resultKind(ev({ channel: "sandbox" }))).toBe("practice");
+    expect(resultKind(ev({ channel: "linkedin" }))).toBe("posted");
+    expect(resultKind(ev({ channel: "whatsapp", outcome: "exported" }))).toBe("whatsapp");
+    expect(resultKind(ev({ channel: "export", outcome: "exported" }))).toBe("exported");
+    expect(resultKind(ev({ channel: "facebook_page", outcome: "exported" }))).toBe("unconnected");
+    expect(resultKind(ev({ channel: "x", outcome: "failed" }))).toBe("failed");
+    expect(resultKind(ev({ channel: "x", outcome: "blocked" }))).toBe("blocked");
+  });
+
+  it("names why an attempt was blocked, and offers a retry only when it can help", () => {
+    expect(blockReason("Set ADMIN_TOKEN to publish to real channels")).toBe("token_unset");
+    expect(blockReason("Missing or wrong X-Admin-Token")).toBe("token_missing");
+    expect(blockReason("Not approved: approve the campaign before publishing")).toBe("not_approved");
+    expect(blockReason("Edited since approval: approve it again before publishing")).toBe("not_approved");
+    expect(blockReason("The x version is switched off")).toBe("switched_off");
+    expect(blockReason("Something odd")).toBe("other");
+    expect(canRetry(ev({ outcome: "failed", error: "HTTP 500" }))).toBe(true);
+    expect(canRetry(ev({ outcome: "blocked", error: "Set ADMIN_TOKEN to publish to real channels" }))).toBe(false);
+    expect(canRetry(ev({ outcome: "blocked", error: "Missing or wrong X-Admin-Token" }))).toBe(true);
+    expect(canRetry(ev({ outcome: "published" }))).toBe(false);
   });
 });
 
@@ -260,5 +336,25 @@ describe("since your campaign", () => {
     // Published before any analysis: no "before" score.
     expect(sinceCampaign([snap("2026-09-06T00:00:00Z", 30)], [marker("2026-09-04T00:00:00Z")])?.before).toBeNull();
     expect(sinceCampaign(snaps, [])).toBeNull();
+  });
+});
+
+describe("preflight", () => {
+  it("reads the server's dry run: an approval still to come is not a block", async () => {
+    const { planState, sendable, eventNote } = await import("./studioFlow");
+    expect(planState({ action: "publish", detail: "Would post now" })).toBe("publish");
+    expect(planState({ action: "export", detail: "" })).toBe("export");
+    expect(planState({ action: "blocked", detail: "Not approved: approve the campaign before publishing" })).toBe("approve");
+    expect(planState({ action: "blocked", detail: "Set ADMIN_TOKEN on the server to publish to real channels" })).toBe("blocked");
+    expect(planState(undefined)).toBeNull();
+    const plans = new Map([
+      ["linkedin", { action: "blocked", detail: "Not posted — needs PUBLIC_BASE_URL" }],
+      ["sandbox", { action: "publish", detail: "" }],
+    ] as const);
+    const list = [{ channel: "linkedin" as const }, { channel: "sandbox" as const }, { channel: "whatsapp" as const }];
+    expect(sendable(list, plans).map((d) => d.channel)).toEqual(["sandbox", "whatsapp"]);
+    expect(sendable(list, null)).toHaveLength(3);
+    expect(eventNote(ev({ note: " Share link only " } as Partial<DistributionEvent>))).toBe("Share link only");
+    expect(eventNote(ev())).toBeNull();
   });
 });

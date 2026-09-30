@@ -68,6 +68,11 @@ MANUAL_FIELDS: dict[str, list[str]] = {
 STATUS_CHANNELS: tuple[ChannelId, ...] = (*ACCOUNT_CHANNELS, "whatsapp")
 
 PENDING_TTL = timedelta(minutes=30)
+
+WHATSAPP_DETAIL = (
+    "Share link only — no account needed. WhatsApp has no posting API, so publishing makes a wa.me link with the "
+    "message filled in; you open it, pick the chat, group or Channel and press send yourself."
+)
 MAX_FIELD_LEN = 4096
 _NUMERIC = re.compile(r"^[0-9]{1,40}$")
 _AUTHOR_RE = re.compile(r"^urn:li:(person|organization):[A-Za-z0-9_-]+$")
@@ -442,13 +447,27 @@ def _ig_note(settings: Any) -> str:
     from app.distribution.channels.meta import InstagramAdapter
 
     problem = InstagramAdapter(settings, credentials=ChannelCredentials("instagram", "env"))._public_url_problem()
-    return f" Instagram also needs PUBLIC_BASE_URL (public image hosting): {problem}." if problem else ""
+    if not problem:
+        return ""
+    return f" Instagram also {problem}." if problem.startswith("needs") else f" Instagram: {problem}."
+
+
+def _align_with_publisher(base: AccountStatus, channel: str, creds: ChannelCredentials, settings: Any) -> None:
+    """A "connected" account must also be one the publish path would post with. If the channel's
+    adapter would refuse (e.g. Instagram without a public PUBLIC_BASE_URL, an incomplete OAuth
+    record, a malformed LinkedIn author), say so: state needs_setup + the adapter's reason."""
+    from app.distribution.channels import ADAPTERS
+
+    status = ADAPTERS[channel](settings, credentials=creds).status()
+    if status.mode != "connected":
+        base.state = "needs_setup"
+        base.detail = f"Account saved, but posts can't go out yet: {status.detail}"
 
 
 def account_status(brand_key: str, channel: ChannelId, *, settings: Any = None, now: datetime | None = None) -> AccountStatus:
     s = _settings(settings)
     if channel == "whatsapp":
-        return AccountStatus(channel="whatsapp", state="connected", method=None, detail="No account needed — posts via a share link")
+        return AccountStatus(channel="whatsapp", state="connected", method=None, detail=WHATSAPP_DETAIL)
     if channel not in ACCOUNT_CHANNELS:
         raise AccountError(f"{channel} has no account to connect")
     oauth_ok = oauth_available(channel, s)
@@ -470,15 +489,17 @@ def account_status(brand_key: str, channel: ChannelId, *, settings: Any = None, 
             base.detail = "The access token has expired — reconnect to keep posting."
         else:
             base.state = "connected"
-            base.detail = ("Connected with the Connect button." if creds.method == "oauth" else "Connected with manually entered credentials.") + ig_note
+            base.detail = "Connected with the Connect button." if creds.method == "oauth" else "Connected with manually entered credentials."
             if channel == "google_business":
                 base.detail += " Posts only go out once Google has approved API access for the app."
+            _align_with_publisher(base, channel, creds, s)
         return base
 
     env = env_credentials(channel, s)
     if _env_complete(env):
         base.state, base.method = "connected", "env"
-        base.detail = "Using the server's .env credentials (shared by every brand). Connect this brand's own account to replace them." + ig_note
+        base.detail = "Using the server's .env credentials (shared by every brand). Connect this brand's own account to replace them."
+        _align_with_publisher(base, channel, env, s)
         return base
     if channel == "google_business":
         base.state, base.detail = "pending_approval", _GBP_APPROVAL

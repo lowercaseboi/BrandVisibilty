@@ -92,7 +92,7 @@ def x_error(resp: httpx.Response) -> str:
         detail = body.get("detail") or detail or body.get("title")
     msg = f"X API error {resp.status_code}" + (f": {detail}" if detail else ".")
     hints = {
-        401: "the credentials were rejected — reconnect the account (or check the X API keys and access token/secret).",
+        401: "the credentials were rejected (expired or revoked) — {reconnect}.",
         403: "if this isn't a duplicate post, the app may be Read-only — set it to Read and Write, then regenerate the access token and secret.",
         429: "rate or monthly post limit reached on X's side — wait and retry.",
     }
@@ -103,6 +103,7 @@ def x_error(resp: httpx.Response) -> str:
 class XAdapter(HttpAdapter):
     channel = "x"
     label = "X (Twitter)"
+    env_fix = "check X_API_KEY / X_API_SECRET and regenerate X_ACCESS_TOKEN / X_ACCESS_SECRET"
 
     def __init__(
         self,

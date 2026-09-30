@@ -178,10 +178,12 @@
   --tone: var(--muted);
 }
 
-/* Decided cards step back; hovering or focusing one brings it forward again. */
+/* Decided cards step back (desaturated, flat); hovering or focusing one brings it forward again.
+   Opacity stays high enough that their small muted text still meets 4.5:1. */
 .rec-card[data-status="done"],
 .rec-card[data-status="rejected"] {
-  opacity: 0.66;
+  opacity: 0.86;
+  filter: saturate(0.35);
   box-shadow: none;
 }
 
@@ -191,13 +193,15 @@
 
 /* Resolved in the latest run: faded, dashed, no lift. */
 .rec-card.is-resolved {
-  opacity: 0.58;
+  opacity: 0.8;
+  filter: saturate(0.35);
   border-style: dashed;
   box-shadow: none;
 }
 
 .rec-card:is([data-status="done"], [data-status="rejected"], .is-resolved):is(:hover, :focus-within) {
-  opacity: 0.94;
+  opacity: 1;
+  filter: none;
 }
 
 .rec-card-top {

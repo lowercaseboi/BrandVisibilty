@@ -42,7 +42,7 @@ export function PublishLog({
                   {fmt.relativeTime(e.at) || e.at}
                 </time>
                 <span className="cs-log-extra">
-                  {e.external_url && (
+                  {e.external_url && /^https?:\/\//i.test(e.external_url) && (
                     <a href={e.external_url} target="_blank" rel="noreferrer">
                       {e.channel === "whatsapp" ? t("board.campaign.log.openWa") : t("board.campaign.log.open")}
                     </a>

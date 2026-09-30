@@ -7,10 +7,35 @@ import { useDetails } from "../settings/details";
 import { markerIndex, sinceDelta } from "./campaign/trendMarkers";
 import type { PublishMarker } from "./campaign/trendMarkers";
 import { toScore, useListFormat, useShortDate, useShortTime } from "./dashboard/helpers";
+import { estimateWidth, pickAxisLabels } from "./trendAxis";
 
-const MAX_W = 720;
 const MIN_W = 280;
 const PAD = { top: 18, right: 28, bottom: 34, left: 40 };
+const AXIS_FONT_PX = 11; // .trend-axis font-size
+const ROW_H = 15; // second label row, only when the first and last labels cannot share one
+
+// Measure axis labels with the real UI font (canvas), falling back to an estimate.
+let measureCtx: CanvasRenderingContext2D | null | undefined;
+function measureLabel(text: string): number {
+  if (measureCtx === undefined) {
+    try {
+      measureCtx = typeof document !== "undefined" ? document.createElement("canvas").getContext("2d") : null;
+      if (measureCtx) {
+        const family = getComputedStyle(document.documentElement).getPropertyValue("--sans").trim() || "monospace";
+        measureCtx.font = `${AXIS_FONT_PX}px ${family}`;
+      }
+    } catch {
+      measureCtx = null;
+    }
+  }
+  return measureCtx ? Math.ceil(measureCtx.measureText(text).width) : estimateWidth(text, AXIS_FONT_PX);
+}
+
+/** Local calendar day, so checks that share a day share a key. */
+function dayKey(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? iso : `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
 
 const ORIGIN_KEY: Record<string, MessageKey> = {
   live: "dashboard.origin.live",
@@ -95,9 +120,9 @@ export function TrendChart({
   const { showDetails } = useDetails();
   const [active, setActive] = useState<number | null>(null);
   const [activeMarker, setActiveMarker] = useState<number | null>(null);
-  // Draw at the container's real width so labels stay readable on phones (a fixed
-  // 720-wide viewBox shrank the text to ~5px at 390px).
-  const [width, setWidth] = useState(MAX_W);
+  // Draw at the container's real width, 1:1, so the 11px labels are 11px at every width (a fixed
+  // viewBox shrank them on phones and blew them up on desktops) and label widths can be measured.
+  const [width, setWidth] = useState(720);
   const observer = useRef<ResizeObserver | null>(null);
   const measureRef = useCallback((el: HTMLDivElement | null) => {
     observer.current?.disconnect();
@@ -141,16 +166,28 @@ export function TrendChart({
   }
 
   const n = snapshots.length;
-  const W = Math.max(MIN_W, Math.min(MAX_W, width));
-  const narrow = W < 500;
-  const H = narrow ? 200 : 240;
+  const W = Math.max(MIN_W, width);
   const innerW = W - PAD.left - PAD.right;
-  const innerH = H - PAD.top - PAD.bottom;
+  const x = (i: number) => PAD.left + (i / (n - 1)) * innerW;
+  const when = (s: Snapshot) => s.collection_completed_at || s.collection_started_at;
+  // X-axis labels: measured, thinned so none collide, first + last always kept (see trendAxis.ts).
+  const axisLabels = pickAxisLabels({
+    xs: snapshots.map((_, i) => x(i)),
+    dayKeys: snapshots.map((s) => dayKey(when(s))),
+    dateText: snapshots.map((s) => shortDate(when(s))),
+    timeText: snapshots.map((s) => shortTime(when(s))),
+    measure: measureLabel,
+    minX: 2,
+    maxX: W - 2,
+  });
+  const twoRows = axisLabels.some((l) => l.row === 1);
+  const padBottom = PAD.bottom + (twoRows ? ROW_H : 0);
+  const H = (W < 500 ? 200 : W < 900 ? 240 : 260) + (twoRows ? ROW_H : 0);
+  const innerH = H - PAD.top - padBottom;
   // Scores are 0-100 points: fit the axis to the highest CI bound (at least 25) plus headroom,
   // rounded up to the next 10.
   const maxVal = Math.min(100, Math.max(25, ...snapshots.map((s) => s.analysis_result.ci_high ?? 0)) + 5);
   const yMax = Math.ceil(maxVal / 10) * 10;
-  const x = (i: number) => PAD.left + (i / (n - 1)) * innerW;
   const y = (v: number) => PAD.top + innerH - (Math.max(0, Math.min(yMax, v ?? 0)) / yMax) * innerH;
 
   const pts = snapshots.map((s, i) => ({
@@ -176,16 +213,8 @@ export function TrendChart({
   const ticks: number[] = [];
   for (let v = 0; v <= yMax; v += yMax <= 50 ? 10 : 20) ticks.push(v);
 
-  const labelEvery = Math.max(1, Math.ceil(n / (narrow ? 3 : 6)));
-  // Several checks on one day would all read "25 Sept": label them by time instead,
-  // and never repeat the same label twice in a row.
-  const days = snapshots.map((s) => shortDate(s.collection_completed_at));
-  const oneDay = days.every((d) => d === days[0]);
-  const axisLabels = snapshots.map((s, i) => (oneDay ? shortTime(s.collection_completed_at) : days[i]));
-  const showLabel = (i: number) =>
-    (i % labelEvery === 0 || i === n - 1) && (i === 0 || axisLabels[i] !== axisLabels[i - 1]);
   const ap = active !== null ? pts[active] : null;
-  const times = snapshots.map((s) => Date.parse(s.collection_completed_at || s.collection_started_at));
+  const times = snapshots.map((s) => Date.parse(when(s)));
   const markers = (events ?? []).flatMap((ev) => {
     const at = markerIndex(times, Date.parse(ev.at));
     if (!at) return [];
@@ -278,11 +307,6 @@ export function TrendChart({
               r={p.s.run_id === currentRunId || i === active ? 5.5 : 4}
               className={`trend-point ${p.s.run_id === currentRunId ? "trend-point-current" : ""}`}
             />
-            {showLabel(i) && (
-              <text x={p.x} y={H - PAD.bottom + 20} className="trend-axis" textAnchor={i === 0 ? "start" : i === n - 1 ? "end" : "middle"}>
-                {axisLabels[i]}
-              </text>
-            )}
             {i === n - 1 && (
               <text x={p.x} y={p.y - 10} className="trend-value" textAnchor="end">
                 {toScore(p.s.analysis_result.composite_score)}
@@ -299,6 +323,13 @@ export function TrendChart({
               onClick={() => setActive(i)}
             />
           </g>
+        ))}
+
+        {/* Labels sit below the publish flags (axis +1..+9), so the two never overlap. */}
+        {axisLabels.map((l) => (
+          <text key={`x${l.index}`} x={l.x} y={PAD.top + innerH + 24 + l.row * ROW_H} className="trend-axis" textAnchor="middle">
+            {l.text}
+          </text>
         ))}
 
         {markers.map((m, i) => {

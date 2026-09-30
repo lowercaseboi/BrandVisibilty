@@ -419,6 +419,11 @@
   content: "· ";
 }
 
+/* A count standing on its own (right side of a section head) has nothing to separate from. */
+.module-section-head > .count::before {
+  content: none;
+}
+
 .status {
   padding: var(--space-4) 0;
   color: var(--muted);
@@ -1525,6 +1530,11 @@ a.card:active {
   font-family: var(--mono);
   font-size: 12px;
   font-weight: 500;
+  /* A halo in the card colour keeps the number readable where it crosses the line or band. */
+  paint-order: stroke;
+  stroke: var(--surface-solid);
+  stroke-width: 3px;
+  stroke-linejoin: round;
 }
 
 .trend-break {
@@ -1868,8 +1878,9 @@ a.card:active {
   margin-left: auto;
 }
 
-.q-group h2 {
-  margin-bottom: var(--space-2);
+/* Intent groups: clear air above each heading so it never touches the card before it. */
+.q-group h3 {
+  margin: var(--space-5) 0 var(--space-2);
 }
 
 .q-list {

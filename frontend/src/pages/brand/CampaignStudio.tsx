@@ -5,14 +5,17 @@ import {
   approveCampaign,
   createCampaign,
   deleteCampaign,
+  listAccounts,
   listBrandChannels,
   patchVariant,
+  preflightCampaign,
   publishCampaign,
   regenerateImage,
   updateDeliverable,
 } from "../../api/client";
 import { CHANNEL_IDS } from "../../api/types";
-import type { Campaign, ChannelId, ChannelStatus, DeliverablePatch, RegenerateImageRequest, Variant, VariantPatch } from "../../api/types";
+import type { PreflightPlan } from "../../api/client";
+import type { AccountStatus, Campaign, ChannelId, ChannelStatus, DeliverablePatch, RegenerateImageRequest, Variant, VariantPatch } from "../../api/types";
 import { campaignHref } from "../../components/campaign/CampaignIndex";
 import {
   TOKENLESS_CHANNELS,
@@ -23,7 +26,7 @@ import {
   statusView,
   usesTemplateImages,
 } from "../../components/campaign/campaignModel";
-import { isTokenUnsetError } from "../../components/campaign/adminToken";
+import { isTokenUnsetError, readAdminToken } from "../../components/campaign/adminToken";
 import { PublishStep } from "../../components/campaign/PublishStep";
 import type { SendState } from "../../components/campaign/PublishStep";
 import { ResultsStep } from "../../components/campaign/ResultsStep";
@@ -31,8 +34,25 @@ import { ReviewStep } from "../../components/campaign/ReviewStep";
 import type { ReviewTab } from "../../components/campaign/ReviewStep";
 import { ActionBar, Generating, Stepper } from "../../components/campaign/StudioChrome";
 import { EmptyState } from "../../components/EmptyState";
-import { STEPS, STEP_LABEL, currentStep, defaultPicks, parseStep, planDestinations, reachableSteps, sendList } from "../../components/campaign/studioFlow";
-import type { StepId } from "../../components/campaign/studioFlow";
+import {
+  STEPS,
+  STEP_LABEL,
+  currentStep,
+  defaultPicks,
+  joinConnected,
+  needsTokenFirst,
+  parsePicks,
+  parseStep,
+  planDestinations,
+  reachableSteps,
+  selectAll,
+  sendList,
+  sendable,
+  setExportInstead,
+  togglePick,
+  whereGate,
+} from "../../components/campaign/studioFlow";
+import type { Picks, StepId } from "../../components/campaign/studioFlow";
 import { useAdminGate } from "../../components/campaign/useAdminGate";
 import { useCampaign } from "../../components/campaign/useCampaign";
 import { useDraftSaver } from "../../components/campaign/useDraftSaver";
@@ -63,21 +83,29 @@ const STEP_INTRO: Record<StepId, MessageKey> = {
 
 // The step-2 choice survives a trip to Details (connecting an account) and reloads, per tab.
 const picksKey = (cid: string) => `bv.campaignPicks.${cid}`;
-function readPicks(cid: string): ChannelId[] | null {
+function readPicks(cid: string): Picks | null {
   try {
-    const raw = sessionStorage.getItem(picksKey(cid));
-    const list: unknown = raw ? JSON.parse(raw) : null;
-    return Array.isArray(list) ? list.filter((c): c is ChannelId => CHANNEL_IDS.includes(c as ChannelId)) : null;
+    return parsePicks(sessionStorage.getItem(picksKey(cid)));
   } catch {
     return null;
   }
 }
-function writePicks(cid: string, picks: ChannelId[]): void {
+function writePicks(cid: string, picks: Picks): void {
   try {
     sessionStorage.setItem(picksKey(cid), JSON.stringify(picks));
   } catch {
     /* storage unavailable: the choice lasts for this visit */
   }
+}
+
+/** A send / progress glyph for the primary publish button. */
+function SendIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 12l16-8-6 16-2.5-6.5z" />
+      <path d="M11.5 13.5L20 4" />
+    </svg>
+  );
 }
 
 /** One save indicator for the whole draft. */
@@ -162,6 +190,7 @@ function Studio({
 
   // ---- this brand's channels (its connected accounts) ----
   const [channels, setChannels] = useState<ChannelStatus[] | null>(null);
+  const [accounts, setAccounts] = useState<AccountStatus[]>([]);
   const [channelsError, setChannelsError] = useState(false);
   const loadChannels = useCallback(() => {
     listBrandChannels(brandKey)
@@ -170,6 +199,10 @@ function Studio({
         setChannelsError(false);
       })
       .catch(() => setChannelsError(true));
+    // Only for "as <account name>": an older backend without it still works.
+    listAccounts(brandKey)
+      .then(setAccounts)
+      .catch(() => setAccounts([]));
   }, [brandKey]);
   useEffect(() => {
     loadChannels();
@@ -239,27 +272,38 @@ function Studio({
   }, [step, reduced]);
 
   // ---- where to post (step 2) ----
-  const [picked, setPicked] = useState<ChannelId[] | null>(() => {
-    const stored = readPicks(cid);
-    const joined = new URLSearchParams(window.location.search).get("connected") as ChannelId | null;
-    if (!stored || !joined || !CHANNEL_IDS.includes(joined) || stored.includes(joined)) return stored;
-    writePicks(cid, [...stored, joined]);
-    return [...stored, joined];
+  // Back from Details with ?connected=<channel>: that channel is ticked (read once, then dropped
+  // from the URL below). The statuses were fetched fresh on mount, so the row shows it connected.
+  const [joinedChannel] = useState<ChannelId | null>(() => {
+    const j = new URLSearchParams(window.location.search).get("connected") as ChannelId | null;
+    return j && CHANNEL_IDS.includes(j) ? j : null;
   });
-  const dests = useMemo(() => planDestinations(view, statuses), [view, statuses]);
-  const chosen = picked ?? defaultPicks(dests);
-  const sends = sendList(dests, chosen);
-  const toggle = useCallback(
-    (ch: ChannelId, on: boolean) => {
-      const base = picked ?? defaultPicks(dests);
-      const next = on ? [...new Set([...base, ch])] : base.filter((c) => c !== ch);
+  const [picked, setPicked] = useState<Picks | null>(() => {
+    const stored = readPicks(cid);
+    if (!stored || !joinedChannel) return stored;
+    const next = joinConnected(stored, joinedChannel);
+    writePicks(cid, next);
+    return next;
+  });
+  const dests = useMemo(() => planDestinations(view, statuses, accounts), [view, statuses, accounts]);
+  const picks: Picks = useMemo(
+    () => picked ?? joinConnected({ on: defaultPicks(dests), exportInstead: [] }, joinedChannel),
+    [picked, dests, joinedChannel],
+  );
+  const sends = sendList(dests, picks);
+  const sendKey = sends.map((d) => d.channel).join(",");
+  const gate = whereGate(dests, picks);
+  const savePicks = useCallback(
+    (next: Picks) => {
       setPicked(next);
       writePicks(cid, next);
     },
-    [picked, dests, cid],
+    [cid],
   );
-  // Back from Details with ?connected=<channel>: the stored choice gains that channel (the default
-  // choice already includes every connected channel); then the param is dropped from the URL.
+  const joined =
+    joinedChannel && channels
+      ? { channel: joinedChannel, ok: dests.find((d) => d.channel === joinedChannel)?.kind !== "unconnected" }
+      : null;
   const connected = params.get("connected");
   useEffect(() => {
     if (!connected) return;
@@ -272,6 +316,22 @@ function Studio({
       { replace: true },
     );
   }, [connected, setParams]);
+
+  // ---- step 3: the server's dry run of each chosen channel (what it will really do) ----
+  const [plans, setPlans] = useState<{ key: string; map: Map<ChannelId, PreflightPlan> } | null>(null);
+  const planKey = `${sendKey}|${campaign.updated_at}`;
+  useEffect(() => {
+    if (step !== "publish" || !sendKey) return;
+    let cancelled = false;
+    preflightCampaign(brandKey, cid, sendKey.split(",") as ChannelId[])
+      .then((list) => !cancelled && setPlans({ key: planKey, map: new Map((list ?? []).map((p) => [p.channel, p])) }))
+      .catch(() => !cancelled && setPlans(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [step, sendKey, planKey, brandKey, cid]);
+  const planMap = plans?.key === planKey && plans.map.size > 0 ? plans.map : null;
+  const goList = sendable(sends, planMap);
 
   // ---- images ----
   const [regenerating, setRegenerating] = useState(false);
@@ -295,6 +355,7 @@ function Studio({
   const [progress, setProgress] = useState<Partial<Record<ChannelId, SendState>>>({});
   const [actionError, setActionError] = useState<string | null>(null);
   const [tokenUnset, setTokenUnset] = useState(false);
+  const [sentCount, setSentCount] = useState<{ i: number; n: number } | null>(null);
 
   const send = async (list: ChannelId[]) => {
     if (!list.length || busy) return;
@@ -302,6 +363,7 @@ function Studio({
     setActionError(null);
     setTokenUnset(false);
     setProgress(Object.fromEntries(list.map((c) => [c, "waiting" as SendState])));
+    setSentCount(null);
     let failed = 0;
     try {
       await Promise.all([variantSaver.flushAll(), deliverableSaver.flushAll()]);
@@ -317,6 +379,7 @@ function Studio({
       }
       for (let i = 0; i < list.length; i++) {
         const ch = list[i];
+        setSentCount({ i: i + 1, n: list.length });
         setProgress((p) => ({ ...p, [ch]: "working" }));
         try {
           // Ask for the token up front for a real channel: a tokenless attempt is logged as blocked.
@@ -349,6 +412,7 @@ function Studio({
     } finally {
       setApproving(false);
       setBusy(false);
+      setSentCount(null);
     }
   };
 
@@ -397,6 +461,23 @@ function Studio({
   const stepHeadingId = useId();
   const n = STEPS.indexOf(step) + 1;
   const returnTo = `${location.pathname}?step=where`;
+  const connectHref = `${brandHref(brandKey, "details")}?return=${encodeURIComponent(returnTo)}#accounts`;
+  const gateNote =
+    gate.reason === "connect"
+      ? t("board.campaign.where.waiting", { names: gate.waiting.map((d) => d.status.label).join(", ") })
+      : gate.reason === "none"
+        ? t("board.campaign.where.noneChosen")
+        : t.n("board.campaign.where.chosen", gate.count);
+  const tokenAhead = readAdminToken() === null && needsTokenFirst(goList.map((d) => d.channel)) ? goList.filter((d) => d.needsApproval && d.channel !== "sandbox").map((d) => d.status.label) : [];
+  const publishLabel = busy
+    ? approving
+      ? t("board.campaign.progress.approving")
+      : sentCount
+        ? t("board.campaign.publish.progressN", { i: sentCount.i, n: sentCount.n })
+        : t("board.campaign.publish.working")
+    : approved
+      ? t.n("board.campaign.publish.goApprovedN", goList.length)
+      : t.n("board.campaign.publish.goN", goList.length);
   const showHead = !generating && variants.length > 0;
 
   let content;
@@ -454,43 +535,82 @@ function Studio({
     content = (
       <WhereStep
         dests={dests}
-        picked={chosen}
-        assets={campaign.assets}
-        brandKey={brandKey}
-        returnTo={returnTo}
+        picks={picks}
+        connectHref={connectHref}
         loading={channels === null && !channelsError}
         error={channelsError}
+        joined={joined}
         onRetry={loadChannels}
-        onToggle={toggle}
+        onToggle={(ch, on) => savePicks(togglePick(picks, ch, on))}
+        onExportInstead={(ch, exportIt) => savePicks(setExportInstead(picks, ch, exportIt))}
+        onSelectAll={() => savePicks(selectAll(dests, picks))}
+        onSelectNone={() => savePicks({ on: [], exportInstead: picks.exportInstead })}
         onFix={(ch) => {
           setTab(ch);
           goStep("review");
         }}
       />
     );
+    const canGo = gate.reason === null && reachable.has("publish");
     bar = (
-      <ActionBar
-        back={{ label: t(STEP_LABEL.review), onClick: () => goStep("review") }}
-        note={sends.length ? t.n("board.campaign.where.chosen", sends.length) : t("board.campaign.where.noneChosen")}
-      >
-        <button type="button" className="btn btn-primary" disabled={!sends.length || !reachable.has("publish")} onClick={() => goStep("publish")}>
+      <ActionBar back={{ label: t(STEP_LABEL.review), onClick: () => goStep("review") }} note={gateNote} noteTone={gate.reason ? "warn" : undefined}>
+        <button type="button" className="btn btn-primary" disabled={!canGo} onClick={() => goStep("publish")}>
           {t("board.campaign.bar.toPublish")} <span aria-hidden="true">→</span>
         </button>
       </ActionBar>
     );
   } else if (step === "publish") {
-    content = <PublishStep sends={sends} assets={campaign.assets} approvedAt={approved ? campaign.approved_at : null} progress={progress} approving={approving} />;
+    content = (
+      <PublishStep
+        sends={sends}
+        assets={campaign.assets}
+        approvedAt={approved ? campaign.approved_at : null}
+        progress={progress}
+        plans={planMap}
+        approving={approving}
+        tokenAhead={busy ? [] : tokenAhead}
+      />
+    );
+    const none = goList.length === 0;
+    const noneNote = sends.length ? t("board.campaign.publish.allBlocked") : t("board.campaign.where.noneChosen");
     bar = (
-      <ActionBar back={busy ? undefined : { label: t(STEP_LABEL.where), onClick: () => goStep("where") }} note={t("board.campaign.bar.publishNote")}>
-        <button type="button" className="btn btn-primary" disabled={busy || !sends.length} onClick={() => void send(sends.map((d) => d.channel))}>
-          {busy && <span className="cs-spinner" aria-hidden="true" />}
-          {busy ? t("board.campaign.publish.working") : approved ? t("board.campaign.publish.goApproved") : t("board.campaign.publish.go")}
+      <ActionBar
+        back={busy ? undefined : { label: t(STEP_LABEL.where), onClick: () => goStep("where") }}
+        note={
+          none
+            ? noneNote
+            : busy
+              ? t("board.campaign.bar.publishingNote")
+              : goList.length < sends.length
+                ? t.n("board.campaign.publish.someBlocked", sends.length - goList.length)
+                : t("board.campaign.bar.publishNote")
+        }
+        noteTone={none || (!busy && goList.length < sends.length) ? "warn" : undefined}
+      >
+        <button
+          type="button"
+          className={`btn btn-primary btn-publish${busy ? " is-busy" : ""}`}
+          disabled={none}
+          aria-disabled={busy || undefined}
+          aria-busy={busy || undefined}
+          onClick={() => !busy && void send(goList.map((d) => d.channel))}
+        >
+          {busy ? <span className="cs-spinner" aria-hidden="true" /> : <SendIcon />}
+          <span aria-live="polite">{publishLabel}</span>
         </button>
       </ActionBar>
     );
   } else {
     content = (
-      <ResultsStep events={campaign.events ?? []} statuses={statuses} brandKey={brandKey} campaignId={cid} busy={busy} onRetry={(ch) => void send([ch])} />
+      <ResultsStep
+        events={campaign.events ?? []}
+        statuses={statuses}
+        brandKey={brandKey}
+        campaignId={cid}
+        connectHref={connectHref}
+        busy={busy}
+        onRetry={(ch) => void send([ch])}
+      />
     );
     bar = (
       <ActionBar back={{ label: t("board.campaign.bar.postMore"), onClick: () => goStep("where") }}>

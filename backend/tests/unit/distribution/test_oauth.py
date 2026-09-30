@@ -198,10 +198,10 @@ def test_meta_single_page_connects_and_offers_instagram(monkeypatch, data_dir) -
     assert q == {"connected": ["facebook_page"], "offer": ["instagram"]}
     creds = accounts.brand_credentials(BRAND, "facebook_page", settings=s)
     assert creds.get("page_token") == "PAGE-TOKEN-A" and creds.account_name == "Local Perfume Co" and creds.method == "oauth"
-    assert accounts.pending_choices(BRAND, "instagram") == [
+    assert accounts.pending_choices(BRAND, "instagram", now=NOW) == [
         {"id": "17841", "name": "@localperfume (via Page Local Perfume Co)", "kind": "instagram"}
     ]
-    accounts.choose(BRAND, "instagram", "17841", settings=s)
+    accounts.choose(BRAND, "instagram", "17841", settings=s, now=NOW)
     ig = accounts.brand_credentials(BRAND, "instagram", settings=s)
     assert ig.get("ig_user_id") == "17841" and ig.get("page_token") == "PAGE-TOKEN-A" and ig.account_name == "@localperfume"
     raw = (data_dir / "accounts" / "perfume.json").read_text()
@@ -215,9 +215,9 @@ def test_meta_multiple_pages_needs_a_choice(monkeypatch) -> None:
     path, q, frag = callback("facebook_page", state, s)
     assert path == "/brands/perfume/studio" and frag == ""
     assert q["connect_choose"] == ["facebook_page"]
-    assert [c["id"] for c in accounts.pending_choices(BRAND, "facebook_page")] == ["101", "202"]
+    assert [c["id"] for c in accounts.pending_choices(BRAND, "facebook_page", now=NOW)] == ["101", "202"]
     assert accounts.brand_credentials(BRAND, "facebook_page", settings=s) is None
-    accounts.choose(BRAND, "facebook_page", "202", settings=s)
+    accounts.choose(BRAND, "facebook_page", "202", settings=s, now=NOW)
     assert accounts.brand_credentials(BRAND, "facebook_page", settings=s).get("page_token") == "PAGE-TOKEN-B"
 
 
@@ -268,11 +268,11 @@ def test_linkedin_with_org_scope_offers_member_and_org(monkeypatch) -> None:
     state, _ = start_state("linkedin", s)
     _, q, _ = callback("linkedin", state, s)
     assert q == {"connect_choose": ["linkedin"]}
-    assert accounts.pending_choices(BRAND, "linkedin") == [
+    assert accounts.pending_choices(BRAND, "linkedin", now=NOW) == [
         {"id": "urn:li:person:abc123", "name": "Jane Doe", "kind": "member"},
         {"id": "urn:li:organization:555", "name": "Perfume Co Ltd", "kind": "organization"},
     ]
-    accounts.choose(BRAND, "linkedin", "urn:li:organization:555", settings=s)
+    accounts.choose(BRAND, "linkedin", "urn:li:organization:555", settings=s, now=NOW)
     assert accounts.brand_credentials(BRAND, "linkedin", settings=s).get("author_urn") == "urn:li:organization:555"
 
 
@@ -361,9 +361,9 @@ def test_google_multiple_locations_then_choose(monkeypatch) -> None:
     state, _ = start_state("google_business", s)
     _, q, _ = callback("google_business", state, s)
     assert q == {"connect_choose": ["google_business"]}
-    choices = accounts.pending_choices(BRAND, "google_business")
+    choices = accounts.pending_choices(BRAND, "google_business", now=NOW)
     assert choices[0] == {"id": "accounts/12/locations/34", "name": "Pune Store (Perfume Group)", "kind": "location"}
-    accounts.choose(BRAND, "google_business", "accounts/12/locations/56", settings=s)
+    accounts.choose(BRAND, "google_business", "accounts/12/locations/56", settings=s, now=NOW)
     creds = accounts.brand_credentials(BRAND, "google_business", settings=s)
     assert (creds.get("account_id"), creds.get("location_id"), creds.get("refresh_token")) == ("12", "56", "G-REFRESH-1")
     assert accounts.account_status(BRAND, "google_business", settings=s, now=NOW).state == "connected"

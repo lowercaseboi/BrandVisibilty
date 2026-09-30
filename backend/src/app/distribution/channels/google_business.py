@@ -22,6 +22,7 @@ from app.distribution.channels.base import (
     HttpAdapter,
     compose_text,
     length_issues,
+    public_url_problem,
     response_json,
     setting,
 )
@@ -30,7 +31,7 @@ from app.distribution.types import Campaign, ChannelStatus, PublishResult, Varia
 GBP_BASE = "https://mybusiness.googleapis.com/v4"
 
 _HINTS = {
-    401: "the access token is invalid or expired (they last about an hour) — get a fresh one.",
+    401: "the access token is invalid, expired or revoked (they last about an hour) — {reconnect}.",
     403: "API access not granted or the API isn't enabled for this Google Cloud project (see CHANNEL_SETUP.md §Google).",
     404: "check GBP_ACCOUNT_ID and GBP_LOCATION_ID.",
     429: "quota exceeded — unapproved projects have a quota of 0.",
@@ -45,6 +46,7 @@ def _strip_prefix(value: str, prefix: str) -> str:
 class GoogleBusinessAdapter(HttpAdapter):
     channel = "google_business"
     label = "Google Business Profile"
+    env_fix = "get a fresh GBP_ACCESS_TOKEN (they last about an hour)"
 
     def _ids(self) -> tuple[str | None, str | None, str | None]:
         account = self.cred("account_id")
@@ -85,7 +87,7 @@ class GoogleBusinessAdapter(HttpAdapter):
             "summary": self._summary(variant),
             "topicType": "STANDARD",
         }
-        if image_url:
+        if image_url and public_url_problem(image_url) is None:  # Google fetches the image itself
             body["media"] = [{"mediaFormat": "PHOTO", "sourceUrl": image_url}]
         if variant.link:
             body["callToAction"] = {"actionType": "LEARN_MORE", "url": variant.link}

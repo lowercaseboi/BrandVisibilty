@@ -214,7 +214,8 @@ export function RunPanel({
                 <option value="auto">
                   {autoIsPractice
                     ? t("dashboard.run.whichAutoPractice")
-                    : t("dashboard.run.whichAuto", { ais: list(liveConfigured.map((p) => p.label || p.provider_id)) })}
+                    : // The count, not the names: the names overflowed the select and are listed just below it.
+                      t("dashboard.run.whichAuto", { ais: liveConfigured.length })}
                 </option>
                 {configured.map((p) => (
                   <option key={p.provider_id} value={p.provider_id}>

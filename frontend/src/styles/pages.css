@@ -608,6 +608,12 @@
   }
 }
 
+/* The one-line note under the question-set intro: body-note size, not lede size. */
+.q-named-note {
+  font-size: var(--fs-sm);
+  margin: var(--space-2) 0 var(--space-3);
+}
+
 /* Questions that name the brand: dimmed with a hollow marker (the header explains once why). */
 .q-row.names-brand .q-text > span:first-child {
   opacity: 0.55;

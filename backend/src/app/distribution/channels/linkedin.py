@@ -52,7 +52,7 @@ AUTHOR_RE = re.compile(r"^urn:li:(person|organization):[A-Za-z0-9_-]+$")
 _RESERVED = re.compile(r"([\\|{}@\[\]()<>#*_~])")
 
 _HINTS = {
-    401: "the access token is invalid or expired — reconnect LinkedIn in Details → Connected accounts.",
+    401: "the access token is invalid, expired or revoked — {reconnect}.",
     403: "missing permission — the token needs w_member_social (or w_organization_social for a company Page, and the member must be a Page admin).",
     422: "LinkedIn rejected the post content — check the text and image.",
     426: "the LinkedIn-Version header is no longer supported — set LINKEDIN_API_VERSION to a recent YYYYMM.",
@@ -79,6 +79,7 @@ def post_url(urn: str) -> str:
 class LinkedInAdapter(HttpAdapter):
     channel = "linkedin"
     label = "LinkedIn"
+    env_fix = "generate a new LINKEDIN_ACCESS_TOKEN"
 
     def _version(self) -> str:
         return str(setting(self.settings, "linkedin_api_version", DEFAULT_VERSION))
