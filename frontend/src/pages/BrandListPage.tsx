@@ -1,10 +1,12 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { FocusEvent, MouseEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { deleteBrand, getLatestSnapshot, listBrands, peekLatestSnapshot } from "../api/client";
 import type { BrandSummary } from "../api/types";
 import { useAsync } from "../api/useAsync";
+import { connectReasonKey, parseConnectReturn, platformKey, stripConnectParams } from "../components/accounts/accountsModel";
 import { AddBrandForm } from "../components/AddBrandForm";
+import { EmptyState } from "../components/EmptyState";
 import { BrandCardBody } from "../components/hub/BrandCardBody";
 import { forgetBrand, peekBrands, rememberBrands } from "../components/hub/brandCache";
 import { pickCard } from "../components/hub/pickCard";
@@ -180,6 +182,22 @@ function BrandRow({
 
 export function BrandListPage() {
   const t = useT();
+  const location = useLocation();
+  const navigate = useNavigate();
+  // A sign-in whose state couldn't be verified (tampered/expired) has no trustworthy brand, so the
+  // backend sends it here: say what happened, then drop the params from the URL.
+  useEffect(() => {
+    const ret = parseConnectReturn(location.search);
+    if (ret?.kind !== "error") return;
+    const platform = t(platformKey(ret.channel));
+    const key = connectReasonKey(ret.reason);
+    toast(
+      key
+        ? t("brandinfo.accounts.returnError", { platform, reason: t(key) })
+        : t("brandinfo.accounts.returnErrorPlain", { platform }),
+    );
+    navigate({ pathname: location.pathname, search: stripConnectParams(location.search) }, { replace: true });
+  }, [location.pathname, location.search, navigate, t]);
   const [reload, setReload] = useState(0);
   const state = useAsync(() => listBrands().then(rememberBrands), [reload]);
   // Arrived through a View Transition (back from a brand hub)? Decided once at mount: the morph is
@@ -215,15 +233,21 @@ export function BrandListPage() {
         </section>
       )}
       {state.status === "error" && (
-        <div className="alert alert-error" role="alert">
-          <p>{t("pages.brands.loadError")}</p>
-          <button type="button" className="btn btn-secondary btn-small" onClick={() => setReload((n) => n + 1)}>
-            {t("common.retry")}
-          </button>
+        <EmptyState
+          icon="error"
+          tone="error"
+          role="alert"
+          title={t("pages.brands.loadError")}
+          primary={
+            <button type="button" className="btn btn-secondary btn-small" onClick={() => setReload((n) => n + 1)}>
+              {t("common.retry")}
+            </button>
+          }
+        >
           <Details>
-            <p className="small">{state.error instanceof Error ? state.error.message : String(state.error)}</p>
+            <p className="small muted">{state.error instanceof Error ? state.error.message : String(state.error)}</p>
           </Details>
-        </div>
+        </EmptyState>
       )}
 
       <BrandRow

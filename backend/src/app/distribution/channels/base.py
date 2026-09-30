@@ -10,23 +10,154 @@ Conventions every adapter follows (the publish service relies on them):
   `status().mode`.
 - Settings are read with `getattr(settings, name, default)` so any object with the right
   attributes works (tests pass a SimpleNamespace); blank strings count as unset.
+- Platform credentials come from a `ChannelCredentials` (a brand's connected account, or the
+  global .env values as the single-tenant fallback — see app.distribution.accounts). Only
+  non-credential knobs (API versions, PUBLIC_BASE_URL, quotas) are read from settings.
 """
 
 from __future__ import annotations
 
+import logging
 import mimetypes
 import re
 import unicodedata
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 import httpx
 
-from app.distribution.types import TEXT_LIMITS, Campaign, ChannelId, ChannelStatus, PublishResult, Variant
+from app.distribution.types import (
+    TEXT_LIMITS,
+    AccountMethod,
+    Campaign,
+    ChannelId,
+    ChannelStatus,
+    PublishResult,
+    Variant,
+)
 
 SETUP_DOC = "docs/CHANNEL_SETUP.md"
+
+
+# --- never let a token reach the logs --------------------------------------------------------------
+
+
+class _RedactUrlQuery(logging.Filter):
+    """httpx logs every request URL at INFO ("HTTP Request: GET https://…?access_token=…"). Graph
+    API calls and OAuth code exchanges carry secrets in the query string, so drop it."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if isinstance(record.args, tuple) and record.args:
+            record.args = tuple(_strip_query(a) for a in record.args)
+        return True
+
+
+def _strip_query(value: Any) -> Any:
+    text = str(value) if value.__class__.__name__ == "URL" else value
+    if isinstance(text, str) and "://" in text and "?" in text:
+        return text.split("?", 1)[0] + "?[redacted]"
+    return value
+
+
+for _name in ("httpx", "httpcore"):
+    if not any(isinstance(f, _RedactUrlQuery) for f in logging.getLogger(_name).filters):
+        logging.getLogger(_name).addFilter(_RedactUrlQuery())
+
+
+# --- credentials -----------------------------------------------------------------------------------
+
+# Channels that post through an account (the rest — whatsapp / export / sandbox — need none).
+ACCOUNT_CHANNELS: tuple[ChannelId, ...] = ("facebook_page", "instagram", "x", "linkedin", "google_business")
+
+# Credential field → the .env setting it falls back to (single-tenant setups).
+ENV_FIELDS: dict[str, dict[str, str]] = {
+    "facebook_page": {"page_id": "meta_page_id", "page_token": "meta_page_token"},
+    "instagram": {"ig_user_id": "ig_user_id", "page_token": "meta_page_token"},
+    "x": {
+        "api_key": "x_api_key",
+        "api_secret": "x_api_secret",
+        "access_token": "x_access_token",
+        "access_secret": "x_access_secret",
+    },
+    "linkedin": {"author_urn": "linkedin_author_urn", "access_token": "linkedin_access_token"},
+    "google_business": {
+        "account_id": "gbp_account_id",
+        "location_id": "gbp_location_id",
+        "access_token": "gbp_access_token",
+    },
+}
+
+# The OAuth app keys each channel's "Connect" flow (and token refresh) needs: (client id, secret).
+OAUTH_APP_KEYS: dict[str, tuple[str, str]] = {
+    "facebook_page": ("meta_app_id", "meta_app_secret"),
+    "instagram": ("meta_app_id", "meta_app_secret"),
+    "x": ("x_client_id", "x_client_secret"),
+    "linkedin": ("linkedin_client_id", "linkedin_client_secret"),
+    "google_business": ("google_client_id", "google_client_secret"),
+}
+
+# Refresh a token this long before it actually expires.
+EXPIRY_LEEWAY = timedelta(seconds=60)
+
+
+def parse_time(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
+
+
+@dataclass
+class ChannelCredentials:
+    """The credentials one adapter publishes with. `fields` holds decrypted values — never log,
+    return or put them in an error (repr hides them)."""
+
+    channel: str
+    method: AccountMethod  # "oauth" | "manual" (a brand's account) | "env" (global .env fallback)
+    fields: dict[str, str] = field(default_factory=dict, repr=False)
+    brand_key: str | None = None
+    account_id: str | None = None
+    account_name: str | None = None
+    expires_at: str | None = None
+    problem: str | None = None  # e.g. stored values can't be decrypted
+
+    def get(self, name: str) -> str | None:
+        value = self.fields.get(name)
+        return value.strip() if isinstance(value, str) and value.strip() else None
+
+    def expired(self, now: datetime | None = None) -> bool:
+        exp = parse_time(self.expires_at)
+        return exp is not None and (now or datetime.now(UTC)) >= exp - EXPIRY_LEEWAY
+
+    @property
+    def from_brand(self) -> bool:
+        return self.method in ("oauth", "manual")
+
+
+def env_credentials(channel: str, settings: Any) -> ChannelCredentials:
+    names = ENV_FIELDS.get(channel, {})
+    fields = {f: v for f, env in names.items() if (v := setting(settings, env))}
+    return ChannelCredentials(channel=channel, method="env", fields=fields)
+
+
+def oauth_app_configured(channel: str, settings: Any) -> bool:
+    """The platform's OAuth client keys are set (X public clients have no secret)."""
+    keys = OAUTH_APP_KEYS.get(channel)
+    if not keys:
+        return False
+    cid, secret = keys
+    return bool(setting(settings, cid)) and (channel == "x" or bool(setting(settings, secret)))
+
+
+def can_refresh(creds: ChannelCredentials, settings: Any) -> bool:
+    return bool(creds.from_brand and creds.get("refresh_token") and oauth_app_configured(creds.channel, settings))
 
 
 @runtime_checkable
@@ -135,9 +266,42 @@ class HttpAdapter:
     label: str
     timeout = httpx.Timeout(60.0, connect=10.0)
 
-    def __init__(self, settings: Any, *, client: httpx.Client | None = None, **_: Any) -> None:
+    def __init__(
+        self,
+        settings: Any,
+        *,
+        client: httpx.Client | None = None,
+        credentials: ChannelCredentials | None = None,
+        now: Callable[[], datetime] | None = None,
+        **_: Any,
+    ) -> None:
         self.settings = settings
         self._client = client  # injected in tests (httpx.MockTransport); else one per publish
+        self.creds = credentials if credentials is not None else env_credentials(self.channel, settings)
+        self._now: Callable[[], datetime] = now or (lambda: datetime.now(UTC))
+
+    def cred(self, name: str) -> str | None:
+        return self.creds.get(name)
+
+    def _unusable(self) -> str | None:
+        """Why the credentials can't be used at all (decrypt failure / expired without refresh)."""
+        if self.creds.problem:
+            return self.creds.problem
+        if self.creds.expired(self._now()) and not can_refresh(self.creds, self.settings):
+            return "the connected account's token has expired — reconnect it in Details → Connected accounts"
+        return None
+
+    def _export_only(self, detail: str) -> ChannelStatus:
+        return ChannelStatus(self.channel, self.label, "export_only", detail=detail)
+
+    def _refresh_if_needed(self, client: httpx.Client) -> None:
+        if not self.creds.expired(self._now()):
+            return
+        if not can_refresh(self.creds, self.settings):
+            raise ChannelError("the connected account's token has expired — reconnect it in Details → Connected accounts.")
+        from app.distribution import oauth  # lazy: oauth imports the account store
+
+        self.creds = oauth.refresh_credentials(self.creds, settings=self.settings, client=client, now=self._now())
 
     @property
     def limit(self) -> int:
@@ -176,6 +340,9 @@ class HttpAdapter:
         if issues:
             return PublishResult(ok=False, error=" ".join(issues))
         try:
+            if self.creds.expired(self._now()):
+                with self._http() as client:
+                    self._refresh_if_needed(client)
             return self._publish(campaign=campaign, variant=variant, image_path=image_path, image_url=image_url)
         except ChannelError as exc:
             return PublishResult(ok=False, error=f"{self.label}: {exc}")

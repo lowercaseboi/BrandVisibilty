@@ -17,11 +17,12 @@ from typing import Literal
 
 # --- enums (string literals keep JSON and TS mirrors trivial) ------------------------------------
 
-ChannelId = Literal["facebook_page", "instagram", "x", "google_business", "whatsapp", "export", "sandbox"]
+ChannelId = Literal["facebook_page", "instagram", "x", "linkedin", "google_business", "whatsapp", "export", "sandbox"]
 CHANNEL_IDS: tuple[ChannelId, ...] = (
     "facebook_page",
     "instagram",
     "x",
+    "linkedin",
     "google_business",
     "whatsapp",
     "export",
@@ -64,6 +65,7 @@ TEXT_LIMITS: dict[ChannelId, int] = {
     "facebook_page": 63_206,
     "instagram": 2_200,
     "x": 280,
+    "linkedin": 3_000,
     "google_business": 1_500,
     "whatsapp": 4_096,
     "export": 1_000_000,
@@ -178,3 +180,31 @@ class PublishResult:
     external_url: str | None = None
     external_id: str | None = None
     error: str | None = None
+
+
+# --- per-brand connected accounts (Details → Connected accounts) ---------------------------------
+
+# How a brand's account for a channel got its credentials. "env" = no per-brand account; the global
+# .env credentials are used as a fallback (single-tenant setups keep working).
+AccountMethod = Literal["oauth", "manual", "env"]
+
+# connected: usable now · not_connected: nothing stored and no .env fallback · needs_setup: OAuth
+# app keys for this platform aren't configured (manual entry still possible) · pending_approval:
+# platform-side API access not granted yet (Google Business) · expired: stored token has expired.
+AccountState = Literal["connected", "not_connected", "needs_setup", "pending_approval", "expired"]
+
+
+@dataclass
+class AccountStatus:
+    """What the API returns about one brand's account on one channel — never any secret."""
+
+    channel: ChannelId
+    state: AccountState
+    method: AccountMethod | None = None
+    account_name: str | None = None  # e.g. "Local Perfume Co" (Page) or "Jane Doe" (LinkedIn member)
+    account_id: str | None = None  # page id / ig user id / urn:li:person:… — not secret
+    connected_at: str | None = None
+    expires_at: str | None = None
+    oauth_available: bool = False  # the platform's OAuth app keys are configured → show "Connect"
+    manual_fields: list[str] = field(default_factory=list)  # field names the manual form needs
+    detail: str = ""  # human-readable hint ("Needs Google Business Profile API approval", …)

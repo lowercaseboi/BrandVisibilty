@@ -6,6 +6,7 @@ import { ModuleShell } from "../../components/module/ModuleShell";
 import { ProviderTable } from "../../components/ProviderTable";
 import { RunPanel } from "../../components/RunPanel";
 import { TrendChart } from "../../components/TrendChart";
+import { SinceCampaignCard } from "../../components/campaign/SinceCampaignCard";
 import { usePublishMarkers } from "../../components/campaign/usePublishMarkers";
 import { HonestyBanners } from "../../components/dashboard/Banners";
 import { CompetitorBars } from "../../components/dashboard/CompetitorBars";
@@ -70,6 +71,8 @@ export function AnalysisModule() {
         )}
         <RunPanel brandKey={brandKey} providers={providers} questions={questions} hasData={!!snapshot} onComplete={reload} />
       </div>
+
+      {snapshot && <SinceCampaignCard markers={publishMarkers} />}
 
       {snapshot && (
         <>

@@ -3,6 +3,7 @@ import { createCampaign, getObservations, listCampaigns } from "../../api/client
 import type { BoardColumn, Campaign, Observation } from "../../api/types";
 import { useAsync } from "../../api/useAsync";
 import { InfoTip } from "../../components/InfoTip";
+import { CampaignsStrip } from "../../components/board/CampaignsStrip";
 import { HowItWorks } from "../../components/board/HowItWorks";
 import { buildBoard, clearLegacyDone, migrateLegacyDone, removeCard, setStatus } from "../../components/board/boardModel";
 import { RecList } from "../../components/board/RecList";
@@ -252,6 +253,7 @@ export function BoardModule() {
     <ModuleShell id="recommendations">
       <div className="board-stack">
         <HowItWorks />
+        <CampaignsStrip brandKey={brandKey} campaigns={campaigns} />
         {body}
       </div>
     </ModuleShell>

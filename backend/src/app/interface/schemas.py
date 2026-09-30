@@ -517,7 +517,7 @@ class ObservationsResponse(_OpenModel):
 # Mirrors app.distribution.types field-for-field (PRD §11.5 / AC-10); the frontend mirrors these in
 # src/api/types.ts.
 
-ChannelIdLit = Literal["facebook_page", "instagram", "x", "google_business", "whatsapp", "export", "sandbox"]
+ChannelIdLit = Literal["facebook_page", "instagram", "x", "linkedin", "google_business", "whatsapp", "export", "sandbox"]
 ImageFormatLit = Literal["square", "portrait", "landscape", "story", "gbp"]
 CampaignStatusLit = Literal["generating", "ready", "approved", "published", "partially_published", "failed"]
 DeliverableKindLit = Literal[
@@ -644,3 +644,64 @@ class PublishRequest(BaseModel):
 class CampaignDeleteResponse(BaseModel):
     campaign_id: str
     deleted: bool = True
+
+
+# --- per-brand connected accounts (Details → Connected accounts) -------------------------------
+# Mirrors AccountStatus in app/distribution/types.py and src/api/types.ts. Never carries a secret.
+
+AccountChannelLit = Literal["facebook_page", "instagram", "x", "linkedin", "google_business", "whatsapp"]
+
+
+class AccountStatusOut(BaseModel):
+    channel: ChannelIdLit
+    state: Literal["connected", "not_connected", "needs_setup", "pending_approval", "expired"] = Field(
+        description="connected: usable now · not_connected: nothing stored and no .env fallback · needs_setup: the "
+        "platform's OAuth app keys aren't configured (manual entry still works) · pending_approval: platform API "
+        "access not granted yet (Google Business) · expired: the stored token expired and can't be refreshed"
+    )
+    method: Literal["oauth", "manual", "env"] | None = Field(
+        default=None, description="How it's connected; env = the server's global .env credentials (no brand account)"
+    )
+    account_name: str | None = None
+    account_id: str | None = None
+    connected_at: str | None = None
+    expires_at: str | None = None
+    oauth_available: bool = Field(default=False, description="The Connect button can be used")
+    manual_fields: list[str] = Field(default_factory=list, description="Field names the manual form needs")
+    detail: str = ""
+
+
+class ManualAccountRequest(BaseModel):
+    """Manual connection: field name → value (see AccountStatus.manual_fields). Values are stored
+    encrypted and never returned."""
+
+    fields: dict[str, str] = Field(
+        examples=[{"page_id": "1234567890", "page_token": "EAAB..."}], max_length=8
+    )
+
+
+class AccountTestResponse(BaseModel):
+    ok: bool
+    detail: str
+
+
+class OAuthStartRequest(BaseModel):
+    return_to: str | None = Field(
+        default=None,
+        max_length=200,
+        description="App path to come back to, must start with /brands/{brand_key}/ (default /brands/{brand_key}/details)",
+    )
+
+
+class OAuthStartResponse(BaseModel):
+    authorize_url: str
+
+
+class AccountChoiceOut(BaseModel):
+    id: str
+    name: str
+    kind: str = Field(description="page · instagram · member · organization · location · user")
+
+
+class AccountChooseRequest(BaseModel):
+    id: str = Field(min_length=1, max_length=300)

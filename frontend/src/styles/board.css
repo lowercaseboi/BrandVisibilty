@@ -515,6 +515,14 @@
   position: relative;
   display: inline-flex;
   align-items: center;
+  /* Shrink with a narrow card instead of pushing past its edge (long status labels, hi/mr). */
+  min-width: 0;
+  max-width: 100%;
+}
+
+.rec-status select {
+  min-width: 0;
+  text-overflow: ellipsis;
 }
 
 .rec-status-dot {
@@ -657,7 +665,7 @@
   color: var(--muted);
 }
 
-@media (max-width: 720px) {
+@media (max-width: 640px) {
   .rec-how-steps {
     grid-template-columns: 1fr;
   }

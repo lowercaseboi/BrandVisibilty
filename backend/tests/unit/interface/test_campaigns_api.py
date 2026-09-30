@@ -65,7 +65,7 @@ def _path(c: dict, suffix: str = "") -> str:
 def test_channels_and_list(api):
     client, _ = api
     channels = client.get("/channels").json()
-    assert {c["channel"] for c in channels} == {"facebook_page", "instagram", "x", "google_business", "whatsapp", "export", "sandbox"}
+    assert {c["channel"] for c in channels} == {"facebook_page", "instagram", "x", "linkedin", "google_business", "whatsapp", "export", "sandbox"}
     assert client.get(f"/brands/{BRAND}/campaigns").json() == []
     assert client.get("/brands/nope/campaigns").status_code == 404
 

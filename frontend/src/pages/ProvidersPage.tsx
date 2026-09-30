@@ -1,6 +1,7 @@
 import { listProviders } from "../api/client";
 import type { ProviderInfo } from "../api/types";
 import { useAsync } from "../api/useAsync";
+import { EmptyState } from "../components/EmptyState";
 import { useFormat, useT } from "../i18n";
 import { Details } from "../settings/details";
 
@@ -56,12 +57,11 @@ export function ProvidersPage() {
 
       {state.status === "loading" && <p className="status">{t("pages.ais.loading")}</p>}
       {state.status === "error" && (
-        <div className="alert alert-error" role="alert">
-          <p>{t("pages.ais.loadError")}</p>
+        <EmptyState icon="error" tone="error" role="alert" title={t("pages.ais.loadError")}>
           <Details>
-            <p className="small">{state.error instanceof Error ? state.error.message : String(state.error)}</p>
+            <p className="small muted">{state.error instanceof Error ? state.error.message : String(state.error)}</p>
           </Details>
-        </div>
+        </EmptyState>
       )}
 
       {state.status === "ready" && (

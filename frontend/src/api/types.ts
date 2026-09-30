@@ -358,12 +358,21 @@ export interface BoardState {
 // JSON field names are the dataclass field names.
 // ---------------------------------------------------------------------------
 
-export type ChannelId = "facebook_page" | "instagram" | "x" | "google_business" | "whatsapp" | "export" | "sandbox";
+export type ChannelId =
+  | "facebook_page"
+  | "instagram"
+  | "x"
+  | "linkedin"
+  | "google_business"
+  | "whatsapp"
+  | "export"
+  | "sandbox";
 
 export const CHANNEL_IDS: ChannelId[] = [
   "facebook_page",
   "instagram",
   "x",
+  "linkedin",
   "google_business",
   "whatsapp",
   "export",
@@ -404,6 +413,7 @@ export const TEXT_LIMITS: Record<ChannelId, number> = {
   facebook_page: 63_206,
   instagram: 2_200,
   x: 280,
+  linkedin: 3_000,
   google_business: 1_500,
   whatsapp: 4_096,
   export: 1_000_000,
@@ -543,4 +553,25 @@ export interface RegenerateImageRequest {
   prompt?: string;
   style?: string;
   seed?: number;
+}
+
+// --- per-brand connected accounts (mirrors distribution/types.py AccountStatus) --------------------
+
+export type AccountMethod = "oauth" | "manual" | "env";
+export type AccountState = "connected" | "not_connected" | "needs_setup" | "pending_approval" | "expired";
+
+/** One brand's account on one channel. Never contains secrets. */
+export interface AccountStatus {
+  channel: ChannelId;
+  state: AccountState;
+  method: AccountMethod | null;
+  account_name: string | null;
+  account_id: string | null;
+  connected_at: string | null;
+  expires_at: string | null;
+  /** The platform's OAuth app keys are configured, so a "Connect" button can be offered. */
+  oauth_available: boolean;
+  /** Field names the manual-entry form needs (e.g. ["page_id", "page_token"]). */
+  manual_fields: string[];
+  detail: string;
 }

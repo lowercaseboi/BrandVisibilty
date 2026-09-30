@@ -2,8 +2,10 @@
 
 Campaign Studio works **without any of this**. With no keys set, the **Sandbox** channel simulates
 publishing, the **Export pack** gives you a zip of images and copy, and **WhatsApp** opens a
-`wa.me` share link. This guide is for connecting real accounts: Facebook Page, Instagram, X and
-(later) Google Business Profile. It also covers the image-generation keys and the admin token.
+`wa.me` share link. This guide is for connecting real accounts: Facebook Page, Instagram, X,
+LinkedIn and Google Business Profile, either once for the whole server (`.env`) or **per brand**
+with the Connect buttons in Details → Connected accounts (section 6). It also covers the
+image-generation keys and the admin token.
 
 > **Platforms change their consoles often.** Menu names below were correct when this was written.
 > Anything marked *(verify in current docs)* is a detail we could not pin down for certain, so check
@@ -30,8 +32,9 @@ once:
 # ADMIN_TOKEN: any long random string; you paste it into the Studio the first time you publish
 python -c "import secrets; print(secrets.token_urlsafe(32))"
 
-# SECRET_KEY: a Fernet key (32 random bytes, url-safe base64), used to encrypt stored platform tokens
-python -c "import base64, os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())"
+# SECRET_KEY: any long random string. It encrypts per-brand platform tokens (a Fernet key is derived
+# from it with HKDF-SHA256) and signs the OAuth "state". Changing it later means reconnecting accounts.
+python -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
 
 Use different values locally and on Render. Anyone holding `ADMIN_TOKEN` can post as the brand.
@@ -308,7 +311,158 @@ accepts both.
 
 ---
 
-## 5. Image generation keys
+## 5. LinkedIn
+
+LinkedIn posts go out through the **Posts API** (`POST https://api.linkedin.com/rest/posts`) as
+either a **member** (`urn:li:person:<id>`, the person who connected) or a **company Page**
+(`urn:li:organization:<id>`, a Page that person administers). The easy route is the per-brand
+**Connect** button (section 6); this section covers the LinkedIn app it needs, and the manual
+fallback.
+
+### 5.1 Create the LinkedIn app
+
+1. Go to <https://www.linkedin.com/developers/apps> → **Create app**. It must be linked to a
+   LinkedIn company Page (any Page you admin; LinkedIn asks an admin of that Page to verify it).
+2. **Products** tab → request:
+   - **Sign In with LinkedIn using OpenID Connect** (gives `openid`, `profile`), and
+   - **Share on LinkedIn** (gives `w_member_social`, posting as the member).
+   Both are normally granted instantly.
+3. To post as a **company Page** as well, request the **Community Management API** product
+   (`w_organization_social`, `r_organization_admin`). This one needs LinkedIn's review *(verify
+   the current approval process in LinkedIn's docs)*. Once granted, set
+   `LINKEDIN_ORGANIZATION_SCOPES=true` so the Connect flow asks for those scopes and lists the
+   Pages you admin.
+4. **Auth** tab → copy the **Client ID** and **Client Secret** into `LINKEDIN_CLIENT_ID` /
+   `LINKEDIN_CLIENT_SECRET`, and add the redirect URL
+   `<OAUTH_REDIRECT_BASE>/oauth/linkedin/callback` (section 6.2).
+
+### 5.2 What gets posted
+
+- Headers on every call: `LinkedIn-Version: 202609` (override with `LINKEDIN_API_VERSION`, format
+  `YYYYMM`) and `X-Restli-Protocol-Version: 2.0.0`. LinkedIn releases a version every month and
+  supports each for at least a year, then rejects it; if posts start failing with HTTP 426 or a
+  "version" error, set a newer month.
+- Text: the copy plus link, up to **3,000 characters**. LinkedIn's "little" text format reserves
+  `( ) [ ] { } < > @ # * _ ~ | \`, so the adapter escapes them; hashtags are sent as hashtag
+  templates so they link properly.
+- Image: `POST /rest/images?action=initializeUpload` → `PUT` the bytes to the returned upload URL →
+  the post references the `urn:li:image:…`. The landscape (1200×675) image is used.
+- The post link is `https://www.linkedin.com/feed/update/<post urn>` from the `x-restli-id` response
+  header.
+- Access tokens last about **60 days**. LinkedIn only issues refresh tokens to approved partner apps
+  *(verify in current docs)*, so when a token expires the account shows **expired** and you click
+  **Connect** again. If LinkedIn does return a refresh token, it is used automatically.
+
+### 5.3 Manual fallback (no OAuth app on the server)
+
+Details → Connected accounts → LinkedIn → *Enter manually* asks for:
+
+- `author_urn`: `urn:li:person:<id>` or `urn:li:organization:<id>`. For a member, the `<id>` is the
+  `sub` returned by `GET https://api.linkedin.com/v2/userinfo` with the token.
+- `access_token`: a token with `w_member_social` (or `w_organization_social`), e.g. from LinkedIn's
+  OAuth token generator tool in the developer portal *(verify its current location)*.
+
+For a single-brand server you can instead set `LINKEDIN_AUTHOR_URN` and `LINKEDIN_ACCESS_TOKEN` in
+`.env.local`; every brand without its own LinkedIn account then uses them.
+
+---
+
+## 6. Per-brand accounts (Connect buttons)
+
+Each brand can post to **its own** Facebook Page, Instagram account, X account, LinkedIn member/Page
+and Google Business location. They are connected from **Details → Connected accounts** in the app.
+
+### 6.1 How credentials are chosen
+
+1. If the brand has its own connected account for a channel, that is used.
+2. Otherwise the global `.env` values (`META_PAGE_TOKEN`, `X_API_KEY`, …) are used, shown as
+   *"Using the server's .env credentials"*. Single-brand setups keep working with no changes.
+
+Stored tokens live in `DATA_DIR/accounts/<brand>.json`, **encrypted** with a key derived from
+`SECRET_KEY` (HKDF-SHA256 → Fernet). The API never returns them; it only shows the account name/id,
+how it was connected, and when it expires. Deleting a brand deletes its file. Changing
+`SECRET_KEY` makes stored tokens unreadable: the accounts show **expired** and must be reconnected.
+
+Connecting, disconnecting, testing and choosing need the `X-Admin-Token` header when `ADMIN_TOKEN`
+is set. Without `SECRET_KEY` nothing can be stored (the API answers 503 with a clear message).
+
+### 6.2 Server settings and redirect URIs
+
+| Setting | What it is |
+|---|---|
+| `SECRET_KEY` | Required. Encrypts tokens and signs the OAuth `state`. |
+| `OAUTH_REDIRECT_BASE` | The **backend's** public base URL as the browser reaches it, no trailing slash. Local dev: `http://localhost:8000`. Docker (nginx on :8080 proxies `/api` to the backend): `http://localhost:8080/api`. Render: `https://<your-backend>.onrender.com`. |
+| `FRONTEND_BASE_URL` | Where the app runs; the callback sends the browser back here. Default `http://localhost:5173` (Vite); Docker: `http://localhost:8080`. |
+| `META_APP_ID`, `META_APP_SECRET` | Meta app (section 2.2) → Facebook Page + Instagram buttons. |
+| `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET` | LinkedIn app (section 5.1). `LINKEDIN_ORGANIZATION_SCOPES=true` to offer company Pages. |
+| `X_CLIENT_ID`, `X_CLIENT_SECRET` | X app → *User authentication settings* → OAuth 2.0 (type: Web App, confidential client). These are **not** the OAuth 1.0a API key/secret. |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google Cloud OAuth client, type *Web application* (section 4.2). |
+
+Register **exactly** these redirect URIs (replace `<base>` with `OAUTH_REDIRECT_BASE`):
+
+| Platform | Where to register | Redirect URI(s) |
+|---|---|---|
+| Meta | App → Facebook Login (for Business) → Settings → *Valid OAuth Redirect URIs* | `<base>/oauth/facebook_page/callback` **and** `<base>/oauth/instagram/callback` |
+| LinkedIn | App → Auth → *Authorized redirect URLs* | `<base>/oauth/linkedin/callback` |
+| X | App → User authentication settings → *Callback URI / Redirect URL* | `<base>/oauth/x/callback` |
+| Google | Cloud console → APIs & Services → Credentials → OAuth client → *Authorized redirect URIs* | `<base>/oauth/google_business/callback` |
+
+Example for local dev: `http://localhost:8000/oauth/linkedin/callback`. Most platforms refuse
+`http://` URIs other than `localhost`; for a phone or a teammate, use the Render URL or a
+`trycloudflare.com` tunnel (section 1) as the base.
+
+A channel's **Connect** button is enabled (`oauth_available: true`) only when its app keys,
+`OAUTH_REDIRECT_BASE` and `SECRET_KEY` are all set. Otherwise the account shows **needs setup** and
+the manual form still works.
+
+### 6.3 What each Connect button does
+
+| Channel | Flow | Scopes | After consent |
+|---|---|---|---|
+| Facebook Page | Facebook Login dialog → code → user token → long-lived user token → `GET /me/accounts` | `pages_show_list, pages_manage_posts, pages_read_engagement, instagram_basic, instagram_content_publish, business_management` | One Page → connected. Several → you pick one. The Page token is stored (Page tokens from a long-lived user token don't expire). If the Page has a linked Instagram business account, it is offered for Instagram too. |
+| Instagram | Same login; lists the Instagram business accounts linked to your Pages | same | Stores the IG account id + its Page's token. Instagram also needs `PUBLIC_BASE_URL` (section 1). |
+| LinkedIn | Authorization code → `GET /v2/userinfo` (`sub` → `urn:li:person:<sub>`) | `openid profile w_member_social` (+ `w_organization_social r_organization_admin` when enabled) | Member only → connected. With org scopes, the member and each Page you admin are offered. |
+| X | OAuth 2.0 authorization code + **PKCE (S256)** → `GET /2/users/me` | `tweet.read tweet.write users.read offline.access media.write` | Stores the user token + refresh token. Tokens last ~2 hours; they are refreshed automatically before posting and the new pair is saved (X rotates refresh tokens). |
+| Google Business | OAuth with PKCE, `access_type=offline`, `prompt=consent` → list accounts → list locations | `https://www.googleapis.com/auth/business.manage` | One location → connected, several → pick one. The hourly access token is refreshed automatically. Posting still needs Google's API approval (section 4.1). |
+
+*(verify in current docs)*: X's `media.write` scope (needed for the v2 media upload with OAuth 2.0
+user tokens) and Meta's exact Business Login configuration (plain Facebook Login vs *Facebook Login
+for Business* with a configuration ID) change from time to time. The endpoint URLs used are in
+`backend/src/app/distribution/oauth.py`.
+
+### 6.4 After the redirect
+
+The platform sends the browser to `<base>/oauth/<channel>/callback`. The backend checks the signed,
+single-use `state` (HMAC-SHA256 with `SECRET_KEY`, 10-minute expiry), exchanges the code, and
+redirects to the app, by default `FRONTEND_BASE_URL/brands/<brand>/details#accounts`, with one of:
+
+- `?connected=<channel>`: done;
+- `?connect_choose=<channel>`: several Pages/organisations/locations were found. The app lists them
+  (`GET /brands/<brand>/accounts/<channel>/choices`) and connects the one you pick
+  (`POST …/choose`). Choices expire after 30 minutes;
+- `?connect_error=<channel>&reason=<code>`: `denied` (you cancelled), `bad_state` / `expired`
+  (link too old or reused, start again), `token_exchange` (wrong app secret or redirect URI),
+  `no_pages`, `no_instagram`, `no_locations`, `network`, `api_error`, `not_configured`,
+  `no_secret_key`;
+- plus `&offer=instagram` when a connected Facebook Page has a linked Instagram account ready to
+  choose.
+
+**Test connection** makes one read-only call (the Page's name, the Instagram username, `GET
+/2/users/me` on X, LinkedIn's `userinfo`, or the GBP location's title) and posts nothing.
+
+### 6.5 Manual fields per channel
+
+| Channel | Fields |
+|---|---|
+| Facebook Page | `page_id`, `page_token` |
+| Instagram | `ig_user_id`, `page_token` (+ server `PUBLIC_BASE_URL`) |
+| X | `api_key`, `api_secret`, `access_token`, `access_secret` (OAuth 1.0a, section 3) |
+| LinkedIn | `author_urn`, `access_token` |
+| Google Business | `account_id`, `location_id`, `access_token` (a plain access token lasts ~1 hour; use Connect for automatic refresh) |
+
+---
+
+## 7. Image generation keys
 
 Images come from the providers in `IMAGE_PROVIDERS` (default `gemini,cloudflare,template`), tried
 in that order.
@@ -349,7 +503,7 @@ in that order.
 
 ---
 
-## 6. Troubleshooting
+## 8. Troubleshooting
 
 | Symptom / error | Likely cause | Fix |
 |---|---|---|
@@ -371,4 +525,10 @@ in that order.
 | GBP post "REJECTED" | Google content policy (phone numbers, spammy text) | Edit the copy and publish again. |
 | Gemini image 429 / quota | No free image quota | Nothing to fix: it falls back to Cloudflare or the template. Or set `IMAGE_PROVIDERS=cloudflare,template`. |
 | Cloudflare 401/403 | Token missing the Workers AI permission, or the account ID is wrong | Recreate the token from the Workers AI template and check the ID in the dashboard URL. |
+| Connect → back with `reason=token_exchange` | Wrong app secret, or the redirect URI registered on the platform doesn't match `OAUTH_REDIRECT_BASE` exactly | Compare with the table in 6.2 (scheme, host, port, `/api` prefix behind nginx). |
+| Connect → `reason=bad_state` / `expired` | The consent page was left open over 10 minutes, the link was reused, or `SECRET_KEY` changed mid-flow | Click Connect again. |
+| Connect button disabled ("needs setup") | Platform app keys, `OAUTH_REDIRECT_BASE` or `SECRET_KEY` missing | Set them (6.2) and restart, or use the manual form. |
+| Account shows **expired** | Token past its expiry with no way to refresh (LinkedIn after ~60 days, a manual GBP token after an hour), or `SECRET_KEY` changed | Connect again. |
+| LinkedIn **403** | Token lacks `w_member_social` / `w_organization_social`, or the member isn't an admin of that Page | Re-check the app's products (5.1) and reconnect. |
+| LinkedIn **426** / version error | `LINKEDIN_API_VERSION` is sunset | Set a recent `YYYYMM` (5.2). |
 | Publish button asks for a token | `ADMIN_TOKEN` set on the server | Paste the same `ADMIN_TOKEN` value you put in `.env.local`. |

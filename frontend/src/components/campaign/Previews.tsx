@@ -253,6 +253,43 @@ function XPreview({ variant, asset, brandName, handle }: PreviewProps) {
   );
 }
 
+function LinkedInPreview({ variant, asset, brandName }: PreviewProps) {
+  const t = useT();
+  return (
+    <article className="pv pv-li">
+      <header className="pv-head">
+        <Avatar name={brandName} round={false} />
+        <div className="pv-who">
+          <strong>{brandName}</strong>
+          <span className="pv-sub">{t("board.campaign.preview.liPage")}</span>
+          <span className="pv-sub">
+            {t("board.campaign.preview.now")} · <Icon d={ICONS.globe} size={12} />
+          </span>
+        </div>
+        <span className="pv-icon-muted">
+          <Icon d={ICONS.more} />
+        </span>
+      </header>
+      <Truncated text={composePost(variant)} lines={3} />
+      {asset && <Picture asset={asset} ratio={asset.format === "landscape" ? "1200 / 627" : "1 / 1"} alt={variant.alt_text ?? ""} />}
+      <footer className="pv-actions pv-actions-spread">
+        <span>
+          <Icon d={ICONS.like} /> {t("board.campaign.preview.fbLike")}
+        </span>
+        <span>
+          <Icon d={ICONS.comment} /> {t("board.campaign.preview.fbComment")}
+        </span>
+        <span>
+          <Icon d={ICONS.repost} /> {t("board.campaign.preview.liRepost")}
+        </span>
+        <span>
+          <Icon d={ICONS.send} /> {t("board.campaign.preview.liSend")}
+        </span>
+      </footer>
+    </article>
+  );
+}
+
 function WhatsAppPreview({ variant, asset, assets, brandName }: PreviewProps) {
   const t = useT();
   const story = latestAssetByFormat(assets).get("story") ?? null;
@@ -341,6 +378,8 @@ export function PlatformPreview(props: PreviewProps) {
       return <InstagramPreview {...props} />;
     case "x":
       return <XPreview {...props} />;
+    case "linkedin":
+      return <LinkedInPreview {...props} />;
     case "whatsapp":
       return <WhatsAppPreview {...props} />;
     case "google_business":

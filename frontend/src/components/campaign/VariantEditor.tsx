@@ -1,10 +1,11 @@
 import { useId, useState } from "react";
 import type { KeyboardEvent } from "react";
-import { IMAGE_SIZES } from "../../api/types";
-import type { Asset, ChannelStatus, Variant, VariantPatch } from "../../api/types";
+import type { ChannelStatus, Variant, VariantPatch } from "../../api/types";
 import { useFormat, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n";
-import { FORMAT_LABEL, MODE_LABEL, channelName, isAdvisory, charBudget, normalizeHashtag, parseHashtags } from "./campaignModel";
+import { channelName, charBudget, isAdvisory, normalizeHashtag, parseHashtags } from "./campaignModel";
+import { IssueList } from "./IssueList";
+import { removeHashtag, removePhrase, variantIssues } from "./studioFlow";
 import type { SaveState } from "./useDraftSaver";
 
 export function SaveIndicator({ state }: { state: SaveState | undefined }) {
@@ -17,7 +18,7 @@ export function SaveIndicator({ state }: { state: SaveState | undefined }) {
         ? "board.campaign.save.saved"
         : "board.campaign.save.error";
   return (
-    <span className={`cs-save cs-save-${state}`} role="status">
+    <span className={`cs-save is-${state}`} role="status">
       {t(key)}
     </span>
   );
@@ -69,25 +70,17 @@ function HashtagInput({ tags, onChange, labelId }: { tags: string[]; onChange: (
   );
 }
 
-const ISSUE_KEY: Record<string, MessageKey> = {
-  empty: "board.campaign.issue.empty",
-  over_limit: "board.campaign.issue.overLimit",
-};
-
 export interface VariantEditorProps {
   variant: Variant;
-  /** Issues computed locally (over limit, empty), on top of the server's variant.issues. */
-  localIssues: string[];
-  assets: Asset[];
-  status: ChannelStatus | undefined;
   statuses: ChannelStatus[];
   saveState: SaveState | undefined;
   locked: boolean;
   onChange: (patch: VariantPatch) => void;
 }
 
-/** Copy editor for one channel: on/off, text with a live counter, hashtags, link, image and alt text. */
-export function VariantEditor({ variant, localIssues, assets, status, statuses, saveState, locked, onChange }: VariantEditorProps) {
+/** Copy editor for one channel: on/off, text with a live counter, plain-language issues with
+ * one-click fixes, hashtags, link and alt text. The image is picked in the strip below it. */
+export function VariantEditor({ variant, statuses, saveState, locked, onChange }: VariantEditorProps) {
   const t = useT();
   const fmt = useFormat();
   const textId = useId();
@@ -96,35 +89,25 @@ export function VariantEditor({ variant, localIssues, assets, status, statuses, 
   const issuesId = useId();
   const budget = charBudget(variant.channel, variant);
   const name = channelName(variant.channel, statuses);
-  const advice = (variant.issues ?? []).filter(isAdvisory);
-  const issues = [
-    ...(variant.issues ?? []).filter((m) => !isAdvisory(m)),
-    ...localIssues.map((k) => (ISSUE_KEY[k] ? t(ISSUE_KEY[k], { limit: fmt.number(budget.limit) }) : k)),
-  ];
+  const issues = variantIssues(variant);
   const hugeLimit = budget.limit >= 100_000;
 
   return (
     <section className="cs-editor" aria-label={t("board.campaign.editor.label", { channel: name })}>
-      <div className="cs-editor-top">
+      <div className="field-head">
         <label className="cs-toggle">
           <span className="switch">
-            <input
-              type="checkbox"
-              checked={variant.enabled}
-              disabled={locked}
-              onChange={(e) => onChange({ enabled: e.target.checked })}
-            />
+            <input type="checkbox" checked={variant.enabled} disabled={locked} onChange={(e) => onChange({ enabled: e.target.checked })} />
             <span className="switch-track" aria-hidden="true" />
           </span>
           <span>{variant.enabled ? t("board.campaign.editor.on", { channel: name }) : t("board.campaign.editor.off", { channel: name })}</span>
         </label>
-        {status && <span className={`cs-mode cs-mode-${status.mode}`}>{t(MODE_LABEL[status.mode])}</span>}
         <SaveIndicator state={saveState} />
       </div>
 
-      <fieldset className="cs-fields" disabled={locked || !variant.enabled}>
+      <fieldset className="field-group" disabled={locked || !variant.enabled}>
         <div className="field">
-          <span className="cs-field-head">
+          <span className="field-head">
             <label htmlFor={textId}>{t("board.campaign.editor.text")}</label>
             <span id={counterId} className={`cs-counter is-${budget.state}`} aria-live="polite">
               {hugeLimit
@@ -134,10 +117,10 @@ export function VariantEditor({ variant, localIssues, assets, status, statuses, 
           </span>
           <textarea
             id={textId}
-            rows={variant.channel === "x" ? 4 : 7}
+            rows={variant.channel === "x" ? 4 : 8}
             value={variant.text}
             aria-describedby={`${counterId}${issues.length ? ` ${issuesId}` : ""}`}
-            aria-invalid={issues.length > 0 || undefined}
+            aria-invalid={issues.some((m) => !isAdvisory(m)) || undefined}
             onChange={(e) => onChange({ text: e.target.value })}
           />
           <span className="field-hint">
@@ -145,62 +128,36 @@ export function VariantEditor({ variant, localIssues, assets, status, statuses, 
           </span>
         </div>
 
-        {issues.length > 0 && (
-          <ul id={issuesId} className="cs-issues" role="alert">
-            {issues.map((m, i) => (
-              <li key={i}>{m}</li>
-            ))}
-          </ul>
-        )}
-        {advice.length > 0 && (
-          <div className="cs-advice">
-            <p className="eyebrow">{t("board.campaign.editor.advice")}</p>
-            <ul>
-              {advice.map((m, i) => (
-                <li key={i}>{m}</li>
-              ))}
-            </ul>
-          </div>
-        )}
+        <IssueList
+          id={issuesId}
+          issues={issues}
+          text={variant.text}
+          hashtags={variant.hashtags}
+          limit={budget.limit}
+          disabled={locked}
+          onRemovePhrase={(phrase) => onChange({ text: removePhrase(variant.text, phrase) })}
+          onRemoveHashtag={(tag) => onChange({ hashtags: removeHashtag(variant.hashtags, tag) })}
+        />
 
         <div className="field">
           <span id={tagsLabelId}>{t("board.campaign.editor.hashtags")}</span>
           <HashtagInput tags={variant.hashtags ?? []} onChange={(hashtags) => onChange({ hashtags })} labelId={tagsLabelId} />
         </div>
 
-        <div className="cs-row">
+        <div className="field-pair">
           <label className="field">
             {t("board.campaign.editor.link")}
-            <input
-              type="url"
-              inputMode="url"
-              placeholder="https://"
-              value={variant.link ?? ""}
-              onChange={(e) => onChange({ link: e.target.value || null })}
-            />
+            <input type="url" inputMode="url" placeholder="https://" value={variant.link ?? ""} onChange={(e) => onChange({ link: e.target.value || null })} />
           </label>
           <label className="field">
-            {t("board.campaign.editor.image")}
-            <select value={variant.asset_id ?? ""} onChange={(e) => onChange({ asset_id: e.target.value || null })}>
-              <option value="">{t("board.campaign.editor.imageAuto")}</option>
-              {assets.map((a) => (
-                <option key={a.asset_id} value={a.asset_id}>
-                  {t(FORMAT_LABEL[a.format])} · {IMAGE_SIZES[a.format]?.join("×")} · {a.provider}
-                  {a.seed != null ? ` · #${a.seed}` : ""}
-                </option>
-              ))}
-            </select>
+            {t("board.campaign.editor.alt")}
+            <input
+              value={variant.alt_text ?? ""}
+              placeholder={t("board.campaign.editor.altPlaceholder")}
+              onChange={(e) => onChange({ alt_text: e.target.value || null })}
+            />
           </label>
         </div>
-
-        <label className="field">
-          {t("board.campaign.editor.alt")}
-          <input
-            value={variant.alt_text ?? ""}
-            placeholder={t("board.campaign.editor.altPlaceholder")}
-            onChange={(e) => onChange({ alt_text: e.target.value || null })}
-          />
-        </label>
       </fieldset>
     </section>
   );

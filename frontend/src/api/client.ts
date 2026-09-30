@@ -1,4 +1,5 @@
 import type {
+  AccountStatus,
   BoardState,
   Campaign,
   ChannelId,
@@ -289,4 +290,68 @@ export function campaignExportUrl(brandKey: string, campaignId: string): string 
 export function mediaUrl(path: string, version?: string): string {
   const clean = path.split("/").map(encodeURIComponent).join("/");
   return `${API_BASE}/media/${clean}${version ? `?v=${encodeURIComponent(version)}` : ""}`;
+}
+
+// ---------------------------------------------------------------------------
+// Per-brand connected accounts (Details → Connected accounts). Responses never carry secrets.
+// ---------------------------------------------------------------------------
+
+/** One pickable Page / organisation / location after an OAuth sign-in (`connect_choose`). */
+export interface AccountChoice {
+  id: string;
+  name: string;
+  kind: string;
+}
+
+/** POST …/test: a cheap read-only call against the platform. */
+export interface AccountTestResult {
+  ok: boolean;
+  detail: string;
+}
+
+const accountPath = (brandKey: string, channel: ChannelId) => `/brands/${b(brandKey)}/accounts/${b(channel)}`;
+
+export function listAccounts(brandKey: string): Promise<AccountStatus[]> {
+  return getJson(`/brands/${b(brandKey)}/accounts`);
+}
+
+/** Manual entry: the guided form's fields (ids and tokens), stored encrypted server-side. */
+export function saveAccount(brandKey: string, channel: ChannelId, fields: Record<string, string>, token: string): Promise<AccountStatus> {
+  return adminJson("PUT", accountPath(brandKey, channel), token, { fields });
+}
+
+export function disconnectAccount(brandKey: string, channel: ChannelId, token: string): Promise<AccountStatus> {
+  return adminJson("DELETE", accountPath(brandKey, channel), token);
+}
+
+export function testAccount(brandKey: string, channel: ChannelId, token: string): Promise<AccountTestResult> {
+  return adminJson("POST", `${accountPath(brandKey, channel)}/test`, token, {});
+}
+
+/** Starts the platform's sign-in; the caller then sends the browser to `authorize_url`. */
+export function startAccountOAuth(brandKey: string, channel: ChannelId, token: string, returnTo?: string): Promise<{ authorize_url: string }> {
+  return adminJson("POST", `${accountPath(brandKey, channel)}/oauth/start`, token, returnTo ? { return_to: returnTo } : {});
+}
+
+export function listAccountChoices(brandKey: string, channel: ChannelId): Promise<AccountChoice[]> {
+  return getJson(`${accountPath(brandKey, channel)}/choices`);
+}
+
+export function chooseAccount(brandKey: string, channel: ChannelId, id: string, token: string): Promise<AccountStatus> {
+  return adminJson("POST", `${accountPath(brandKey, channel)}/choose`, token, { id });
+}
+
+// ---------------------------------------------------------------------------
+// Campaign Studio: channel status for one brand
+// ---------------------------------------------------------------------------
+
+/** Channel status as this brand would post (its own connected accounts first, then the server's
+ * shared credentials). Falls back to the brand-agnostic GET /channels on an older backend (404). */
+export async function listBrandChannels(brandKey: string): Promise<ChannelStatus[]> {
+  try {
+    return await getJson<ChannelStatus[]>(`/brands/${b(brandKey)}/channels`);
+  } catch (err) {
+    if (err instanceof ApiError && (err.status === 404 || err.status === 405)) return listChannels();
+    throw err;
+  }
 }

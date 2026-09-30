@@ -1,10 +1,19 @@
-/* Brand details module: profile card (view + edit), coverage matrix and the questions section
-   frame. The questions editor's own rows/lists/badges reuse the existing q- and pg- prefixed
+/* Details module: connected accounts, profile card (view + edit), coverage matrix and the
+   questions section frame; plus the hub's Details preview line and onboarding checklist. The questions editor's own rows/lists/badges reuse the existing q- and pg- prefixed
    classes in pages.css and components.css unchanged — nothing here duplicates those. */
 
-/* The old /questions deep link lands on #questions; leave room for the sticky module band. */
-.bi-questions-section {
+/* Deep links (#accounts, #profile, #coverage, #questions — the old /questions route lands on
+   #questions): leave room for the sticky module band. The heading takes focus on arrival; a
+   script-moved focus ring is only drawn for keyboard users. */
+.bi-anchor {
   scroll-margin-top: 92px;
+}
+
+/* Headings only take focus from script (arrival on a deep link, after a dialog closes) so screen
+   readers start there; they aren't controls, so no ring. */
+.bi-anchor h2[tabindex="-1"]:focus,
+.acc-card-name:focus {
+  outline: none;
 }
 
 /* ---------- profile: read view ---------- */
@@ -193,5 +202,562 @@
 @media (max-width: 640px) {
   .bi-coverage-cell {
     padding: var(--space-1) var(--space-2);
+  }
+}
+
+/* =========================================================
+   Connected accounts
+   ========================================================= */
+
+.acc-count {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.acc-offer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--ok-border);
+  border-radius: var(--radius-sm);
+  background: var(--ok-bg);
+}
+
+.acc-offer p {
+  flex: 1 1 240px;
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-h);
+}
+
+.acc-offer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.acc-offer-actions .btn {
+  max-width: 100%;
+  white-space: normal;
+  text-align: left;
+}
+
+.acc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.acc-card {
+  --acc-tone: var(--border-strong);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-solid);
+  box-shadow: inset 3px 0 0 var(--acc-tone);
+}
+
+.acc-tone-ok {
+  --acc-tone: var(--ok);
+}
+
+.acc-tone-warn {
+  --acc-tone: var(--warn);
+}
+
+.acc-tone-err {
+  --acc-tone: var(--err);
+}
+
+.acc-tone-info {
+  --acc-tone: var(--info);
+}
+
+.acc-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  flex-wrap: wrap;
+}
+
+.acc-card-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-h);
+}
+
+.acc-card-name {
+  margin: 0;
+  font-family: var(--display);
+  word-spacing: normal;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.acc-pill {
+  margin-left: auto;
+}
+
+.acc-card-line {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.acc-card-sub {
+  margin: 0;
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.acc-card-sub.is-warn {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.acc-card-sub a {
+  color: var(--accent-text);
+  font-family: var(--mono);
+}
+
+.acc-tech summary {
+  width: fit-content;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.acc-tech summary:hover {
+  color: var(--text);
+}
+
+.acc-tech p {
+  margin: var(--space-1) 0 0;
+}
+
+.acc-busy {
+  color: var(--text);
+}
+
+.acc-note {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.acc-note-ok {
+  border-color: var(--ok-border);
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+
+.acc-note-err {
+  border-color: var(--err-border);
+  background: var(--err-bg);
+  color: var(--err);
+}
+
+.acc-note-close {
+  flex: none;
+  font-size: var(--fs-xs);
+  color: inherit;
+}
+
+.acc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-2);
+}
+
+.acc-disconnect {
+  margin-left: auto;
+}
+
+/* ---------- dialogs (manual entry, picker, disconnect, admin token) ---------- */
+
+.acc-dialog {
+  /* .card sets position: relative, which would pin the modal to the top of the document rather
+     than the viewport once the page is scrolled. */
+  position: fixed;
+  width: min(460px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+  overflow: auto;
+  background: var(--surface-solid);
+  color: var(--text);
+}
+
+/* Beats `section > .card` (components.css), which would pin it near the top. */
+.acc-dialog.card {
+  margin: auto;
+}
+
+.acc-dialog-wide {
+  width: min(560px, calc(100vw - 32px));
+}
+
+.acc-dialog::backdrop {
+  background: color-mix(in srgb, var(--band-dark) 55%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+.acc-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+}
+
+.acc-dialog-title {
+  margin: 0;
+  font-family: var(--display);
+  word-spacing: normal;
+  font-size: var(--fs-lg);
+  color: var(--text-h);
+}
+
+.acc-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.acc-form p {
+  margin: 0;
+}
+
+.acc-form .field input {
+  font-family: var(--mono);
+}
+
+.acc-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.acc-howto {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.acc-howto summary {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.acc-howto ol {
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-3) calc(var(--space-4) + var(--space-3));
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+}
+
+.acc-howto li + li {
+  margin-top: var(--space-1);
+}
+
+.acc-choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.acc-choice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-solid);
+  cursor: pointer;
+}
+
+.acc-choice:hover {
+  background: var(--surface-2);
+}
+
+.acc-choice.is-picked {
+  border-color: var(--accent);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.acc-choice input {
+  accent-color: var(--accent);
+}
+
+.acc-choice-name {
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.acc-choice-kind {
+  margin-left: auto;
+}
+
+@media (max-width: 640px) {
+  .bi-anchor .module-section-head {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .acc-dialog-body {
+    padding: var(--space-4);
+  }
+
+  .acc-dialog-actions .btn {
+    flex: 1 1 auto;
+  }
+
+  .acc-card {
+    padding: var(--space-3);
+  }
+}
+
+/* =========================================================
+   Hub: Details preview line + onboarding checklist
+   ========================================================= */
+
+.hub-pv-accounts {
+  flex-wrap: nowrap;
+  align-items: baseline;
+}
+
+.hub-pv-accounts::before {
+  content: "";
+  flex: none;
+  align-self: center;
+  width: 6px;
+  height: 6px;
+  border-radius: 1.5px;
+  background: var(--border-strong);
+}
+
+.hub-pv-accounts.is-on::before {
+  background: var(--ok-dot);
+}
+
+/* Same width as the hub stage below it (hub.css .hub-stage), so the edges line up. */
+.ob {
+  --ob-w: min(1240px, calc(100vw - 2 * var(--gutter)));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: var(--ob-w);
+  margin-inline: calc((100% - var(--ob-w)) / 2);
+  padding: var(--space-3) var(--space-4);
+}
+
+.ob-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.ob-title {
+  margin: 0;
+  font-family: var(--display);
+  word-spacing: normal;
+  font-size: var(--fs-md);
+  color: var(--text-h);
+}
+
+.ob-progress {
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.ob-meter {
+  flex: 0 1 140px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+}
+
+.ob-meter span {
+  display: block;
+  height: 100%;
+  background: var(--ok-dot);
+  transition: width var(--dur-slow) var(--ease);
+}
+
+.ob-hide {
+  margin-left: auto;
+  font-size: var(--fs-sm);
+}
+
+.ob-steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ob-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 100%;
+  padding: 6px var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-solid);
+  font-size: var(--fs-sm);
+  line-height: 1.3;
+  color: var(--text);
+  text-decoration: none;
+  transition:
+    border-color var(--dur) var(--ease),
+    background var(--dur) var(--ease);
+}
+
+.ob-link:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+
+.ob-mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-2xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.ob-step.is-done .ob-link {
+  color: var(--muted);
+}
+
+.ob-step.is-done .ob-mark {
+  border-color: var(--ok);
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+
+.ob-step.is-current .ob-link {
+  border-color: var(--accent);
+  box-shadow: inset 0 -2px 0 var(--accent);
+  color: var(--text-h);
+  font-weight: 600;
+}
+
+.ob-step.is-current .ob-mark {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.ob-hint {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+
+.ob.is-complete .ob-hint {
+  color: var(--ok);
+}
+
+@media (max-width: 1100px) {
+  .ob-link {
+    font-size: var(--fs-xs);
+  }
+}
+
+@media (max-width: 900px) {
+  .ob {
+    --ob-w: 100%;
+  }
+}
+
+/* Phones: numbered dots in a row; only the next step keeps its label (every step keeps its full
+   name for screen readers). */
+@media (max-width: 640px) {
+  .ob-meter {
+    display: none;
+  }
+
+  .ob-steps {
+    display: flex;
+  }
+
+  .ob-step:not(.is-current) .ob-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .ob-step.is-current {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .ob-step:not(.is-current) .ob-link {
+    padding: 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ob-meter span,
+  .ob-link {
+    transition: none;
   }
 }

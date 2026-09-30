@@ -4,6 +4,7 @@ import type { MouseEvent } from "react";
 import { flushSync } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import type { LinkProps } from "react-router-dom";
+import { prefersReducedMotion } from "../../settings/motion";
 
 type VTDocument = Document & {
   startViewTransition?: (update: () => void) => { finished: Promise<void> };
@@ -22,8 +23,7 @@ export function viewTransitionFinished(): Promise<void> | null {
 /** True when navigations will morph: the View Transitions API exists and motion isn't reduced. */
 export function canMorph(): boolean {
   if (typeof document === "undefined") return false;
-  const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-  return !!(document as VTDocument).startViewTransition && !reduce;
+  return !!(document as VTDocument).startViewTransition && !prefersReducedMotion();
 }
 
 /**

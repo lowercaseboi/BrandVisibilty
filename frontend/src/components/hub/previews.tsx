@@ -2,6 +2,9 @@ import type { BrandProfile, QuestionSet, Snapshot, TrendVerdict } from "../../ap
 import { humanize, ratingFromRange, scoreBandClass, scoreOutOf100, scoreRange } from "../../format";
 import { useFormat, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n";
+import { useBrandData } from "../../pages/brand/BrandContext";
+import { POSTING_CHANNELS, countConnected } from "../accounts/accountsModel";
+import { useAccounts } from "../accounts/useAccounts";
 import { countGapTypes, sparkPoints } from "./previewMath";
 
 // Live previews on the hub's module cards: a glance at what each module holds, from the data the
@@ -26,11 +29,16 @@ function Stat({ value, unit }: { value: string; unit: string }) {
   );
 }
 
-/** Brand details: category, then competitors · questions (just questions until the profile loads). */
+/** Details: category, then competitors · questions (just questions until the profile loads), then
+ * how many posting accounts are connected (left out while loading or if the backend has no
+ * accounts routes yet). */
 export function DetailsPreview({ profile, questions }: { profile: BrandProfile | null; questions: QuestionSet | null }) {
   const t = useT();
   const fmt = useFormat();
+  const { brandKey } = useBrandData();
+  const { accounts, state } = useAccounts(brandKey);
   const qCount = questions ? questions.scored_count : null;
+  const connected = countConnected(accounts);
   return (
     <div className="hub-pv-details">
       {profile?.category && <p className="hub-pv-line">{profile.category}</p>}
@@ -38,6 +46,11 @@ export function DetailsPreview({ profile, questions }: { profile: BrandProfile |
         {profile && <Stat value={fmt.number(profile.competitors.length)} unit={t.n("hub.preview.details.competitors", profile.competitors.length)} />}
         {qCount !== null && <Stat value={fmt.number(qCount)} unit={t.n("hub.preview.details.questions", qCount)} />}
       </p>
+      {state === "ready" && (
+        <p className={`hub-pv-line hub-pv-meta hub-pv-accounts${connected > 0 ? " is-on" : ""}`}>
+          {t("hub.preview.details.accounts", { n: fmt.number(connected), total: fmt.number(POSTING_CHANNELS.length) })}
+        </p>
+      )}
     </div>
   );
 }

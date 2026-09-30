@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-
-const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+import { useReducedMotion } from "../../settings/motion";
 
 /**
  * A hairline amber bar fixed just under the header, filling left-to-right with how far down the
@@ -10,6 +9,7 @@ const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion:
 export function ScrollProgress() {
   const fillRef = useRef<HTMLDivElement | null>(null);
   const [top, setTop] = useState(0);
+  const reduced = useReducedMotion();
 
   useEffect(() => {
     const header = document.querySelector(".app-header");
@@ -20,9 +20,8 @@ export function ScrollProgress() {
   }, []);
 
   useEffect(() => {
-    if (prefersReducedMotion()) return;
     const fill = fillRef.current;
-    if (!fill) return;
+    if (!fill || reduced) return;
     let raf = 0;
     let ticking = false;
     const update = () => {
@@ -45,7 +44,7 @@ export function ScrollProgress() {
       window.removeEventListener("resize", onScroll);
       cancelAnimationFrame(raf);
     };
-  }, []);
+  }, [reduced]);
 
   return (
     <div className="lp-scroll-progress" style={{ top }} aria-hidden="true">

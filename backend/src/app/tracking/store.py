@@ -197,6 +197,10 @@ def delete_brand_data(brand_key: str) -> None:
     from app.distribution.store import delete_brand_campaigns
 
     delete_brand_campaigns(brand_key)
+    # Connected social accounts (encrypted tokens): DATA_DIR/accounts/<brand_key>.json.
+    from app.distribution.accounts import delete_brand as delete_brand_accounts
+
+    delete_brand_accounts(brand_key)
 
 
 def brand_keys_with_data() -> set[str]:

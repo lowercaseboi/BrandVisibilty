@@ -37,7 +37,7 @@ def test_create_builds_copy_images_and_keeps_gap_id(env):
     assert c.status == "ready" and c.drafted_by == "template"
     assert c.recommendation_id == "rec-comp" and c.gap_id == "gap-comp"  # AC-7
     assert c.suggestion_key == "comparison_page|ashok_vada_pav"
-    assert {v.channel for v in c.variants} == {"facebook_page", "instagram", "x", "google_business", "whatsapp", "sandbox", "export"}
+    assert {v.channel for v in c.variants} == {"facebook_page", "instagram", "x", "linkedin", "google_business", "whatsapp", "sandbox", "export"}
     assert {a.format for a in c.assets} == {"square", "landscape", "gbp", "story"}
     assert all(v.asset_id for v in c.variants)
     x = next(v for v in c.variants if v.channel == "x")

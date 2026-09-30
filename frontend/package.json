@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "oxlint && node scripts/check-i18n.mjs",
+    "lint": "oxlint && node scripts/check-i18n.mjs && node scripts/check-breakpoints.mjs",
     "preview": "vite preview",
     "test": "vitest run"
   },

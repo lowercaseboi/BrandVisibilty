@@ -1,6 +1,7 @@
 /* oxlint-disable react/only-export-components -- pure helper, hook and component belong together */
 import { useCallback, useRef } from "react";
 import type { HTMLAttributes, PointerEvent, ReactNode } from "react";
+import { prefersReducedMotion } from "../../settings/motion";
 
 export interface Tilt {
   /** Degrees around the X axis (positive tips the top edge away). */
@@ -32,7 +33,7 @@ export function tiltFromPointer(x: number, y: number, w: number, h: number, maxD
 
 const canTilt = () =>
   typeof window !== "undefined" &&
-  !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches &&
+  !prefersReducedMotion() &&
   !window.matchMedia?.("(pointer: coarse)").matches;
 
 /**

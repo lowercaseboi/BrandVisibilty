@@ -1,4 +1,3 @@
-import { useId } from "react";
 import type { ChannelId, ChannelStatus, DistributionEvent } from "../../api/types";
 import { useFormat, useT } from "../../i18n";
 import { OUTCOME_LABEL, OUTCOME_TONE, channelName, eventsNewestFirst, latestEventByChannel } from "./campaignModel";
@@ -22,16 +21,12 @@ export function PublishLog({
 }) {
   const t = useT();
   const fmt = useFormat();
-  const headingId = useId();
   const newest = latestEventByChannel(events);
   const list = eventsNewestFirst(events);
 
   return (
-    <section className="card cs-panel" aria-labelledby={headingId}>
-      <div className="cs-panel-head">
-        <h2 id={headingId}>{t("board.campaign.log.title")}</h2>
-        <p className="muted small">{t("board.campaign.log.intro")}</p>
-      </div>
+    <div className="cs-log-body">
+      <p className="muted small">{t("board.campaign.log.intro")}</p>
       {list.length === 0 ? (
         <p className="muted small">{t("board.campaign.log.empty")}</p>
       ) : (
@@ -39,7 +34,7 @@ export function PublishLog({
           {list.map((e) => {
             const retry = (e.outcome === "failed" || e.outcome === "blocked") && newest.get(e.channel) === e;
             return (
-              <li key={e.event_id} className={`cs-log-row tone-${OUTCOME_TONE[e.outcome] ?? "muted"}`}>
+              <li key={e.event_id} className="cs-log-row" data-tone={OUTCOME_TONE[e.outcome] ?? "muted"}>
                 <span className="cs-log-dot" aria-hidden="true" />
                 <span className="cs-log-channel">{channelName(e.channel, statuses)}</span>
                 <span className="cs-log-outcome">{OUTCOME_LABEL[e.outcome] ? t(OUTCOME_LABEL[e.outcome]) : e.outcome}</span>
@@ -53,8 +48,8 @@ export function PublishLog({
                     </a>
                   )}
                   {e.error && <span className="cs-log-error">{e.error}</span>}
-                  {retry && (
-                    <button type="button" className="btn btn-secondary btn-small" disabled={busy || !canRetry} onClick={() => onRetry(e.channel)}>
+                  {retry && canRetry && (
+                    <button type="button" className="btn btn-secondary btn-small" disabled={busy} onClick={() => onRetry(e.channel)}>
                       {t("board.campaign.log.retry")}
                     </button>
                   )}
@@ -64,6 +59,6 @@ export function PublishLog({
           })}
         </ol>
       )}
-    </section>
+    </div>
   );
 }

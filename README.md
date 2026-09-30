@@ -23,7 +23,7 @@ Open a brand and you land on its **hub**, four modules deep:
 
 | Module | Answers |
 |--------|---------|
-| **Brand details** | Who is this brand — name, category, city, competitors, the questions it's tracked on. |
+| **Details** | Who is this brand — name, category, city, competitors, the questions it's tracked on — and its connected social accounts (Facebook Page, Instagram, X, LinkedIn, Google Business). |
 | **Analysis** | *How visible am I?* Composite score (0–100) with a confidence interval, Coverage / Prominence / Share of Voice, per-provider breakdown, and a live evidence view — one real AI answer with brand and competitor names highlighted. |
 | **Gaps & evidence** | *Why?* Every detected gap (presence, prominence, competitive, source, representation), each linked back to the raw answers that prove it. |
 | **Recommendation engine (board)** | *What should I do?* A kanban of prioritised suggestions, each traceable to a `gap_id` — drag a card to track it, or turn it into a campaign. |

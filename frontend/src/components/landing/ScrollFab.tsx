@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useT } from "../../i18n";
-
-const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+import { prefersReducedMotion } from "../../settings/motion";
 
 /** How close to the bottom of the page counts as "there" — flips the arrow to point up. */
 const BOTTOM_THRESHOLD_PX = 48;

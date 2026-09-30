@@ -15,6 +15,10 @@ import { CORNER_OF } from "./wireGeometry";
  * The outer `.hub-module` box is the grid item the live wires measure (it never transforms); the
  * TiltCard inside does the entrance (emerging from the centre card) and the lean toward the cursor.
  *
+ * A small numbered socket (`.hub-module-conn`) sits on the card's inner edge just under where its
+ * wire plugs in, so the card ↔ wire pairing reads without any motion (and on phones, where the
+ * "Module 0n" eyebrow is hidden). It lives outside the tilt, on the wire's measured box.
+ *
  * `named` drops the view-transition-name while the list → hub morph is still running: as a named
  * element the card would be a separate snapshot clipped to its own box, so it couldn't emerge from
  * the centre card (it sits in the page layer, under the morphing card, instead).
@@ -86,6 +90,9 @@ export function ModuleCard({
           </span>
         </TransitionLink>
       </TiltCard>
+      <span className="hub-module-conn" aria-hidden="true">
+        {fmt.number(index + 1)}
+      </span>
     </div>
   );
 }

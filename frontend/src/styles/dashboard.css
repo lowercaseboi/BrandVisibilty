@@ -587,7 +587,7 @@
   margin-top: var(--space-4);
 }
 
-@media (max-width: 760px) {
+@media (max-width: 640px) {
   .run-grid {
     grid-template-columns: minmax(0, 1fr);
   }

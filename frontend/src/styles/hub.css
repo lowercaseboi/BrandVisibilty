@@ -1023,6 +1023,78 @@
   }
 }
 
+/* Numbered socket on each module card's inner edge, just under where its wire plugs in (ModuleCard).
+   Static — it pops in with the port and then stays, so the card ↔ wire pairing reads with or
+   without motion. Straddles the edge so it fits the narrow phone gutter beside the rail. */
+.hub-module-conn {
+  position: absolute;
+  top: calc(50% + 11px);
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border: 1px solid color-mix(in srgb, var(--accent) 65%, var(--line));
+  border-radius: 50%;
+  background: var(--surface-solid);
+  color: var(--accent);
+  font: 600 10px/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  animation: hub-port-in 0.4s var(--ease-spring) backwards;
+  animation-delay: calc(var(--hub-delay) + var(--i, 0) * var(--hub-stagger) + var(--hub-draw));
+}
+
+.hub-module-tl .hub-module-conn,
+.hub-module-bl .hub-module-conn {
+  right: 0;
+  translate: 50% 0;
+}
+
+.hub-module-tr .hub-module-conn,
+.hub-module-br .hub-module-conn {
+  left: 0;
+  translate: -50% 0;
+}
+
+.hub.is-back .hub-module-conn,
+.hub.is-back .hub-rail {
+  animation: none;
+}
+
+/* Stacked layout's rail (LiveWires RailNodes): junction nodes where each row taps off the spine and
+   a chevron node midway along each run, pointing away from the brand card. */
+.hub-rail {
+  animation: hub-rail-in 0.4s var(--ease) backwards;
+  animation-delay: calc(var(--hub-delay) + var(--hub-draw));
+}
+
+@keyframes hub-rail-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.hub-rail-node circle,
+.hub-rail-arrow circle {
+  fill: var(--surface-solid);
+  stroke: var(--accent);
+  stroke-width: 1.4;
+}
+
+.hub-rail-node .hub-rail-node-core {
+  fill: var(--accent);
+  stroke: none;
+}
+
+.hub-rail-arrow path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 /* Hover / focus a module: its wire runs hotter (and ~1.4× faster, LiveWires.tsx), the others dim. */
 .hub-wires[data-active] .hub-wire:not(.is-active) {
   opacity: 0.35;
@@ -1059,9 +1131,11 @@
   opacity: 0.14;
 }
 
-/* ---------- stacked layout: centre on top, 2 × 2 modules, a bus wire down the middle ---------- */
+/* ---------- stacked layout: centre on top, 2 × 2 modules, a bus wire down the middle ----------
+   Up to the laptop breakpoint: below ~1100px the three-column cable layout squeezes the module
+   cards under ~250px and their previews clip, so the hub stacks there already. */
 
-@media (max-width: 979px) {
+@media (max-width: 1100px) {
   .hub-stage {
     --hub-w: 100%;
     min-height: 0;
@@ -1101,7 +1175,7 @@
   }
 }
 
-@media (max-width: 759px) {
+@media (max-width: 640px) {
   .hub-stage {
     column-gap: 24px;
     row-gap: 16px;
@@ -1168,6 +1242,8 @@
 /* ---------- reduced motion: everything in place, wires lit but still ---------- */
 
 @media (prefers-reduced-motion: reduce) {
+  .hub-module-conn,
+  .hub-rail,
   .hub-module-tilt,
   .hub-stage::before,
   .hub-port-body,
@@ -1189,7 +1265,16 @@
 
   .hub-port-halo {
     animation: none;
-    opacity: 0.18;
-    transform: scale(1.6);
+    opacity: 0.22;
+    transform: scale(1.7);
+  }
+
+  /* No current to show where a wire ends, so make the sockets themselves unmissable. */
+  .hub-port-ring {
+    stroke-width: 1.9;
+  }
+
+  .hub-port-core {
+    r: 2.4;
   }
 }

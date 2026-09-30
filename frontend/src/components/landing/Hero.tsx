@@ -1,20 +1,23 @@
 import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useT } from "../../i18n";
+import { useReducedMotion } from "../../settings/motion";
 import { Reveal } from "./Reveal";
-
-const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
 /** Hero: the pitch, two CTAs, and an illustrative "AI assistant" answer card. */
 export function Hero() {
   const t = useT();
   const glowRef = useRef<HTMLDivElement | null>(null);
+  const reduced = useReducedMotion();
 
   // Gentle parallax on the hero glow while it's in view. rAF-throttled; skipped under reduced motion.
   useEffect(() => {
-    if (prefersReducedMotion()) return;
     const glow = glowRef.current;
     if (!glow) return;
+    if (reduced) {
+      glow.style.transform = "";
+      return;
+    }
     let raf = 0;
     let ticking = false;
     const update = () => {
@@ -34,7 +37,7 @@ export function Hero() {
       window.removeEventListener("scroll", onScroll);
       cancelAnimationFrame(raf);
     };
-  }, []);
+  }, [reduced]);
 
   return (
     <section id="top" className="lp-band-dark lp-hero">

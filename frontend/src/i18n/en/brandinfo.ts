@@ -1,8 +1,192 @@
-// Brand details module (profile + coverage matrix + questions section head). English only for
+// Details module (connected accounts + profile + coverage matrix + questions section head). English only for
 // now — hi/mr fall back to English at runtime (i18n/index.tsx lookup) until a translation round
 // adds them. The questions editor itself keeps its existing pages.q.* / pages.add.* keys —
 // they're reused here rather than duplicated.
 export const brandinfo = {
+  // ---- Connected accounts (first section of Details)
+  "accounts.eyebrow": "Connected accounts",
+  "accounts.title": "Where this brand posts",
+  "accounts.sub": "Connect each platform once. Campaigns then post from this brand's own accounts; anything not connected gives you the text to post yourself.",
+  "accounts.count": "{n} of {total} connected",
+  "accounts.loading": "Checking connected accounts…",
+  "accounts.unavailableTitle": "Connected accounts aren't available here yet",
+  "accounts.unavailable": "This server doesn't support connecting accounts yet. Campaigns still give you the text to post yourself.",
+  "accounts.errorTitle": "Couldn't load connected accounts",
+  "accounts.error": "Reason: {message}",
+  "accounts.retry": "Try again",
+  "accounts.listLabel": "Platforms",
+
+  "accounts.channel.facebook_page": "Facebook Page",
+  "accounts.channel.instagram": "Instagram",
+  "accounts.channel.x": "X",
+  "accounts.channel.linkedin": "LinkedIn",
+  "accounts.channel.google_business": "Google Business",
+  "accounts.channel.whatsapp": "WhatsApp",
+
+  // State label (short, shown as a status pill) + one plain sentence.
+  "accounts.pill.connected": "Connected",
+  "accounts.pill.shared": "Shared account",
+  "accounts.pill.not_connected": "Not connected",
+  "accounts.pill.needs_setup": "Needs setup",
+  "accounts.pill.pending_approval": "Waiting for approval",
+  "accounts.pill.expired": "Expired",
+  "accounts.pill.ready": "Ready",
+  "accounts.line.connectedAs": "Connected as {name}.",
+  "accounts.line.connected": "Connected.",
+  "accounts.line.shared": "Using the server's shared account. Connect this brand's own account so posts come from it.",
+  "accounts.line.sharedAs": "Using the server's shared account ({name}). Connect this brand's own account so posts come from it.",
+  "accounts.line.not_connected": "Not connected yet. Campaigns give you the {platform} text to post yourself.",
+  "accounts.line.needs_setup": "One-click Connect for {platform} isn't set up on this server yet. You can still enter the details by hand.",
+  "accounts.line.pending_approval": "Google has to approve API access for this business first. Until then you get the text to post yourself.",
+  "accounts.line.expired": "The connection to {name} expired. Reconnect to keep posting.",
+  "accounts.line.whatsapp": "No account needed: posts open WhatsApp with your text ready to send.",
+  "accounts.expiresOn": "Access expires on {date}.",
+  "accounts.expiresSoon": "Access expires on {date}. Reconnect before then to keep posting.",
+  "accounts.via.oauth": "Signed in with {platform}",
+  "accounts.via.manual": "Entered by hand",
+  "accounts.docs": "Setup guide:",
+  "accounts.techDetail": "Technical details",
+
+  "accounts.action.connect": "Connect",
+  "accounts.action.reconnect": "Reconnect",
+  "accounts.action.manual": "Enter details manually",
+  "accounts.action.update": "Update details",
+  "accounts.action.test": "Test",
+  "accounts.action.disconnect": "Disconnect",
+  "accounts.action.connectAria": "Connect {platform}",
+  "accounts.action.reconnectAria": "Reconnect {platform}",
+  "accounts.action.manualAria": "Enter {platform} details manually",
+  "accounts.action.updateAria": "Update {platform} details",
+  "accounts.action.testAria": "Test the {platform} connection",
+  "accounts.action.disconnectAria": "Disconnect {platform}",
+  "accounts.busy": "Working…",
+  "accounts.redirecting": "Opening {platform} sign-in…",
+
+  "accounts.test.ok": "Connection works.",
+  "accounts.test.fail": "The test failed: {detail}.",
+  "accounts.err.action": "That didn't work: {message}",
+  "accounts.err.noSecretKey":
+    "The server has no SECRET_KEY, so it can't store account tokens safely. Add SECRET_KEY to the server's .env (see docs/CHANNEL_SETUP.md) and restart it.",
+  "accounts.err.invalidUrn": "{field} must start with urn:li:person: or urn:li:organization: followed by the ID.",
+  "accounts.err.noAdminToken": "Connecting accounts needs an admin token. Set ADMIN_TOKEN on the server first.",
+
+  // Return from a platform sign-in (?connected= / ?connect_choose= / ?connect_error=)
+  "accounts.toast.connected": "{platform} connected.",
+  "accounts.toast.error": "Couldn't connect {platform}.",
+  "accounts.toast.disconnected": "{platform} disconnected.",
+  "accounts.toast.saved": "{platform} details saved.",
+  "accounts.return.hint": "Connect an account below, then head back to your campaign.",
+  "accounts.return.ready": "Connected. Your campaign can post there now.",
+  "accounts.return.back": "Back to your campaign →",
+  "accounts.returnError": "Connecting {platform} didn't finish: {reason}",
+  "accounts.returnErrorPlain": "Connecting {platform} didn't finish. Please try again.",
+  "accounts.dismiss": "Dismiss",
+  // Reason codes from the backend's sign-in redirect (&reason=…), in plain words.
+  "accounts.reason.denied": "the sign-in was cancelled or permission wasn't granted.",
+  "accounts.reason.bad_state": "the sign-in link was invalid or already used. Start again from Connect.",
+  "accounts.reason.expired": "the sign-in took too long. Start again from Connect.",
+  "accounts.reason.no_code": "the platform didn't send the sign-in back. Try again.",
+  "accounts.reason.token_exchange": "the platform wouldn't hand over access. Try Connect again.",
+  "accounts.reason.no_pages": "this login doesn't manage any Facebook Pages.",
+  "accounts.reason.no_instagram": "no Instagram business account is linked to your Facebook Pages.",
+  "accounts.reason.no_locations": "no Google Business locations were found for this login.",
+  "accounts.reason.api_error": "the platform returned an error. Try again in a few minutes.",
+  "accounts.reason.network": "we couldn't reach the platform. Check the connection and try again.",
+  "accounts.reason.not_configured": "one-click Connect isn't set up on this server.",
+  "accounts.reason.no_secret_key": "the server has no SECRET_KEY, so it can't store tokens safely.",
+
+  // Manual entry dialog
+  "accounts.manual.title": "Enter {platform} details",
+  "accounts.manual.intro": "Paste the values from {platform}. Secrets are stored encrypted and never shown again.",
+  "accounts.manual.howTitle": "Where do I find this?",
+  "accounts.manual.required": "Fill in {field}.",
+  "accounts.manual.save": "Save and test",
+  "accounts.manual.saving": "Saving…",
+  "accounts.manual.testing": "Testing the connection…",
+  "accounts.manual.savedOk": "Saved, and the connection works.",
+  "accounts.manual.savedFail": "Saved, but the test failed: {detail}. Check the values and save again.",
+  "accounts.manual.noFields": "This platform has nothing to enter by hand.",
+  "accounts.cancel": "Cancel",
+  "accounts.close": "Close",
+  "accounts.done": "Done",
+
+  // Field labels + one-line help (unknown field names fall back to a humanised name + generic help)
+  "accounts.field.page_id.label": "Facebook Page ID",
+  "accounts.field.page_id.help": "The number that identifies your Page (Page → About → Page transparency).",
+  "accounts.field.page_token.label": "Page access token",
+  "accounts.field.page_token.help": "A long-lived Page token from Meta. It lets us post as the Page.",
+  "accounts.field.ig_user_id.label": "Instagram account ID",
+  "accounts.field.ig_user_id.help": "The Instagram business account linked to your Page (a long number, often starting 1784).",
+  "accounts.field.api_key.label": "API key",
+  "accounts.field.api_key.help": "From your X developer app, under Keys and tokens.",
+  "accounts.field.api_secret.label": "API key secret",
+  "accounts.field.api_secret.help": "Shown next to the API key when you generate it.",
+  "accounts.field.access_token.label": "Access token",
+  "accounts.field.access_token.help": "The token the platform gave you for this account.",
+  "accounts.field.access_secret.label": "Access token secret",
+  "accounts.field.access_secret.help": "Shown next to the access token when you generate it.",
+  "accounts.field.refresh_token.label": "Refresh token",
+  "accounts.field.refresh_token.help": "Lets us renew access without asking you to sign in again.",
+  "accounts.field.author_urn.label": "Post as (profile or company)",
+  "accounts.field.author_urn.help": "urn:li:person:… for your own profile, or urn:li:organization:… for a company Page.",
+  "accounts.field.organization_id.label": "Company Page ID",
+  "accounts.field.organization_id.help": "The number in your LinkedIn company Page's admin URL.",
+  "accounts.field.person_id.label": "Profile ID",
+  "accounts.field.person_id.help": "Your LinkedIn member ID (from the userinfo API).",
+  "accounts.field.account_id.label": "Business account ID",
+  "accounts.field.account_id.help": "Looks like accounts/1234…, from the Business Profile API.",
+  "accounts.field.location_id.label": "Location ID",
+  "accounts.field.location_id.help": "Looks like locations/9876…, one per shop listing.",
+  "accounts.field.generic.help": "Copy this from the platform's developer settings.",
+
+  // "Where do I find this?" — one step per line.
+  "accounts.howto.facebook_page":
+    "Open developers.facebook.com and create (or open) your app.\nIn Graph API Explorer, get a user token with pages_manage_posts and pages_read_engagement.\nExchange it for a long-lived token, then list your Pages: each Page has its ID and its own token.\nPaste that Page's ID and token here.",
+  "accounts.howto.instagram":
+    "Your Instagram account must be a Business or Creator account linked to your Facebook Page.\nIn Graph API Explorer, ask for the Page's instagram_business_account field: that number is the Instagram account ID.\nUse the same Page token as for Facebook.",
+  "accounts.howto.x":
+    "Open developer.x.com, create a project and an app.\nSet the app's permissions to Read and write.\nUnder Keys and tokens, generate the API key and secret, then the access token and secret.",
+  "accounts.howto.linkedin":
+    "Open linkedin.com/developers and create an app linked to your company Page.\nAdd the Share on LinkedIn product (and Community Management for company Pages).\nGenerate an access token with w_member_social (or w_organization_social) in the token tool.",
+  "accounts.howto.google_business":
+    "Apply for Business Profile API access in Google Cloud (approval can take days).\nOnce approved, enable the APIs and create an OAuth client.\nList your accounts and locations with the API to find both IDs.",
+  "accounts.howto.whatsapp": "Nothing to set up: WhatsApp posts are shared from your own phone.",
+
+  // Disconnect confirm
+  "accounts.disconnect.title": "Disconnect {platform}?",
+  "accounts.disconnect.body": "Campaigns will stop posting to {name} and give you the text to post yourself. You can connect again at any time.",
+  "accounts.disconnect.confirm": "Disconnect",
+
+  // Picker after a sign-in that can post as several Pages / organisations / locations
+  "accounts.choose.title": "Which {platform} account should this brand post as?",
+  "accounts.choose.loading": "Loading your accounts…",
+  "accounts.choose.emptyTitle": "No accounts found",
+  "accounts.choose.empty": "No accounts were found for this sign-in. Check the account has the right permissions and try again.",
+  "accounts.choose.errorTitle": "Couldn't load the accounts",
+  "accounts.choose.error": "Reason: {message}",
+  "accounts.choose.submit": "Use this account",
+  "accounts.choose.legend": "Accounts",
+  "accounts.kind.page": "Facebook Page",
+  "accounts.kind.instagram": "Instagram account",
+  "accounts.kind.member": "Your profile",
+  "accounts.kind.organization": "Company Page",
+  "accounts.kind.location": "Business location",
+  "accounts.kind.user": "Account",
+
+  // One-click offer after a Facebook sign-in that also found a linked Instagram account (&offer=)
+  "accounts.offer.text": "The same sign-in can also post to {platform} as {name}.",
+  "accounts.offer.textPlain": "The same sign-in can also post to {platform}.",
+  "accounts.offer.accept": "Also connect {platform} ({name})",
+  "accounts.offer.acceptPlain": "Also connect {platform}",
+  "accounts.offer.dismiss": "Not now",
+
+  // Admin token prompt (same token as the Campaign Studio)
+  "accounts.token.title": "Admin token",
+  "accounts.token.hint": "Connecting or changing accounts needs the admin token set on the server (ADMIN_TOKEN). It is kept for this tab only.",
+  "accounts.token.rejected": "That token was not accepted. Try again.",
+  "accounts.token.label": "Token",
+  "accounts.token.submit": "Continue",
+
   // ---- Profile section
   "profile.eyebrow": "Profile",
   "profile.title": "Brand information",

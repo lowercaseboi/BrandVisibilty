@@ -93,7 +93,8 @@ class Settings(BaseSettings):
     # ADMIN_TOKEN gates approve / publish / delete (header X-Admin-Token). Unset → only the
     # sandbox / export / whatsapp channels (which send nothing externally) can be used.
     admin_token: str | None = None
-    # Fernet key material for encrypting stored platform tokens (later OAuth "Connect" UI).
+    # Key material for encrypting per-brand platform tokens (Fernet key derived via HKDF) and
+    # signing OAuth `state`. Any long random string; changing it makes stored tokens unreadable.
     secret_key: str | None = None
     # Public origin that serves /media/... (Render URL, or a cloudflared tunnel locally).
     # Instagram needs the image at a public URL; unset → IG publishing fails with a clear error.
@@ -121,6 +122,28 @@ class Settings(BaseSettings):
     gbp_account_id: str | None = None
     gbp_location_id: str | None = None
     gbp_access_token: str | None = None
+    # LinkedIn (Posts API). Single-tenant .env fallback; per-brand accounts are connected in the UI.
+    linkedin_author_urn: str | None = None  # urn:li:person:<id> or urn:li:organization:<id>
+    linkedin_access_token: str | None = None
+    linkedin_api_version: str = "202609"  # LinkedIn-Version header (YYYYMM; each lasts >= 1 year)
+    # Ask LinkedIn for w_organization_social + r_organization_admin too (needs the Community
+    # Management API product approved for the app); off → post as the member only.
+    linkedin_organization_scopes: bool = False
+
+    # --- Per-brand "Connect" buttons (OAuth apps; docs/CHANNEL_SETUP.md §Per-brand accounts) ---
+    meta_app_id: str | None = None
+    meta_app_secret: str | None = None
+    linkedin_client_id: str | None = None
+    linkedin_client_secret: str | None = None
+    x_client_id: str | None = None
+    x_client_secret: str | None = None
+    google_client_id: str | None = None
+    google_client_secret: str | None = None
+    # Public base URL of THIS backend, as the browser reaches it; redirect URIs are
+    # f"{OAUTH_REDIRECT_BASE}/oauth/<channel>/callback". Behind docker nginx: http://host:8080/api.
+    oauth_redirect_base: str | None = None
+    # Where the OAuth callback sends the browser back to (the React app).
+    frontend_base_url: str = "http://localhost:5173"
     # Campaign copy drafting: "auto" = first configured of gemini / groq, else template;
     # or force "gemini" | "groq" | "template".
     copy_provider: str = "auto"

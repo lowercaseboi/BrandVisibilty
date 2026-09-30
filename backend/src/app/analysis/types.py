@@ -160,3 +160,8 @@ class DetectionConfig:
     competitive_co_occurrence_threshold: float = 0.30  # θ_co
     competitive_beat_threshold: float = 0.60  # θ_beat
     representation_disagreement_threshold: float = 0.5  # not in Decisions Log — starting assumption
+    # Providers "disagree with each other" only when the share of distinct claim sets among the
+    # claim-bearing prompted answers exceeds this (and there are >= 3 such answers). A single odd
+    # answer out of many no longer fires the gap — starting assumption, like the one above.
+    representation_distinct_rate_threshold: float = 0.5
+    representation_min_claim_bearing: int = 3

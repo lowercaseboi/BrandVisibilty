@@ -221,6 +221,7 @@ def test_representation_gap_fires_on_disagreement_between_providers():
     prompted = [
         PromptedObservation("p1", "q1", "gemini", "identity", frozenset({"perfume"})),
         PromptedObservation("p2", "q2", "groq", "identity", frozenset({"cologne_brand"})),
+        PromptedObservation("p3", "q3", "claude", "identity", frozenset({"perfume", "attar"})),
     ]
     expected = frozenset({"perfume"})
     gaps = detect_gaps(
@@ -258,3 +259,43 @@ def test_no_gaps_ever_marked_inferred_by_the_deterministic_rules():
     observations = [obs("o1", "q1", "gemini", [])]
     gaps = detect_gaps(observations, BRAND, frozenset({COMP_A}))
     assert all(g.is_inferred is False for g in gaps)
+
+
+# --- REPRESENTATION: providers disagreeing with each other is a *rate* (plan D5) ---------------
+
+
+def _rep_gaps(claim_sets, config=None):
+    config = config or DetectionConfig(representation_disagreement_threshold=0.99)
+    prompted = [
+        PromptedObservation(f"p{i}", f"q{i}", "gemini", "identity", frozenset(s)) for i, s in enumerate(claim_sets)
+    ]
+    # expected overlaps every set, so only the between-providers rule can fire
+    expected = frozenset().union(*map(frozenset, claim_sets))
+    gaps = detect_gaps(
+        [], BRAND, frozenset({COMP_A}), config, prompted_observations=prompted, expected_attributes=expected
+    )
+    return gaps_of_type(gaps, "representation")
+
+
+def test_representation_uniform_claims_no_gap():
+    assert _rep_gaps([{"perfume"}] * 6) == []
+
+
+def test_representation_mixed_claims_under_threshold_no_gap():
+    # 6 claim-bearing answers, 2 distinct sets → 0.33 <= 0.5: one paraphrase isn't a gap
+    sets = [{"perfume"}] * 5 + [{"perfume", "attar"}]
+    assert _rep_gaps(sets) == []
+    # and fewer than 3 claim-bearing answers never counts, however mixed
+    assert _rep_gaps([{"perfume"}, {"attar"}]) == []
+
+
+def test_representation_mixed_claims_above_threshold_gap():
+    sets = [{"perfume"}, {"attar"}, {"perfume", "attar"}, {"perfume"}]  # 3 distinct / 4 = 0.75
+    rep = _rep_gaps(sets)
+    assert len(rep) == 1
+    assert rep[0].detail["disagree_with_each_other"] is True
+    assert len(rep[0].detail["distinct_claim_sets"]) == 3
+    assert rep[0].detail["disagreement_rate"] == 0.0
+    # the threshold is configurable
+    assert _rep_gaps(sets, DetectionConfig(representation_disagreement_threshold=0.99,
+                                           representation_distinct_rate_threshold=0.8)) == []

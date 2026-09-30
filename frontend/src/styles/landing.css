@@ -741,7 +741,7 @@
   font-size: 1.12rem;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 640px) {
   .lp-context-grid {
     grid-template-columns: 1fr;
     gap: 24px;
@@ -844,7 +844,7 @@
   max-width: 60ch;
 }
 
-@media (max-width: 560px) {
+@media (max-width: 640px) {
   .lp-workflow-rail {
     left: 19px;
   }
@@ -1125,7 +1125,7 @@
   }
 }
 
-@media (max-width: 560px) {
+@media (max-width: 640px) {
   .lp-feature-grid {
     grid-template-columns: 1fr;
   }
@@ -1200,7 +1200,7 @@
   text-decoration: underline;
 }
 
-@media (max-width: 560px) {
+@media (max-width: 640px) {
   .lp-footer-inner {
     flex-direction: column;
     align-items: flex-start;

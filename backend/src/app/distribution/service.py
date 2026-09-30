@@ -86,16 +86,17 @@ def _make_qr_poster(**kwargs: Any) -> Asset:
     return make_qr_poster(**kwargs)
 
 
-def _get_adapter(channel: ChannelId) -> Any:
+def _get_adapter(channel: ChannelId, brand_key: str | None = None) -> Any:
+    """The adapter with the brand's connected account (else the global .env credentials)."""
     from app.distribution.channels import get_adapter
 
-    return get_adapter(channel)
+    return get_adapter(channel, brand_key)
 
 
-def channel_statuses() -> list[Any]:
+def channel_statuses(brand_key: str | None = None) -> list[Any]:
     from app.distribution.channels import channel_statuses as statuses
 
-    return statuses()
+    return statuses(brand_key)
 
 
 def _public_base_url() -> str | None:
@@ -603,7 +604,7 @@ def _attempt(campaign: Campaign, channel: ChannelId, base_url: str | None) -> Di
         return _event(campaign, channel, "blocked", variant=variant, error=reason)
     assert variant is not None
     try:
-        adapter = _get_adapter(channel)
+        adapter = _get_adapter(channel, campaign.brand_key)
         mode = adapter.status().mode
         if mode == "disabled":
             return _event(campaign, channel, "blocked", variant=variant, error=f"The {channel} channel is disabled on this server")

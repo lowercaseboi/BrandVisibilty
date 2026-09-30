@@ -13,12 +13,16 @@ from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException, Query, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 
 from app.brands import registry as brands_registry
 from app.collection import registry as provider_registry
 from app.interface.jobs import JobManager, JobNotRunning, UnknownProvider
 from app.interface.schemas import (
+    AccountChoiceOut,
+    AccountChooseRequest,
+    AccountStatusOut,
+    AccountTestResponse,
     BoardState,
     BrandDeleteResponse,
     BrandProfile,
@@ -32,6 +36,9 @@ from app.interface.schemas import (
     DeliverablePatch,
     HealthResponse,
     Job,
+    ManualAccountRequest,
+    OAuthStartRequest,
+    OAuthStartResponse,
     ObservationsResponse,
     ProviderInfoOut,
     PublishRequest,
@@ -96,6 +103,13 @@ TAGS = [
         "images, edit, approve, then publish or export. Approve / publish / delete need the `X-Admin-Token` "
         "header when the server sets ADMIN_TOKEN; without ADMIN_TOKEN only the sandbox, export and WhatsApp "
         "channels can be used. Every publish attempt, including refused ones, is logged.",
+    },
+    {
+        "name": "accounts",
+        "description": "Per-brand connected social accounts (Details → Connected accounts): OAuth Connect buttons "
+        "with a manual-token fallback. Tokens are stored encrypted (SECRET_KEY) and never returned. Changing "
+        "an account needs X-Admin-Token when ADMIN_TOKEN is set. A brand without its own account falls back "
+        "to the server's .env credentials.",
     },
 ]
 
@@ -594,6 +608,188 @@ def list_channels() -> list[dict[str, Any]]:
     """Every channel adapter and whether it can publish now (connected), only export, or is disabled.
     Reads settings only — never calls a platform. Credentials are never returned."""
     return [asdict(s) for s in _campaigns().channel_statuses()]
+
+
+@app.get("/brands/{brand_key}/channels", tags=["campaigns"], response_model=list[ChannelStatusOut])
+def list_brand_channels(brand_key: str) -> list[dict[str, Any]]:
+    """Like GET /channels, but with this brand's connected accounts (falling back to the server's
+    .env credentials for channels the brand hasn't connected). Never calls a platform."""
+    _known_brand_or_404(brand_key)
+    return [asdict(s) for s in _campaigns().channel_statuses(brand_key)]
+
+
+# --------------------------------------------------------------------------- connected accounts
+
+
+def _accounts():
+    from app.distribution import accounts
+
+    return accounts
+
+
+def _oauth():
+    from app.distribution import oauth
+
+    return oauth
+
+
+def _require_admin(header: str | None) -> str:
+    configured, actor = _check_admin(header)
+    if configured and actor is None:
+        raise HTTPException(status_code=401, detail="Missing or wrong X-Admin-Token")
+    return actor or "user"
+
+
+def _account_channel_or_404(channel: str, *, allow_whatsapp: bool = False) -> None:
+    allowed = _accounts().STATUS_CHANNELS if allow_whatsapp else _accounts().ACCOUNT_CHANNELS
+    if channel not in allowed:
+        raise HTTPException(status_code=404, detail=f"No account to connect for channel '{channel}'")
+
+
+@contextlib.contextmanager
+def _account_errors() -> Iterator[None]:
+    accounts, oauth = _accounts(), _oauth()
+    try:
+        yield
+    except accounts.SecretKeyMissing as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from None
+    except oauth.OAuthNotConfigured as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
+    except accounts.AccountError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from None
+
+
+def _account_audit(brand_key: str, actor: str, action: str, channel: str, **context: Any) -> None:
+    _campaigns()._audit(brand_key, actor, action, f"account:{channel}", **context)
+
+
+@app.get("/brands/{brand_key}/accounts", tags=["accounts"], response_model=list[AccountStatusOut])
+def list_accounts(brand_key: str) -> list[dict[str, Any]]:
+    """The brand's account on each channel (facebook_page, instagram, x, linkedin, google_business,
+    whatsapp): state, how it's connected, whether the Connect button works, and the manual form's
+    fields. Never returns a token."""
+    _known_brand_or_404(brand_key)
+    return [asdict(a) for a in _accounts().account_statuses(brand_key)]
+
+
+@app.put("/brands/{brand_key}/accounts/{channel}", tags=["accounts"], response_model=AccountStatusOut)
+def put_account(
+    brand_key: str,
+    channel: str,
+    body: ManualAccountRequest,
+    x_admin_token: str | None = Header(default=None, description=ADMIN_HEADER_DOC),
+) -> dict[str, Any]:
+    """Connect manually: all of the channel's `manual_fields` (422 names a missing/invalid field,
+    never its value). Replaces any existing account for the channel. 503 without SECRET_KEY."""
+    actor = _require_admin(x_admin_token)
+    _known_brand_or_404(brand_key)
+    _account_channel_or_404(channel)
+    with _account_errors():
+        _accounts().set_manual(brand_key, channel, body.fields)
+    _account_audit(brand_key, actor, "account.connect", channel, method="manual")
+    return asdict(_accounts().account_status(brand_key, channel))
+
+
+@app.delete("/brands/{brand_key}/accounts/{channel}", tags=["accounts"], response_model=AccountStatusOut)
+def delete_account(
+    brand_key: str,
+    channel: str,
+    x_admin_token: str | None = Header(default=None, description=ADMIN_HEADER_DOC),
+) -> dict[str, Any]:
+    """Disconnect: forget the brand's stored credentials for the channel (the platform-side app
+    authorisation stays until the user removes it there). Returns the new status."""
+    actor = _require_admin(x_admin_token)
+    _known_brand_or_404(brand_key)
+    _account_channel_or_404(channel)
+    with _account_errors():
+        existed = _accounts().delete_account(brand_key, channel)
+    if existed:
+        _account_audit(brand_key, actor, "account.disconnect", channel)
+    return asdict(_accounts().account_status(brand_key, channel))
+
+
+@app.post("/brands/{brand_key}/accounts/{channel}/test", tags=["accounts"], response_model=AccountTestResponse)
+def test_account(
+    brand_key: str,
+    channel: str,
+    x_admin_token: str | None = Header(default=None, description=ADMIN_HEADER_DOC),
+) -> dict[str, Any]:
+    """One cheap read-only call to the platform with the brand's effective credentials (e.g. the
+    Page's name, the X user). Refreshes an expired token first when possible."""
+    _require_admin(x_admin_token)
+    _known_brand_or_404(brand_key)
+    _account_channel_or_404(channel, allow_whatsapp=True)
+    ok, detail = _oauth().test_account(brand_key, channel)
+    return {"ok": ok, "detail": detail}
+
+
+@app.post("/brands/{brand_key}/accounts/{channel}/oauth/start", tags=["accounts"], response_model=OAuthStartResponse)
+def oauth_start(
+    brand_key: str,
+    channel: str,
+    body: OAuthStartRequest | None = None,
+    x_admin_token: str | None = Header(default=None, description=ADMIN_HEADER_DOC),
+) -> dict[str, Any]:
+    """Begin the Connect flow: send the browser to `authorize_url`. The platform comes back to
+    GET /oauth/{channel}/callback, which redirects to the app. 409 when the platform's OAuth app
+    isn't configured on the server, 503 without SECRET_KEY."""
+    _require_admin(x_admin_token)
+    _known_brand_or_404(brand_key)
+    _account_channel_or_404(channel)
+    with _account_errors():
+        url = _oauth().start(brand_key, channel, body.return_to if body else None)
+    return {"authorize_url": url}
+
+
+@app.get(
+    "/oauth/{channel}/callback",
+    tags=["accounts"],
+    response_class=RedirectResponse,
+    status_code=302,
+    responses={302: {"description": "Back to the app: ?connected= | ?connect_choose= | ?connect_error=&reason="}},
+)
+def oauth_callback(
+    channel: str,
+    code: str | None = Query(default=None, max_length=4096),
+    state: str | None = Query(default=None, max_length=4096),
+    error: str | None = Query(default=None, max_length=200),
+) -> RedirectResponse:
+    """Where the platform sends the browser after consent (no admin token — the signed, single-use
+    `state` protects it). Redirects to FRONTEND_BASE_URL + return_to with `connected=<channel>`,
+    `connect_choose=<channel>` (several Pages/orgs/locations: pick one) or
+    `connect_error=<channel>&reason=<code>`; also `offer=instagram` when a connected Facebook Page
+    has a linked Instagram account ready to choose. `#accounts` is added for the details page."""
+    target = _oauth().handle_callback(channel, code=code, state=state, error=error)
+    return RedirectResponse(target, status_code=302)
+
+
+@app.get("/brands/{brand_key}/accounts/{channel}/choices", tags=["accounts"], response_model=list[AccountChoiceOut])
+def account_choices(brand_key: str, channel: str) -> list[dict[str, str]]:
+    """The options found by the last Connect (Pages, LinkedIn member/organisations, GBP locations,
+    Instagram accounts) waiting for a pick; empty when none or expired (30 min)."""
+    _known_brand_or_404(brand_key)
+    _account_channel_or_404(channel)
+    with _account_errors():
+        return _accounts().pending_choices(brand_key, channel)
+
+
+@app.post("/brands/{brand_key}/accounts/{channel}/choose", tags=["accounts"], response_model=AccountStatusOut)
+def account_choose(
+    brand_key: str,
+    channel: str,
+    body: AccountChooseRequest,
+    x_admin_token: str | None = Header(default=None, description=ADMIN_HEADER_DOC),
+) -> dict[str, Any]:
+    """Connect the chosen option (404 when it isn't pending any more)."""
+    actor = _require_admin(x_admin_token)
+    _known_brand_or_404(brand_key)
+    _account_channel_or_404(channel)
+    with _account_errors():
+        _accounts().choose(brand_key, channel, body.id)
+    _account_audit(brand_key, actor, "account.connect", channel, method="oauth")
+    return asdict(_accounts().account_status(brand_key, channel))
 
 
 @app.get("/brands/{brand_key}/campaigns", tags=["campaigns"], response_model=list[CampaignOut])

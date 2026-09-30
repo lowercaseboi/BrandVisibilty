@@ -175,8 +175,15 @@ def _representation_gap(
     ]
     disagreement_rate = len(disagree_with_profile) / len(prompted_observations)
 
-    distinct_claim_sets = {obs.claimed_attributes for obs in prompted_observations if obs.claimed_attributes}
-    disagree_with_each_other = len(distinct_claim_sets) > 1
+    claim_bearing = [obs for obs in prompted_observations if obs.claimed_attributes]
+    distinct_claim_sets = {obs.claimed_attributes for obs in claim_bearing}
+    # A rate, not "more than one distinct set": with many answers a single paraphrase would
+    # otherwise always fire. Needs enough claim-bearing answers for the rate to mean anything.
+    n_claim_bearing = len(claim_bearing)
+    disagree_with_each_other = (
+        n_claim_bearing >= config.representation_min_claim_bearing
+        and len(distinct_claim_sets) / n_claim_bearing > config.representation_distinct_rate_threshold
+    )
 
     if disagreement_rate < config.representation_disagreement_threshold and not disagree_with_each_other:
         return None

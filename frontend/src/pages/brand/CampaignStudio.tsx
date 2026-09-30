@@ -1,53 +1,44 @@
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useLocation, useParams, useSearchParams } from "react-router-dom";
 import {
   ApiError,
   approveCampaign,
-  campaignExportUrl,
   createCampaign,
   deleteCampaign,
-  listChannels,
+  listBrandChannels,
   patchVariant,
   publishCampaign,
   regenerateImage,
   updateDeliverable,
 } from "../../api/client";
 import { CHANNEL_IDS } from "../../api/types";
-import type {
-  Campaign,
-  ChannelId,
-  ChannelStatus,
-  DeliverablePatch,
-  RegenerateImageRequest,
-  Variant,
-  VariantPatch,
-} from "../../api/types";
+import type { Campaign, ChannelId, ChannelStatus, DeliverablePatch, RegenerateImageRequest, Variant, VariantPatch } from "../../api/types";
 import { campaignHref } from "../../components/campaign/CampaignIndex";
 import {
-  CHANNEL_FORMATS,
-  assetForVariant,
+  TOKENLESS_CHANNELS,
   blockingIssues,
-  canApprove,
-  channelName,
-  channelOptions,
-  defaultSelection,
   hashtagsForServer,
   isApproved,
+  latestEventByChannel,
   statusView,
-  TOKENLESS_CHANNELS,
   usesTemplateImages,
-  whatsappShareUrl,
 } from "../../components/campaign/campaignModel";
 import { isTokenUnsetError } from "../../components/campaign/adminToken";
-import { DeliverablesPanel } from "../../components/campaign/DeliverablesPanel";
-import { ImagePanel } from "../../components/campaign/ImagePanel";
-import { PlatformPreview } from "../../components/campaign/Previews";
-import { ChannelBar, PublishDialog } from "../../components/campaign/PublishPanel";
-import { PublishLog } from "../../components/campaign/PublishLog";
+import { PublishStep } from "../../components/campaign/PublishStep";
+import type { SendState } from "../../components/campaign/PublishStep";
+import { ResultsStep } from "../../components/campaign/ResultsStep";
+import { ReviewStep } from "../../components/campaign/ReviewStep";
+import type { ReviewTab } from "../../components/campaign/ReviewStep";
+import { ActionBar, Generating, Stepper } from "../../components/campaign/StudioChrome";
+import { EmptyState } from "../../components/EmptyState";
+import { STEPS, STEP_LABEL, currentStep, defaultPicks, parseStep, planDestinations, reachableSteps, sendList } from "../../components/campaign/studioFlow";
+import type { StepId } from "../../components/campaign/studioFlow";
 import { useAdminGate } from "../../components/campaign/useAdminGate";
 import { useCampaign } from "../../components/campaign/useCampaign";
 import { useDraftSaver } from "../../components/campaign/useDraftSaver";
-import { VariantEditor } from "../../components/campaign/VariantEditor";
+import type { SaveState } from "../../components/campaign/useDraftSaver";
+import { SaveIndicator } from "../../components/campaign/VariantEditor";
+import { WhereStep } from "../../components/campaign/WhereStep";
 import { actionTitle } from "../../components/dashboard/actions";
 import { gapTypeText, humanizeId, parseSuggestionKey } from "../../components/dashboard/helpers";
 import { ModuleShell } from "../../components/module/ModuleShell";
@@ -55,33 +46,76 @@ import { brandHref, gapsHref } from "../../components/module/modules";
 import { TransitionLink, useTransitionNavigate } from "../../components/module/transition";
 import { toast } from "../../components/Toaster";
 import { useFormat, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n";
+import { useReducedMotion } from "../../settings/motion";
 import { useBrandData } from "./BrandContext";
 
 const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
 const channelOrder = (a: Variant, b: Variant) => CHANNEL_IDS.indexOf(a.channel) - CHANNEL_IDS.indexOf(b.channel);
 
+const STEP_INTRO: Record<StepId, MessageKey> = {
+  review: "board.campaign.review.intro",
+  where: "board.campaign.where.intro",
+  publish: "board.campaign.publish.intro",
+  results: "board.campaign.results.intro",
+};
+
+// The step-2 choice survives a trip to Details (connecting an account) and reloads, per tab.
+const picksKey = (cid: string) => `bv.campaignPicks.${cid}`;
+function readPicks(cid: string): ChannelId[] | null {
+  try {
+    const raw = sessionStorage.getItem(picksKey(cid));
+    const list: unknown = raw ? JSON.parse(raw) : null;
+    return Array.isArray(list) ? list.filter((c): c is ChannelId => CHANNEL_IDS.includes(c as ChannelId)) : null;
+  } catch {
+    return null;
+  }
+}
+function writePicks(cid: string, picks: ChannelId[]): void {
+  try {
+    sessionStorage.setItem(picksKey(cid), JSON.stringify(picks));
+  } catch {
+    /* storage unavailable: the choice lasts for this visit */
+  }
+}
+
+/** One save indicator for the whole draft. */
+function overallSave(states: Record<string, SaveState>[]): SaveState | undefined {
+  const all = states.flatMap((s) => Object.values(s));
+  if (all.includes("error")) return "error";
+  if (all.some((s) => s === "saving" || s === "pending")) return "saving";
+  return all.includes("saved") ? "saved" : undefined;
+}
+
 /**
- * Campaign Studio (PRD §11.5 / AC-10): a recommendation's campaign — live look-alike previews per
- * app, per-channel copy editors with limits, images, text deliverables, then Approve → Publish with
- * every attempt logged. The header traces back to the recommendation and its gap (AC-7).
+ * Campaign Studio (PRD §11.5 / AC-10): a recommendation's campaign as a guided four-step flow —
+ * review the draft, choose where to post, approve & publish, results — under a sticky progress
+ * header, with the step's primary action in a sticky bottom bar. The page traces back to the
+ * recommendation and its gap (AC-7); every publish attempt is logged (AC-10).
  */
 export function CampaignStudio() {
   const t = useT();
   const { campaignId = "" } = useParams();
   const { brandKey } = useBrandData();
-  const { campaign, job, error, loading, setCampaign } = useCampaign(brandKey, campaignId);
+  const { campaign, job, error, loading, setCampaign, reload } = useCampaign(brandKey, campaignId);
 
   let body;
   if (loading && !campaign) body = <p className="status">{t("board.campaign.loading")}</p>;
   else if (!campaign)
     body = (
-      <div className="card board-empty-state">
-        <h2>{t("board.campaign.notFound")}</h2>
-        <p className="muted">{error instanceof ApiError && error.status !== 404 ? errorText(error) : t("board.campaign.notFoundBody")}</p>
-      </div>
+      <EmptyState
+        icon="compass"
+        title={t("board.campaign.notFound")}
+        body={error instanceof ApiError && error.status !== 404 ? errorText(error) : t("board.campaign.notFoundBody")}
+        primary={
+          <TransitionLink to={brandHref(brandKey, "recommendations")} className="btn btn-primary">
+            {t("board.campaign.back")}
+          </TransitionLink>
+        }
+      />
     );
-  else body = <Studio key={campaign.campaign_id} campaign={campaign} job={job} setCampaign={setCampaign} />;
+  else body = <Studio key={campaign.campaign_id} campaign={campaign} job={job} setCampaign={setCampaign} reload={reload} />;
 
   return (
     <ModuleShell id="recommendations">
@@ -97,43 +131,66 @@ function Studio({
   campaign,
   job,
   setCampaign,
+  reload,
 }: {
   campaign: Campaign;
   job: ReturnType<typeof useCampaign>["job"];
   setCampaign: (c: Campaign) => void;
+  reload: () => Promise<void>;
 }) {
   const t = useT();
   const fmt = useFormat();
   const go = useTransitionNavigate();
+  const location = useLocation();
+  const reduced = useReducedMotion();
   const { brandKey, brandName, latest, history } = useBrandData();
   const { runAdmin, dialog } = useAdminGate();
   const cid = campaign.campaign_id;
 
-  // ---- channels (adapter status) ----
+  // The newest campaign, also between renders (the publish loop reads it after each await).
+  const campaignRef = useRef(campaign);
+  useEffect(() => {
+    campaignRef.current = campaign;
+  }, [campaign]);
+  const commit = useCallback(
+    (c: Campaign) => {
+      campaignRef.current = c;
+      setCampaign(c);
+    },
+    [setCampaign],
+  );
+
+  // ---- this brand's channels (its connected accounts) ----
   const [channels, setChannels] = useState<ChannelStatus[] | null>(null);
   const [channelsError, setChannelsError] = useState(false);
   const loadChannels = useCallback(() => {
-    listChannels()
+    listBrandChannels(brandKey)
       .then((c) => {
         setChannels(c);
         setChannelsError(false);
       })
       .catch(() => setChannelsError(true));
-  }, []);
-  useEffect(loadChannels, [loadChannels]);
+  }, [brandKey]);
+  useEffect(() => {
+    loadChannels();
+    // Back from connecting an account in another tab: check again.
+    const onVisible = () => document.visibilityState === "visible" && loadChannels();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [loadChannels]);
   const statuses = useMemo(() => channels ?? [], [channels]);
 
   // ---- autosave (variants per channel, deliverables per index) ----
   const variantSaver = useDraftSaver<VariantPatch>(
     useCallback(
-      async (channel: string, patch: VariantPatch) => setCampaign(await patchVariant(brandKey, cid, channel as ChannelId, patch)),
-      [brandKey, cid, setCampaign],
+      async (channel: string, patch: VariantPatch) => commit(await patchVariant(brandKey, cid, channel as ChannelId, patch)),
+      [brandKey, cid, commit],
     ),
   );
   const deliverableSaver = useDraftSaver<DeliverablePatch>(
     useCallback(
-      async (key: string, patch: DeliverablePatch) => setCampaign(await updateDeliverable(brandKey, cid, Number(key.slice(1)), patch)),
-      [brandKey, cid, setCampaign],
+      async (key: string, patch: DeliverablePatch) => commit(await updateDeliverable(brandKey, cid, Number(key.slice(1)), patch)),
+      [brandKey, cid, commit],
     ),
   );
 
@@ -148,108 +205,181 @@ function Studio({
   );
   const view = useMemo(() => ({ ...campaign, variants, deliverables }), [campaign, variants, deliverables]);
 
-  const [active, setActive] = useState<ChannelId | null>(null);
-  const activeVariant = variants.find((v) => v.channel === active) ?? variants[0] ?? null;
-  const activeAsset = activeVariant ? assetForVariant(campaign.assets, activeVariant) : null;
-
   const editVariant = (channel: ChannelId, patch: VariantPatch) => {
     const out = { ...patch };
     if (out.hashtags) out.hashtags = hashtagsForServer(out.hashtags);
     variantSaver.edit(channel, out);
   };
 
+  // ---- steps: ?step= in the URL (Back / Forward work), else resume from the status ----
+  const [params, setParams] = useSearchParams();
+  const step = currentStep(view, parseStep(params.get("step")));
+  const reachable = reachableSteps(view);
+  const goStep = useCallback(
+    (s: StepId) =>
+      setParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("step", s);
+        return next;
+      }),
+    [setParams],
+  );
+  const [tab, setTab] = useState<ReviewTab>(variants[0]?.channel ?? "web");
+
+  // Focus the new step's heading and bring the studio's top into view (not on first load).
+  const rootRef = useRef<HTMLDivElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const shownStep = useRef(step);
+  useEffect(() => {
+    if (shownStep.current === step) return;
+    shownStep.current = step;
+    headingRef.current?.focus({ preventScroll: true });
+    const top = rootRef.current?.getBoundingClientRect().top ?? 0;
+    if (top < 0) window.scrollTo({ top: window.scrollY + top - 88, behavior: reduced ? "auto" : "smooth" });
+  }, [step, reduced]);
+
+  // ---- where to post (step 2) ----
+  const [picked, setPicked] = useState<ChannelId[] | null>(() => {
+    const stored = readPicks(cid);
+    const joined = new URLSearchParams(window.location.search).get("connected") as ChannelId | null;
+    if (!stored || !joined || !CHANNEL_IDS.includes(joined) || stored.includes(joined)) return stored;
+    writePicks(cid, [...stored, joined]);
+    return [...stored, joined];
+  });
+  const dests = useMemo(() => planDestinations(view, statuses), [view, statuses]);
+  const chosen = picked ?? defaultPicks(dests);
+  const sends = sendList(dests, chosen);
+  const toggle = useCallback(
+    (ch: ChannelId, on: boolean) => {
+      const base = picked ?? defaultPicks(dests);
+      const next = on ? [...new Set([...base, ch])] : base.filter((c) => c !== ch);
+      setPicked(next);
+      writePicks(cid, next);
+    },
+    [picked, dests, cid],
+  );
+  // Back from Details with ?connected=<channel>: the stored choice gains that channel (the default
+  // choice already includes every connected channel); then the param is dropped from the URL.
+  const connected = params.get("connected");
+  useEffect(() => {
+    if (!connected) return;
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("connected");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [connected, setParams]);
+
   // ---- images ----
   const [regenerating, setRegenerating] = useState(false);
-  const regenerate = (req: RegenerateImageRequest) => {
+  const regenerate = (req: RegenerateImageRequest, channel: ChannelId) => {
+    const before = new Set(campaign.assets.map((a) => a.asset_id));
     setRegenerating(true);
     regenerateImage(brandKey, cid, req)
-      .then(setCampaign)
+      .then((c) => {
+        commit(c);
+        // The new take is what the user wanted for this channel: use it here.
+        const fresh = c.assets.find((a) => !before.has(a.asset_id) && a.format === req.format);
+        if (fresh) editVariant(channel, { asset_id: fresh.asset_id });
+      })
       .catch((err: unknown) => toast(t("board.campaign.toast.regenFailed", { error: errorText(err) })))
       .finally(() => setRegenerating(false));
   };
 
-  // ---- approve / publish / delete ----
-  const [busy, setBusy] = useState<"approve" | "publish" | "delete" | "retry" | null>(null);
+  // ---- approve & publish (one confirm; channels sent one by one for per-channel progress) ----
+  const [busy, setBusy] = useState(false);
+  const [approving, setApproving] = useState(false);
+  const [progress, setProgress] = useState<Partial<Record<ChannelId, SendState>>>({});
   const [actionError, setActionError] = useState<string | null>(null);
   const [tokenUnset, setTokenUnset] = useState(false);
-  const [confirming, setConfirming] = useState(false);
-  const [picked, setPicked] = useState<ChannelId[] | null>(null);
 
-  const options = useMemo(() => channelOptions(view, statuses), [view, statuses]);
-  const selectable = options.filter((o) => o.block === null);
-  const selected = (picked ?? defaultSelection(options)).filter((c) => selectable.some((o) => o.status.channel === c));
-  const selectedOptions = selectable.filter((o) => selected.includes(o.status.channel));
-
-  const handleAdminError = (err: unknown) => {
-    if (isTokenUnsetError(err)) setTokenUnset(true);
-    else setActionError(errorText(err));
-  };
-
-  const approve = async () => {
+  const send = async (list: ChannelId[]) => {
+    if (!list.length || busy) return;
+    setBusy(true);
     setActionError(null);
-    setBusy("approve");
+    setTokenUnset(false);
+    setProgress(Object.fromEntries(list.map((c) => [c, "waiting" as SendState])));
+    let failed = 0;
     try {
       await Promise.all([variantSaver.flushAll(), deliverableSaver.flushAll()]);
-      const c = await runAdmin((token) => approveCampaign(brandKey, cid, token), { promptFirst: false });
-      if (c) {
-        setCampaign(c);
-        toast(t("board.campaign.toast.approved"));
+      if (!isApproved(campaignRef.current)) {
+        setApproving(true);
+        const approved = await runAdmin((token) => approveCampaign(brandKey, cid, token), { promptFirst: false });
+        setApproving(false);
+        if (!approved) {
+          setProgress({});
+          return;
+        }
+        commit(approved);
       }
+      for (let i = 0; i < list.length; i++) {
+        const ch = list[i];
+        setProgress((p) => ({ ...p, [ch]: "working" }));
+        try {
+          // Ask for the token up front for a real channel: a tokenless attempt is logged as blocked.
+          const out = await runAdmin((token) => publishCampaign(brandKey, cid, [ch], token), {
+            promptFirst: !TOKENLESS_CHANNELS.includes(ch),
+          });
+          if (!out) {
+            setProgress((p) => ({ ...p, ...Object.fromEntries(list.slice(i).map((c) => [c, "skipped" as SendState])) }));
+            break;
+          }
+          commit(out);
+          const e = latestEventByChannel(out.events ?? []).get(ch);
+          const ok = !!e && (e.outcome === "published" || e.outcome === "exported");
+          if (!ok) failed++;
+          setProgress((p) => ({ ...p, [ch]: ok ? "done" : "failed" }));
+        } catch (err) {
+          failed++;
+          if (isTokenUnsetError(err)) setTokenUnset(true);
+          else setActionError(errorText(err));
+          setProgress((p) => ({ ...p, [ch]: "failed" }));
+        }
+      }
+      await reload(); // refused attempts are logged server-side too
+      loadChannels(); // quotas moved
+      toast(failed ? t.n("board.campaign.toast.publishedSome", failed) : t("board.campaign.toast.published"));
+      goStep("results");
     } catch (err) {
-      handleAdminError(err);
+      if (isTokenUnsetError(err)) setTokenUnset(true);
+      else setActionError(errorText(err));
     } finally {
-      setBusy(null);
+      setApproving(false);
+      setBusy(false);
     }
   };
 
-  const publish = async (list: ChannelId[], kind: "publish" | "retry") => {
-    setConfirming(false);
-    setActionError(null);
-    setBusy(kind);
-    try {
-      // Ask for the token up front: a tokenless attempt at a real channel would be logged as blocked.
-      const local = list.every((ch) => TOKENLESS_CHANNELS.includes(ch));
-      const c = await runAdmin((token) => publishCampaign(brandKey, cid, list, token), { promptFirst: !local });
-      if (c) {
-        setCampaign(c);
-        const fresh = c.events.filter((e) => list.includes(e.channel));
-        const failed = new Set(fresh.filter((e) => e.outcome === "failed" || e.outcome === "blocked").map((e) => e.channel));
-        toast(failed.size ? t.n("board.campaign.toast.publishedSome", failed.size) : t("board.campaign.toast.published"));
-        loadChannels(); // quotas moved
-      }
-    } catch (err) {
-      handleAdminError(err);
-    } finally {
-      setBusy(null);
-    }
-  };
-
+  // ---- delete / redraft ----
   const remove = async () => {
     if (!window.confirm(t("board.campaign.deleteConfirm"))) return;
-    setActionError(null);
-    setBusy("delete");
     try {
       const done = await runAdmin((token) => deleteCampaign(brandKey, cid, token), { promptFirst: false });
       if (done !== null) {
         variantSaver.reset();
         deliverableSaver.reset();
+        try {
+          sessionStorage.removeItem(picksKey(cid));
+        } catch {
+          /* storage unavailable */
+        }
         toast(t("board.campaign.toast.deleted"));
         go(brandHref(brandKey, "recommendations"));
       }
     } catch (err) {
-      handleAdminError(err);
-    } finally {
-      setBusy(null);
+      if (isTokenUnsetError(err)) setTokenUnset(true);
+      else toast(errorText(err));
     }
   };
-
-  const [retrying, setRetrying] = useState(false);
-  const regenerateCampaign = () => {
-    setRetrying(true);
+  const [redrafting, setRedrafting] = useState(false);
+  const redraft = () => {
+    setRedrafting(true);
     createCampaign(brandKey, campaign.recommendation_id)
       .then(({ campaign: c }) => go(campaignHref(brandKey, c.campaign_id)))
       .catch((err: unknown) => toast(t("board.campaign.toast.createFailed", { error: errorText(err) })))
-      .finally(() => setRetrying(false));
+      .finally(() => setRedrafting(false));
   };
 
   // ---- header facts ----
@@ -262,269 +392,186 @@ function Studio({
   const sv = statusView(campaign.status);
   const generating = campaign.status === "generating";
   const approved = isApproved(campaign);
-  const issues = blockingIssues(variants);
-  const approvable = canApprove(view);
-  const waUrl = whatsappShareUrl(campaign.events ?? []);
+  const issues = blockingIssues(variants).length;
   const imageProviders = [...new Set(campaign.assets.map((a) => a.provider))].filter((p) => p !== "template");
-  const hasSandbox = variants.some((v) => v.channel === "sandbox") || selected.includes("sandbox");
-  const headingId = useId();
-  const editorId = useId();
+  const stepHeadingId = useId();
+  const n = STEPS.indexOf(step) + 1;
+  const returnTo = `${location.pathname}?step=where`;
+  const showHead = !generating && variants.length > 0;
+
+  let content;
+  let bar = null;
+  if (generating) content = <Generating job={job} />;
+  else if (variants.length === 0)
+    content = (
+      <EmptyState
+        icon="error"
+        tone="error"
+        role="alert"
+        title={t("board.campaign.failedBody")}
+        body={job?.error ?? undefined}
+        primary={
+          <button type="button" className="btn btn-primary" disabled={redrafting} onClick={redraft}>
+            {t("board.campaign.retryCreate")}
+          </button>
+        }
+      />
+    );
+  else if (step === "review") {
+    content = (
+      <ReviewStep
+        variants={variants}
+        assets={campaign.assets}
+        deliverables={deliverables}
+        statuses={statuses}
+        brandName={brandName}
+        brandKey={brandKey}
+        tab={tab}
+        onTab={setTab}
+        variantStates={variantSaver.states}
+        deliverableStates={deliverableSaver.states}
+        locked={busy}
+        approved={approved}
+        regenerating={regenerating}
+        onEditVariant={editVariant}
+        onEditDeliverable={(i, patch) => deliverableSaver.edit(`d${i}`, patch)}
+        onRegenerate={regenerate}
+      />
+    );
+    bar = (
+      <ActionBar note={issues > 0 ? t.n("board.campaign.bar.fixFirst", issues) : t("board.campaign.bar.reviewNote")}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={issues > 0}
+          onClick={() => void Promise.all([variantSaver.flushAll(), deliverableSaver.flushAll()]).then(() => goStep("where"))}
+        >
+          {t("board.campaign.bar.toWhere")} <span aria-hidden="true">→</span>
+        </button>
+      </ActionBar>
+    );
+  } else if (step === "where") {
+    content = (
+      <WhereStep
+        dests={dests}
+        picked={chosen}
+        assets={campaign.assets}
+        brandKey={brandKey}
+        returnTo={returnTo}
+        loading={channels === null && !channelsError}
+        error={channelsError}
+        onRetry={loadChannels}
+        onToggle={toggle}
+        onFix={(ch) => {
+          setTab(ch);
+          goStep("review");
+        }}
+      />
+    );
+    bar = (
+      <ActionBar
+        back={{ label: t(STEP_LABEL.review), onClick: () => goStep("review") }}
+        note={sends.length ? t.n("board.campaign.where.chosen", sends.length) : t("board.campaign.where.noneChosen")}
+      >
+        <button type="button" className="btn btn-primary" disabled={!sends.length || !reachable.has("publish")} onClick={() => goStep("publish")}>
+          {t("board.campaign.bar.toPublish")} <span aria-hidden="true">→</span>
+        </button>
+      </ActionBar>
+    );
+  } else if (step === "publish") {
+    content = <PublishStep sends={sends} assets={campaign.assets} approvedAt={approved ? campaign.approved_at : null} progress={progress} approving={approving} />;
+    bar = (
+      <ActionBar back={busy ? undefined : { label: t(STEP_LABEL.where), onClick: () => goStep("where") }} note={t("board.campaign.bar.publishNote")}>
+        <button type="button" className="btn btn-primary" disabled={busy || !sends.length} onClick={() => void send(sends.map((d) => d.channel))}>
+          {busy && <span className="cs-spinner" aria-hidden="true" />}
+          {busy ? t("board.campaign.publish.working") : approved ? t("board.campaign.publish.goApproved") : t("board.campaign.publish.go")}
+        </button>
+      </ActionBar>
+    );
+  } else {
+    content = (
+      <ResultsStep events={campaign.events ?? []} statuses={statuses} brandKey={brandKey} campaignId={cid} busy={busy} onRetry={(ch) => void send([ch])} />
+    );
+    bar = (
+      <ActionBar back={{ label: t("board.campaign.bar.postMore"), onClick: () => goStep("where") }}>
+        <TransitionLink to={brandHref(brandKey, "recommendations")} className="btn btn-primary">
+          {t("board.campaign.bar.done")}
+        </TransitionLink>
+      </ActionBar>
+    );
+  }
 
   return (
-    <div className="cs-studio">
+    <div className="cs-studio" ref={rootRef}>
       {dialog}
-      {confirming && (
-        <PublishDialog
-          options={selectedOptions}
-          assets={campaign.assets}
-          onClose={() => setConfirming(false)}
-          onConfirm={() => void publish(selected, "publish")}
-        />
-      )}
-
-      <header className="card cs-header" aria-labelledby={headingId}>
-        <div className="cs-header-top">
-          <span className={`cs-status tone-${sv.tone}`}>
+      <div className="cs-top">
+        <div className="cs-top-row">
+          <span className="status-pill" data-tone={sv.tone}>
             {generating && <span className="cs-spinner" aria-hidden="true" />}
             {t(sv.key)}
           </span>
-          <span className="cs-badges">
-            <span className="cs-badge">
-              {!campaign.drafted_by || campaign.drafted_by === "template"
-                ? t("board.campaign.badge.templateCopy")
-                : t("board.campaign.badge.draftedBy", { by: campaign.drafted_by })}
-            </span>
-            {usesTemplateImages(campaign.assets) && <span className="cs-badge is-honest">{t("board.campaign.badge.templateImage")}</span>}
-            {imageProviders.length > 0 && (
-              <span className="cs-badge">{t("board.campaign.badge.images", { by: imageProviders.join(", ") })}</span>
-            )}
-            {hasSandbox && <span className="cs-badge is-honest">{t("board.campaign.badge.simulated")}</span>}
+          <p className="cs-title" title={campaign.headline || recTitle}>
+            {campaign.headline || recTitle}
+          </p>
+          <SaveIndicator state={overallSave([variantSaver.states, deliverableSaver.states])} />
+        </div>
+        <Stepper current={generating ? "review" : step} reachable={reachable} onGo={goStep} />
+      </div>
+
+      <div className="cs-trace">
+        <span className="muted">{t("board.campaign.fromRec")}</span>
+        <TransitionLink to={brandHref(brandKey, "recommendations")} className="cs-trace-rec">
+          {recTitle}
+        </TransitionLink>
+        <TransitionLink
+          to={gapsHref(brandKey, { gapId: campaign.gap_id, runId: gapSnap?.run_id })}
+          className="rec-trace"
+          title={t("board.card.traceTitle", { id: campaign.gap_id })}
+        >
+          <span aria-hidden="true">↳ </span>
+          {t("board.card.trace", { type: gapType })}
+        </TransitionLink>
+        <span className="muted">· {t("board.campaign.created", { when: fmt.relativeTime(campaign.created_at) || campaign.created_at })}</span>
+        <span className="cs-badges">
+          <span className="cs-badge">
+            {!campaign.drafted_by || campaign.drafted_by === "template"
+              ? t("board.campaign.badge.templateCopy")
+              : t("board.campaign.badge.draftedBy", { by: campaign.drafted_by })}
           </span>
-        </div>
-        <h2 id={headingId} className="cs-headline">
-          {campaign.headline || recTitle}
-        </h2>
-        <p className="cs-trace">
-          <span className="muted">{t("board.campaign.fromRec")} </span>
-          <TransitionLink to={brandHref(brandKey, "recommendations")} className="cs-trace-rec">
-            {recTitle}
-          </TransitionLink>{" "}
-          <TransitionLink
-            to={gapsHref(brandKey, { gapId: campaign.gap_id, runId: gapSnap?.run_id })}
-            className="rec-trace"
-            title={t("board.card.traceTitle", { id: campaign.gap_id })}
-          >
-            <span aria-hidden="true">↳ </span>
-            {t("board.card.trace", { type: gapType })}
-          </TransitionLink>
-        </p>
-        <p className="cs-dates muted small">
-          {t("board.campaign.created", { when: fmt.relativeTime(campaign.created_at) || campaign.created_at })}
-          {campaign.approved_at && approved && (
-            <> · {t("board.campaign.approvedAt", { when: fmt.relativeTime(campaign.approved_at) || campaign.approved_at })}</>
-          )}
-        </p>
-      </header>
-
-      {generating && (
-        <div className="card cs-generating" role="status">
-          <span className="cs-spinner cs-spinner-lg" aria-hidden="true" />
-          <div>
-            <strong>{t("board.campaign.generating.title")}</strong>
-            <p className="muted small">{job?.message || t("board.campaign.generating.body")}</p>
-            {job && job.total > 0 && (
-              <div className="progress" aria-hidden="true">
-                <div className="progress-bar" style={{ width: `${Math.round((job.done / job.total) * 100)}%` }} />
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {campaign.status === "failed" && !campaign.approved_at && variants.length === 0 && (
-        <div className="alert alert-error" role="alert">
-          <p>{job?.error || t("board.campaign.failedBody")}</p>
-          <button type="button" className="btn btn-secondary btn-small" disabled={retrying} onClick={regenerateCampaign}>
-            {t("board.campaign.retryCreate")}
+          {usesTemplateImages(campaign.assets) && <span className="cs-badge is-honest">{t("board.campaign.badge.templateImage")}</span>}
+          {imageProviders.length > 0 && <span className="cs-badge">{t("board.campaign.badge.images", { by: imageProviders.join(", ") })}</span>}
+        </span>
+        {!generating && (
+          <button type="button" className="btn-link cs-delete" disabled={busy} onClick={() => void remove()}>
+            {t("board.campaign.delete")}
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
-      {variants.length > 0 && activeVariant && (
-        <>
-          <div className="cs-tabs" role="group" aria-label={t("board.campaign.tabs")}>
-            {variants.map((v) => {
-              const n = issues.filter((i) => i.channel === v.channel).length;
-              return (
-                <button
-                  key={v.channel}
-                  type="button"
-                  className={`cs-tab${v.channel === activeVariant.channel ? " is-active" : ""}${v.enabled ? "" : " is-off"}`}
-                  aria-pressed={v.channel === activeVariant.channel}
-                  aria-controls={editorId}
-                  onClick={() => setActive(v.channel)}
-                >
-                  {channelName(v.channel, statuses)}
-                  {!v.enabled && <span className="cs-tab-note">{t("board.campaign.tabOff")}</span>}
-                  {v.enabled && n > 0 && (
-                    <span className="cs-tab-issues" aria-label={t.n("board.campaign.tabIssues", n)}>
-                      {n}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+      <section className="cs-step" aria-labelledby={showHead ? stepHeadingId : undefined}>
+        {showHead && (
+          <div className="cs-step-head">
+            <p className="eyebrow">{t("board.campaign.step.of", { n, total: STEPS.length })}</p>
+            <h2 id={stepHeadingId} ref={headingRef} tabIndex={-1}>
+              {t(STEP_LABEL[step])}
+            </h2>
+            <p className="muted">{t(STEP_INTRO[step])}</p>
           </div>
-
-          <div className="cs-grid">
-            <div className="cs-left">
-              <div className="cs-preview-frame">
-                <p className="eyebrow">{t("board.campaign.preview.title", { channel: channelName(activeVariant.channel, statuses) })}</p>
-                <div className={activeVariant.enabled ? "" : "cs-preview-off"}>
-                  <PlatformPreview
-                    variant={activeVariant}
-                    asset={activeAsset}
-                    assets={campaign.assets}
-                    brandName={brandName}
-                    handle={brandKey.replace(/[^a-z0-9_]/gi, "").toLowerCase()}
-                    onPickAsset={generating ? undefined : (assetId) => editVariant(activeVariant.channel, { asset_id: assetId })}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="cs-right" id={editorId}>
-              {approved && <p className="cs-reapprove">{t("board.campaign.reapprove")}</p>}
-              <div className="card cs-panel">
-                <VariantEditor
-                  variant={activeVariant}
-                  localIssues={issues.filter((i) => i.channel === activeVariant.channel && i.local).map((i) => i.message)}
-                  assets={campaign.assets}
-                  status={statuses.find((s) => s.channel === activeVariant.channel)}
-                  statuses={statuses}
-                  saveState={variantSaver.states[activeVariant.channel]}
-                  locked={generating}
-                  onChange={(patch) => editVariant(activeVariant.channel, patch)}
-                />
-              </div>
-              <ImagePanel
-                key={activeVariant.channel}
-                assets={campaign.assets}
-                activeAssetId={activeAsset?.asset_id ?? null}
-                activeChannelName={channelName(activeVariant.channel, statuses)}
-                defaultFormat={activeAsset?.format ?? CHANNEL_FORMATS[activeVariant.channel]?.[0] ?? "square"}
-                busy={regenerating}
-                disabled={generating}
-                onRegenerate={regenerate}
-                onUse={(assetId) => editVariant(activeVariant.channel, { asset_id: assetId })}
-              />
-            </div>
+        )}
+        {tokenUnset && (
+          <div className="alert alert-warn" role="alert">
+            {t("board.campaign.token.unset")}
           </div>
-        </>
-      )}
-
-      <DeliverablesPanel
-        deliverables={deliverables}
-        states={deliverableSaver.states}
-        disabled={generating}
-        onChange={(i: number, patch: DeliverablePatch) => deliverableSaver.edit(`d${i}`, patch)}
-      />
-
-      {!generating && (
-        <section className="card cs-panel cs-publish" aria-label={t("board.campaign.publish.title")}>
-          <div className="cs-panel-head">
-            <h2>{t("board.campaign.publish.title")}</h2>
-            <p className="muted small">{t("board.campaign.publish.intro")}</p>
+        )}
+        {actionError && (
+          <div className="alert alert-error" role="alert">
+            {actionError}
           </div>
-          {channelsError && (
-            <p className="board-notice" role="status">
-              <span className="board-notice-dot" aria-hidden="true" />
-              {t("board.campaign.channels.error")}{" "}
-              <button type="button" className="btn-link" onClick={loadChannels}>
-                {t("board.offline.retry")}
-              </button>
-            </p>
-          )}
-          {channels && (
-            <ChannelBar
-              options={options}
-              selected={selected}
-              onToggle={(ch, on) =>
-                setPicked((prev) => {
-                  const base = prev ?? selected;
-                  return on ? [...new Set([...base, ch])] : base.filter((c) => c !== ch);
-                })
-              }
-            />
-          )}
+        )}
+        {content}
+      </section>
 
-          {tokenUnset && (
-            <div className="alert alert-warn" role="alert">
-              {t("board.campaign.token.unset")}
-            </div>
-          )}
-          {actionError && (
-            <div className="alert alert-error" role="alert">
-              {actionError}
-            </div>
-          )}
-
-          <div className="cs-actions">
-            {approved ? (
-              <span className="cs-approved">
-                <span className="cs-approved-dot" aria-hidden="true" />
-                {t("board.campaign.approved")}
-              </span>
-            ) : (
-              <button
-                type="button"
-                className="btn btn-primary"
-                disabled={!approvable || busy !== null || variantSaver.dirty || deliverableSaver.dirty}
-                onClick={() => void approve()}
-                title={issues.length ? t.n("board.campaign.approveBlocked", issues.length) : undefined}
-              >
-                {busy === "approve" && <span className="cs-spinner" aria-hidden="true" />}
-                {t("board.campaign.approve")}
-              </button>
-            )}
-            <button
-              type="button"
-              className={`btn ${approved ? "btn-primary" : "btn-secondary"}`}
-              disabled={selected.length === 0 || busy !== null || variantSaver.dirty}
-              onClick={() => setConfirming(true)}
-            >
-              {busy === "publish" && <span className="cs-spinner" aria-hidden="true" />}
-              {t.n("board.campaign.publish.button", selected.length)}
-            </button>
-            <a className="btn btn-secondary" href={campaignExportUrl(brandKey, cid)} download>
-              {t("board.campaign.export")}
-            </a>
-            {waUrl && (
-              <a className="btn btn-secondary" href={waUrl} target="_blank" rel="noreferrer">
-                {t("board.campaign.openWhatsApp")}
-              </a>
-            )}
-            <span className="cs-grow" />
-            <button type="button" className="btn-link cs-delete" disabled={busy !== null} onClick={() => void remove()}>
-              {t("board.campaign.delete")}
-            </button>
-          </div>
-          {!approved && issues.length > 0 && (
-            <p className="field-error">{t.n("board.campaign.approveBlocked", issues.length)}</p>
-          )}
-          {!approved && issues.length === 0 && !generating && (
-            <p className="field-hint">{t("board.campaign.approveHint")}</p>
-          )}
-        </section>
-      )}
-
-      <PublishLog
-        events={campaign.events ?? []}
-        statuses={statuses}
-        busy={busy !== null}
-        canRetry
-        onRetry={(ch) => void publish([ch], "retry")}
-      />
+      {bar}
     </div>
   );
 }

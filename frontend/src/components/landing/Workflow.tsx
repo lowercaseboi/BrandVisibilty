@@ -1,9 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { MessageKey } from "../../i18n";
 import { useT } from "../../i18n";
+import { useReducedMotion } from "../../settings/motion";
 import { Reveal } from "./Reveal";
-
-const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
 const STEPS: { title: MessageKey; body: MessageKey }[] = [
   { title: "pages.landing.workflow.step1.title", body: "pages.landing.workflow.step1.body" },
@@ -13,6 +12,8 @@ const STEPS: { title: MessageKey; body: MessageKey }[] = [
   { title: "pages.landing.workflow.step5.title", body: "pages.landing.workflow.step5.body" },
   { title: "pages.landing.workflow.step6.title", body: "pages.landing.workflow.step6.body" },
 ];
+
+const ALL_LIT = STEPS.map(() => true);
 
 /**
  * "Workflow": six numbered steps, [01]–[06], with a connecting rail that draws in as the section
@@ -28,8 +29,10 @@ export function Workflow() {
   const listRef = useRef<HTMLDivElement | null>(null);
   const railRef = useRef<HTMLDivElement | null>(null);
   const numRefs = useRef<(HTMLSpanElement | null)[]>([]);
-  const reduced = prefersReducedMotion();
-  const [lit, setLit] = useState<boolean[]>(() => STEPS.map(() => reduced));
+  const reduced = useReducedMotion();
+  const [scrollLit, setLit] = useState<boolean[]>(() => STEPS.map(() => reduced));
+  // Reduced motion (even when switched on mid-session): every step lit, nothing tied to scroll.
+  const lit = reduced ? ALL_LIT : scrollLit;
 
   // The rail must stop at the [06] marker's center, not run on past it. Its `top` is fixed by CSS
   // (24px), so the marker's offset from that fixed point is also the rail's total length; written

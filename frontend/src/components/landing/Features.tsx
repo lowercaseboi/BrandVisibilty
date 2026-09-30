@@ -1,6 +1,7 @@
 import type { MouseEvent, ReactNode } from "react";
 import type { MessageKey } from "../../i18n";
 import { useT } from "../../i18n";
+import { prefersReducedMotion } from "../../settings/motion";
 import { Reveal } from "./Reveal";
 
 function iconProps() {
@@ -80,14 +81,16 @@ const CARDS: { icon: ReactNode; title: MessageKey; body: MessageKey }[] = [
   { icon: <TrendIcon />, title: "pages.landing.features.f6.title", body: "pages.landing.features.f6.body" },
 ];
 
-const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-
-/** Tilts the card slightly towards the pointer on hover; a no-op under reduced motion. */
+/** Tilts the card slightly towards the pointer on hover; a no-op under reduced motion (checked per
+ * move, so switching the OS setting mid-session takes effect at once). */
 function tiltHandlers() {
-  if (prefersReducedMotion()) return {};
   return {
     onMouseMove: (e: MouseEvent<HTMLDivElement>) => {
       const el = e.currentTarget;
+      if (prefersReducedMotion()) {
+        el.style.transform = "";
+        return;
+      }
       const rect = el.getBoundingClientRect();
       const px = (e.clientX - rect.left) / rect.width - 0.5;
       const py = (e.clientY - rect.top) / rect.height - 0.5;

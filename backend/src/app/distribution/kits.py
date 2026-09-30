@@ -17,13 +17,14 @@ from app.distribution.types import ChannelId, DeliverableKind, ImageFormat
 from app.recommendation.engine import ACTION_CLASS, ACTION_LABEL, ACTION_VOCABULARY
 
 # Social channels a social kit posts to by default (WhatsApp = share link + status image).
-SOCIAL_CHANNELS: tuple[ChannelId, ...] = ("facebook_page", "instagram", "x", "google_business", "whatsapp")
+SOCIAL_CHANNELS: tuple[ChannelId, ...] = ("facebook_page", "instagram", "x", "linkedin", "google_business", "whatsapp")
 
 # Which image each channel posts.
 CHANNEL_FORMAT: dict[ChannelId, ImageFormat] = {
     "facebook_page": "square",
     "instagram": "square",
     "x": "landscape",
+    "linkedin": "landscape",
     "google_business": "gbp",
     "whatsapp": "story",
     "sandbox": "square",

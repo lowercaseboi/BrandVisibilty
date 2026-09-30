@@ -47,6 +47,7 @@ HASHTAG_CAPS: dict[str, int] = {
     "facebook_page": 3,
     "instagram": 8,
     "x": 2,
+    "linkedin": 3,
     "google_business": 0,
     "whatsapp": 0,
     "export": 8,
@@ -349,6 +350,7 @@ def _cta(channel: ChannelId, facts: BrandFacts) -> str:
         "facebook_page": f"Visit us{f' in {city}' if city else ''} and tell us what you think.",
         "instagram": "Save this post and share it with a friend.",
         "x": "",
+        "linkedin": f"Follow {facts.name} for more updates{f' from {city}' if city else ''}.",
         "google_business": "Visit us or message us for details.",
         "whatsapp": "Forward this to someone who'd like it.",
         "sandbox": "",
@@ -379,6 +381,9 @@ def _template_variants(kit: Kit, facts: BrandFacts, competitor: str | None, head
             text = " ".join(core[1:2] + core[2:3]) if len(core) > 2 else " ".join(core)
         elif channel == "whatsapp":
             text = "\n\n".join([f"*{headline}*", " ".join(core), _cta(channel, facts)])
+        elif channel == "linkedin":
+            # Professional tone: plain headline, the facts as a short paragraph, no emoji-style CTA.
+            text = "\n\n".join(s for s in [headline, " ".join(core), _cta(channel, facts)] if s)
         else:
             text = "\n\n".join(s for s in [headline, " ".join(core), _cta(channel, facts)] if s)
         variant = Variant(
@@ -758,7 +763,8 @@ def build_prompt(
             f"Recommendation: {kit.label}. {recommendation.get('reasoning', '')}",
             f"Campaign angle: {kit.angle}. The brand name must appear in every post and deliverable.",
             f"Channels and limits (limits include hashtags): {json.dumps(channels)}",
-            "WhatsApp text is a message people forward; X text must be short; Google Business posts use no hashtags.",
+            "WhatsApp text is a message people forward; X text must be short; Google Business posts use no hashtags; "
+            "LinkedIn text is professional in tone (clear, factual, no slang or emoji, 2-4 short paragraphs).",
             "Return exactly this JSON shape (no markdown fences, no commentary):",
             json.dumps(schema, ensure_ascii=False),
         ]

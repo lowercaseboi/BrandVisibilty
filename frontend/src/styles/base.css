@@ -363,6 +363,12 @@ textarea:disabled {
   outline: none;
 }
 
+/* RouteFocus moves focus to the new page's heading (tabindex -1) after a navigation: a programmatic
+   landing spot for screen readers and the next Tab, not a control — so no ring around the title. */
+h1[tabindex="-1"]:focus {
+  outline: none;
+}
+
 .app-footer {
   border-top: 1px solid var(--border);
   background: transparent;

@@ -2,10 +2,9 @@ import { useEffect, useState, useRef } from "react";
 import type { RatingBand } from "../format";
 import { scoreBandClass } from "../format";
 import { useFormat } from "../i18n";
+import { useReducedMotion } from "../settings/motion";
 
 const COUNT_MS = 1100;
-
-const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
 /** Counts 0 → target (ease-out) each time `play` changes; jumps straight to the target under reduced
  * motion. `instant` starts at the target on mount (no first count-up), e.g. when a view-transition
@@ -15,7 +14,7 @@ function useCountUp(target: number, play: number, instant = false): number {
   // The (target, play) pair already on screen. Comparing against it (rather than a one-shot "skip
   // first run" flag) keeps `instant` working when StrictMode runs the mount effect twice.
   const shown = useRef<string | null>(instant ? `${target}|${play}` : null);
-  const reduced = prefersReducedMotion();
+  const reduced = useReducedMotion();
   useEffect(() => {
     if (reduced) return;
     const key = `${target}|${play}`;

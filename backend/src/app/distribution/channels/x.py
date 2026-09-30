@@ -1,4 +1,11 @@
-"""X (Twitter) adapter: OAuth 1.0a user context, v2 media upload, v2 create post.
+"""X (Twitter) adapter: user-context auth, v2 media upload, v2 create post.
+
+Two ways to authenticate, both user context:
+- OAuth 2.0 (a brand connected with the "Connect" button): `Authorization: Bearer <user token>`.
+  Tokens last about 2 hours; with `offline.access` a refresh token comes along and the adapter
+  refreshes before publishing (app.distribution.oauth.refresh_credentials), saving the new pair.
+- OAuth 1.0a (manual keys, or X_* in .env): api key/secret + access token/secret, signed per
+  request (oauth1.py).
 
 Flow: POST https://api.x.com/2/media/upload (multipart: media, media_category=tweet_image,
 media_type) → data.id; then POST https://api.x.com/2/tweets {"text", "media": {"media_ids"}}.
@@ -44,7 +51,8 @@ from app.distribution.types import Campaign, ChannelStatus, PublishResult, Varia
 
 MEDIA_UPLOAD_URL = "https://api.x.com/2/media/upload"
 TWEETS_URL = "https://api.x.com/2/tweets"
-_CRED_NAMES = ("x_api_key", "x_api_secret", "x_access_token", "x_access_secret")
+USERS_ME_URL = "https://api.x.com/2/users/me"
+_OAUTH1_FIELDS = ("api_key", "api_secret", "access_token", "access_secret")
 
 _usage_lock = threading.Lock()
 
@@ -84,7 +92,7 @@ def x_error(resp: httpx.Response) -> str:
         detail = body.get("detail") or detail or body.get("title")
     msg = f"X API error {resp.status_code}" + (f": {detail}" if detail else ".")
     hints = {
-        401: "check X_API_KEY / X_API_SECRET / X_ACCESS_TOKEN / X_ACCESS_SECRET.",
+        401: "the credentials were rejected — reconnect the account (or check the X API keys and access token/secret).",
         403: "if this isn't a duplicate post, the app may be Read-only — set it to Read and Write, then regenerate the access token and secret.",
         429: "rate or monthly post limit reached on X's side — wait and retry.",
     }
@@ -104,8 +112,7 @@ class XAdapter(HttpAdapter):
         now: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
         **kw: Any,
     ) -> None:
-        super().__init__(settings, client=client, **kw)
-        self._now = now
+        super().__init__(settings, client=client, now=now, **kw)
 
     # --- quota -----------------------------------------------------------------------------------
 
@@ -130,22 +137,29 @@ class XAdapter(HttpAdapter):
 
     # --- adapter ---------------------------------------------------------------------------------
 
-    def _creds(self) -> dict[str, str | None]:
-        return {name: setting(self.settings, name) for name in _CRED_NAMES}
+    def uses_oauth2(self) -> bool:
+        return bool(self.cred("bearer_token"))
 
     def status(self) -> ChannelStatus:
-        creds = self._creds()
-        missing = [n.upper() for n, v in creds.items() if not v]
-        if missing:
-            return ChannelStatus(
-                self.channel, self.label, "export_only", detail=f"Set {', '.join(missing)} to post (see {SETUP_DOC}); export pack until then."
-            )
+        if not self.uses_oauth2():
+            missing = [f for f in _OAUTH1_FIELDS if not self.cred(f)]
+            if missing:
+                if self.creds.from_brand:
+                    detail = f"The connected account is missing {', '.join(missing)} — reconnect it; export pack until then."
+                else:
+                    envs = ", ".join("X_" + f.upper() for f in missing)
+                    detail = f"Set {envs} to post (see {SETUP_DOC}) or connect an account in Details; export pack until then."
+                return self._export_only(detail)
+        problem = self._unusable()
+        if problem:
+            return self._export_only(problem[:1].upper() + problem[1:] + ".")
         left = self.quota_remaining()
+        who = f"{self.creds.account_name} · " if self.creds.from_brand and self.creds.account_name else ""
         return ChannelStatus(
             self.channel,
             self.label,
             "connected",
-            detail=f"{left} of {self.monthly_limit()} posts left this month (counted by this app)",
+            detail=f"{who}{left} of {self.monthly_limit()} posts left this month (counted by this app)",
             quota_remaining=left,
         )
 
@@ -156,14 +170,15 @@ class XAdapter(HttpAdapter):
         )
 
     def _auth(self, method: str, url: str) -> dict[str, str]:
-        c = self._creds()
+        if self.uses_oauth2():
+            return {"Authorization": f"Bearer {self.cred('bearer_token')}"}
         header = oauth1.authorization_header(
             method,
             url,
-            consumer_key=c["x_api_key"] or "",
-            consumer_secret=c["x_api_secret"] or "",
-            token=c["x_access_token"] or "",
-            token_secret=c["x_access_secret"] or "",
+            consumer_key=self.cred("api_key") or "",
+            consumer_secret=self.cred("api_secret") or "",
+            token=self.cred("access_token") or "",
+            token_secret=self.cred("access_secret") or "",
         )
         return {"Authorization": header}
 

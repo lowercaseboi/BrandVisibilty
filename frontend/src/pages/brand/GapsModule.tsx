@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { getObservations } from "../../api/client";
 import type { Gap } from "../../api/types";
 import { useAsync } from "../../api/useAsync";
+import { EmptyState } from "../../components/EmptyState";
 import { GapList } from "../../components/GapList";
 import { SampleAnswer } from "../../components/dashboard/SampleAnswer";
 import { pickSample, sampleReason } from "../../components/dashboard/answerHighlight";
@@ -14,9 +15,8 @@ import { brandHref } from "../../components/module/modules";
 import { TransitionLink } from "../../components/module/transition";
 import { T, useFormat, useT } from "../../i18n";
 import { Details } from "../../settings/details";
+import { prefersReducedMotion } from "../../settings/motion";
 import { useBrandData } from "./BrandContext";
-
-const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
 /**
  * Gaps & evidence: the detected gaps (left) connected to the verbatim AI responses behind them
@@ -137,15 +137,16 @@ export function GapsModule() {
   if (!runId) {
     return (
       <ModuleShell id="gaps">
-        <div className="card empty-state dash-empty">
-          <h2>{t("dashboard.empty.title")}</h2>
-          <p>{t("modules.gaps.none.body")}</p>
-          <p>
+        <EmptyState
+          icon="chart"
+          title={t("dashboard.empty.title")}
+          body={t("modules.gaps.none.body")}
+          primary={
             <TransitionLink to={brandHref(brandKey, "analysis")} className="btn btn-primary">
               {t("modules.gaps.none.cta")}
             </TransitionLink>
-          </p>
-        </div>
+          }
+        />
       </ModuleShell>
     );
   }

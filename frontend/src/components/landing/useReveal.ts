@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-
-const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+import { useReducedMotion } from "../../settings/motion";
 
 /**
  * True once this element has scrolled into the viewport; stays true afterwards (reveals once).
@@ -9,10 +8,11 @@ const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion:
 export function useReveal<T extends HTMLElement>() {
   const ref = useRef<T | null>(null);
   const [visible, setVisible] = useState(false);
+  const reduced = useReducedMotion();
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || typeof IntersectionObserver === "undefined" || prefersReducedMotion()) {
+    if (!el || typeof IntersectionObserver === "undefined" || reduced) {
       setVisible(true);
       return;
     }
@@ -27,7 +27,7 @@ export function useReveal<T extends HTMLElement>() {
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, []);
+  }, [reduced]);
 
   return { ref, visible };
 }

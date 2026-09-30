@@ -232,3 +232,18 @@ def test_resolve_copy_provider():
     assert cw.resolve_copy_provider(NS(copy_provider="auto", gemini_api_key="k", groq_api_key="k")) == "gemini"
     assert cw.resolve_copy_provider(NS(copy_provider="template", gemini_api_key="k", groq_api_key="k")) is None
     assert cw.resolve_copy_provider(NS(copy_provider="groq", gemini_api_key="k", groq_api_key=None)) is None
+
+
+def test_linkedin_variant_is_professional_and_claim_checked():
+    kit = kits.kit_for("faq_page")
+    assert "linkedin" in kit.channels and kits.CHANNEL_FORMAT["linkedin"] == "landscape"
+    assert "landscape" in kit.image_formats
+    draft = cw.draft_campaign(kit, FACTS, gap=GAP, recommendation=REC, competitor=None, provider_id=None)
+    li = next(v for v in draft.variants if v.channel == "linkedin")
+    assert FACTS.name in li.text and f"Follow {FACTS.name}" in li.text
+    assert len(li.hashtags) <= cw.HASHTAG_CAPS["linkedin"] == 3
+    assert "LinkedIn text is professional" in cw.build_prompt(kit, FACTS, gap=GAP, recommendation=REC, competitor=None)
+    v = cw.validate_variant(Variant(channel="linkedin", text="Gajanan Vada Pav is the best in Mumbai, #1 rated."), FACTS)
+    assert any("Unsupported claim" in i for i in v.issues), v.issues
+    long = cw.validate_variant(Variant(channel="linkedin", text="Gajanan Vada Pav " + "a" * 3000), FACTS)
+    assert any("too long" in i.lower() for i in long.issues), long.issues

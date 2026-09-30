@@ -53,3 +53,33 @@ export function sinceDelta(snapshots: Snapshot[], at: string): number | null {
   if (before.comparability_key !== last.comparability_key) return null;
   return last.analysis_result.composite_score - before.analysis_result.composite_score;
 }
+
+/** "Since your campaign on <date>": the score before it (the last analysis finished before its first
+ * publish) against the newest analysis, when that one came after. */
+export interface SinceCampaign {
+  marker: PublishMarker;
+  before: Snapshot | null;
+  /** The newest analysis, only when it finished after the publish; null = run another one. */
+  after: Snapshot | null;
+  /** Both runs are in the same comparable segment (same questions and AI sources). */
+  comparable: boolean;
+  /** after − before (0–100 points), when both exist and are comparable. */
+  delta: number | null;
+}
+
+const finishedAt = (s: Snapshot) => Date.parse(s.collection_completed_at || s.collection_started_at);
+
+/** For the newest published campaign (markers are oldest first); null when nothing was published. */
+export function sinceCampaign(snapshots: Snapshot[], markers: PublishMarker[]): SinceCampaign | null {
+  const marker = markers[markers.length - 1];
+  if (!marker) return null;
+  const at = Date.parse(marker.at);
+  if (!Number.isFinite(at)) return null;
+  const sorted = [...snapshots].filter((s) => Number.isFinite(finishedAt(s))).sort((a, b) => finishedAt(a) - finishedAt(b));
+  const before = [...sorted].reverse().find((s) => finishedAt(s) < at) ?? null;
+  const newest = sorted[sorted.length - 1];
+  const after = newest && finishedAt(newest) > at ? newest : null;
+  const comparable = !!before && !!after && before.comparability_key === after.comparability_key;
+  const delta = before && after && comparable ? after.analysis_result.composite_score - before.analysis_result.composite_score : null;
+  return { marker, before, after, comparable, delta };
+}

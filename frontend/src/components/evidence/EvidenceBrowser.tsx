@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { Observation } from "../../api/types";
 import { useIntentLabel } from "../../format";
 import { useFormat, useT } from "../../i18n";
+import { EmptyState } from "../EmptyState";
 import { ObservationCard } from "./ObservationCard";
 import { NO_FILTER, distinct, filterObservations, isFiltered, mentionsBrand } from "./filter";
 import type { EvidenceFilter } from "./filter";
@@ -111,14 +112,20 @@ export function EvidenceBrowser({
       <EvidenceLegend />
 
       {visible.length === 0 ? (
-        <div className="evidence-empty">
-          <p className="empty">{t("pages.answers.empty")}</p>
-          {isFiltered(filter) && (
-            <button type="button" className="btn btn-secondary btn-small" onClick={() => update(NO_FILTER)}>
-              {t("modules.evidence.resetFilters")}
-            </button>
-          )}
-        </div>
+        <EmptyState
+          compact
+          as="p"
+          icon="search"
+          role="status"
+          title={t("pages.answers.empty")}
+          primary={
+            isFiltered(filter) && (
+              <button type="button" className="btn btn-secondary btn-small" onClick={() => update(NO_FILTER)}>
+                {t("modules.evidence.resetFilters")}
+              </button>
+            )
+          }
+        />
       ) : (
         <div className="obs-list">
           {shown.map((o) => (

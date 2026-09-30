@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties, RefObject } from "react";
+import { useReducedMotion } from "../../settings/motion";
 import type { ModuleId } from "../module/modules";
 import { CORNER_OF, SPARK_SPEED, computeWires, sparkPeriod } from "./wireGeometry";
 import type { Box, Corner, WireGeom, WireLayout } from "./wireGeometry";
@@ -52,19 +53,6 @@ function glowRegion(geom: WireGeom) {
   };
 }
 
-function usePrefersReducedMotion(): boolean {
-  const query = "(prefers-reduced-motion: reduce)";
-  const [reduced, setReduced] = useState(() => typeof window !== "undefined" && !!window.matchMedia?.(query).matches);
-  useEffect(() => {
-    const mq = window.matchMedia?.(query);
-    if (!mq) return;
-    const on = () => setReduced(mq.matches);
-    mq.addEventListener("change", on);
-    return () => mq.removeEventListener("change", on);
-  }, []);
-  return reduced;
-}
-
 /** One module's port: a socket ring with a lit core and a halo that pulses outward. */
 function Port({ x, y, className = "" }: { x: number; y: number; className?: string }) {
   return (
@@ -79,6 +67,45 @@ function Port({ x, y, className = "" }: { x: number; y: number; className?: stri
 }
 
 /**
+ * The stacked (bus) layout's rail markers: a junction node where each row of modules taps off the
+ * spine, and a downward chevron midway along each spine run — so the flow from the centre card to
+ * the modules reads as a directed rail even when nothing moves (reduced motion).
+ */
+function RailNodes({ spineX, top, rows }: { spineX: number; top: number; rows: number[] }) {
+  const stops = [top, ...rows];
+  return (
+    <g className="hub-rail">
+      {rows.map((y, i) => {
+        const from = stops[i];
+        // Only where the run is long enough for the chevron to sit clear of the nodes.
+        if (y - from < 34) return null;
+        return (
+          <g key={`a${i}`} className="hub-rail-arrow" transform={`translate(${spineX.toFixed(1)} ${((from + y) / 2).toFixed(1)})`}>
+            <circle r={6.5} />
+            <path d="M-3 -1.4 L0 1.8 L3 -1.4" />
+          </g>
+        );
+      })}
+      {rows.map((y) => (
+        <g key={`n${y}`} className="hub-rail-node" transform={`translate(${spineX.toFixed(1)} ${y.toFixed(1)})`}>
+          <circle r={5.2} />
+          <circle className="hub-rail-node-core" r={1.9} />
+        </g>
+      ))}
+    </g>
+  );
+}
+
+/** Distinct row positions (the modules of one row share a tap-off height), top to bottom. */
+function railRows(ys: number[]): number[] {
+  const rows: number[] = [];
+  for (const y of [...ys].sort((a, b) => a - b)) {
+    if (rows.length === 0 || y - rows[rows.length - 1] > 4) rows.push(y);
+  }
+  return rows;
+}
+
+/**
  * "Live wire" cables from the hub's centre card to its four module cards, drawn in an SVG laid
  * over the stage (pointer-events: none). Each wire is a dim cable with a glowing core that draws
  * itself out of the brand card as its module emerges, then carries current: bright dashes flowing
@@ -88,7 +115,9 @@ function Port({ x, y, className = "" }: { x: number; y: number; className?: stri
  * restarts when React re-renders or the geometry is re-measured.
  *
  * Geometry is re-measured with a ResizeObserver on the stage and every card, when fonts load, and
- * after any animation in the stage ends. Under reduced motion the wires are static and glowing.
+ * after any animation in the stage ends. Under reduced motion the wires are static and glowing,
+ * with no current or sparks; the ports, the numbered sockets on the cards (ModuleCard) and, in the
+ * stacked layout, the rail's junction nodes and arrows carry the "centre feeds each module" story.
  */
 export function LiveWires({
   stageRef,
@@ -102,7 +131,7 @@ export function LiveWires({
   active: ModuleId | null;
 }) {
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
-  const reduced = usePrefersReducedMotion();
+  const reduced = useReducedMotion();
   const [geo, setGeo] = useState<Geometry | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
 
@@ -261,6 +290,7 @@ export function LiveWires({
           <Port x={geom.end.x} y={geom.end.y} className="hub-port-end" />
         </g>
       ))}
+      {shared && <RailNodes spineX={shared.x} top={shared.y} rows={railRows(geo.wires.map((w) => w.geom.end.y))} />}
       {shared && <Port x={shared.x} y={shared.y} className="hub-port-start hub-port-shared" />}
     </svg>
   );

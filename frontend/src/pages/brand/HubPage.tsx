@@ -11,6 +11,7 @@ import { BrandCardBody } from "../../components/hub/BrandCardBody";
 import { peekBrandSummary } from "../../components/hub/brandCache";
 import { LiveWires } from "../../components/hub/LiveWires";
 import { ModuleCard } from "../../components/hub/ModuleCard";
+import { OnboardingChecklist } from "../../components/hub/OnboardingChecklist";
 import { AnalysisPreview, DetailsPreview, GapsPreview, PreviewSkeleton } from "../../components/hub/previews";
 import { useT } from "../../i18n";
 import { useBrandData } from "./BrandContext";
@@ -141,6 +142,7 @@ export function HubPage() {
         </div>
       )}
 
+      <OnboardingChecklist />
       <div className="hub-stage" ref={stageRef} data-active={active ?? undefined}>
         <section className="hub-centre" aria-label={t("hub.centre.label", { brand: brandName })}>
           {skeleton ? (

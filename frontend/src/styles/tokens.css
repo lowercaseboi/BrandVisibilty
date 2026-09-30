@@ -183,6 +183,21 @@
   /* layout */
   --maxw: 1080px;
   --gutter: 20px;
+
+  /* Breakpoints — the ONLY widths allowed in @media (enforced by scripts/check-breakpoints.mjs,
+     part of `npm run lint`). CSS custom properties can't be used inside a media query, so these
+     are documentation: write the literal value, and pair them like this:
+       phone      @media (max-width: 480px)   — small phones; single column, tightest spacing
+       mobile     @media (max-width: 640px)   — phones in general; stacked cards, compact chrome
+       tablet     @media (max-width: 900px)   — two-up grids collapse, the hub stacks
+       laptop     @media (max-width: 1100px)  — wide multi-column layouts ease off
+     and "from this width up" is the same value + 1 (min-width: 481px / 641px / 901px / 1101px),
+     so a max/min pair never overlaps or leaves a 1px gap. A new layout change picks the nearest
+     of these rather than a width of its own; container queries are the tool for truly local fits. */
+  --bp-phone: 480px;
+  --bp-mobile: 640px;
+  --bp-tablet: 900px;
+  --bp-laptop: 1100px;
 }
 
 /* Dark: warm grey-brown (Claude/Discord-like), cards a shade darker than the page. Keep this block and the one below identical. */

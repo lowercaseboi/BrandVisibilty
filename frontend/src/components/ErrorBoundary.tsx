@@ -2,6 +2,7 @@ import { Component } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useT } from "../i18n";
+import { EmptyState } from "./EmptyState";
 
 type Props = {
   children: ReactNode;
@@ -15,18 +16,23 @@ type State = { error: Error | null };
 function ErrorFallback({ onReset }: { onReset: () => void }) {
   const t = useT();
   return (
-    <div className="card empty-state">
-      <h1>{t("common.errorBoundary.title")}</h1>
-      <p className="muted">{t("common.errorBoundary.body")}</p>
-      <p className="page-head-actions">
+    <EmptyState
+      as="h1"
+      icon="error"
+      tone="error"
+      title={t("common.errorBoundary.title")}
+      body={t("common.errorBoundary.body")}
+      primary={
         <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>
           {t("common.errorBoundary.reload")}
         </button>
+      }
+      secondary={
         <Link to="/app" className="btn btn-secondary" onClick={onReset}>
           {t("common.errorBoundary.goToDashboard")}
         </Link>
-      </p>
-    </div>
+      }
+    />
   );
 }
 

@@ -1,6 +1,7 @@
 """Meta Graph API adapters: Facebook Page and Instagram (Business/Creator account linked to it).
 
-Both use the same long-lived Page access token (META_PAGE_TOKEN). Setup: docs/CHANNEL_SETUP.md.
+Both use a Page access token: the brand's connected account (Facebook Login → the Page's own
+token, which doesn't expire), else META_PAGE_TOKEN from .env. Setup: docs/CHANNEL_SETUP.md.
 
 Facebook Page: POST /{page_id}/photos (multipart `source` = image bytes, or `url` = public image
 URL) with `caption`, or POST /{page_id}/feed (`message`, `link`) for text-only posts; the
@@ -76,7 +77,14 @@ class _MetaAdapter(HttpAdapter):
         return f"{GRAPH_BASE}/{version}"
 
     def _token(self) -> str | None:
-        return setting(self.settings, "meta_page_token")
+        return self.cred("page_token")
+
+    def _missing(self, names: tuple[tuple[str, str, str | None], ...]) -> str:
+        """"Set META_PAGE_ID and …" for .env setups; "Connect … (missing page token)" for brand accounts."""
+        missing = [(env, human) for env, human, v in names if not v]
+        if self.creds.from_brand:
+            return f"The connected account is missing its {' and '.join(h for _, h in missing)} — reconnect it; export pack until then."
+        return f"Set {' and '.join(e for e, _ in missing)} to post (see {SETUP_DOC}) or connect an account in Details; export pack until then."
 
 
 class FacebookPageAdapter(_MetaAdapter):
@@ -84,16 +92,19 @@ class FacebookPageAdapter(_MetaAdapter):
     label = "Facebook Page"
 
     def _page_id(self) -> str | None:
-        return setting(self.settings, "meta_page_id")
+        return self.cred("page_id")
 
     def status(self) -> ChannelStatus:
         page_id, token = self._page_id(), self._token()
-        if page_id and token:
-            return ChannelStatus(self.channel, self.label, "connected", detail=f"Page ID {page_id}")
-        missing = " and ".join(n for n, v in (("META_PAGE_ID", page_id), ("META_PAGE_TOKEN", token)) if not v)
-        return ChannelStatus(
-            self.channel, self.label, "export_only", detail=f"Set {missing} to post (see {SETUP_DOC}); export pack until then."
-        )
+        if not (page_id and token):
+            return self._export_only(
+                self._missing((("META_PAGE_ID", "page id", page_id), ("META_PAGE_TOKEN", "page token", token)))
+            )
+        problem = self._unusable()
+        if problem:
+            return self._export_only(problem[:1].upper() + problem[1:] + ".")
+        name = self.creds.account_name if self.creds.from_brand else None
+        return ChannelStatus(self.channel, self.label, "connected", detail=f"Page: {name}" if name else f"Page ID {page_id}")
 
     def _publish(
         self, *, campaign: Campaign, variant: Variant, image_path: Path | None, image_url: str | None
@@ -147,7 +158,7 @@ class InstagramAdapter(_MetaAdapter):
         self._sleep = sleep
 
     def _ig_user_id(self) -> str | None:
-        return setting(self.settings, "ig_user_id")
+        return self.cred("ig_user_id")
 
     def _public_base_url(self) -> str | None:
         return setting(self.settings, "public_base_url")
@@ -164,14 +175,14 @@ class InstagramAdapter(_MetaAdapter):
     def status(self) -> ChannelStatus:
         ig, token = self._ig_user_id(), self._token()
         if not (ig and token):
-            missing = " and ".join(n for n, v in (("IG_USER_ID", ig), ("META_PAGE_TOKEN", token)) if not v)
-            return ChannelStatus(
-                self.channel, self.label, "export_only", detail=f"Set {missing} to post (see {SETUP_DOC}); export pack until then."
+            return self._export_only(
+                self._missing((("IG_USER_ID", "Instagram account id", ig), ("META_PAGE_TOKEN", "page token", token)))
             )
-        problem = self._public_url_problem()
+        problem = self._unusable() or self._public_url_problem()
         if problem:
-            return ChannelStatus(self.channel, self.label, "export_only", detail=problem[:1].upper() + problem[1:] + ".")
-        return ChannelStatus(self.channel, self.label, "connected", detail=f"IG account {ig}")
+            return self._export_only(problem[:1].upper() + problem[1:] + ".")
+        name = self.creds.account_name if self.creds.from_brand else None
+        return ChannelStatus(self.channel, self.label, "connected", detail=f"Instagram: {name}" if name else f"IG account {ig}")
 
     def validate(self, variant: Variant) -> list[str]:
         issues = length_issues(self.label, compose_text(variant), self.limit)

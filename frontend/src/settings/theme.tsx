@@ -2,6 +2,7 @@
 import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useState, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
 import { flushSync } from "react-dom";
+import { prefersReducedMotion } from "./motion";
 
 export type ThemePref = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
@@ -68,8 +69,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const toggle = useCallback(() => {
     const next = resolved === "dark" ? "light" : "dark";
     const doc = document as Document & { startViewTransition?: (update: () => void) => unknown };
-    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if (doc.startViewTransition && !reduce) doc.startViewTransition(() => flushSync(() => setPref(next)));
+    if (doc.startViewTransition && !prefersReducedMotion()) doc.startViewTransition(() => flushSync(() => setPref(next)));
     else setPref(next);
   }, [resolved, setPref]);
 

@@ -17,6 +17,7 @@ def test_statuses_cover_all_channels_in_order_with_no_settings() -> None:
         "facebook_page": "export_only",
         "instagram": "export_only",
         "x": "export_only",
+        "linkedin": "export_only",
         "google_business": "export_only",
         "whatsapp": "export_only",
         "export": "connected",

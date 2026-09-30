@@ -101,6 +101,7 @@ class FakeAdapter:
     ok: bool = True
     issues: list[str] = field(default_factory=list)
     calls: list[dict[str, Any]] = field(default_factory=list)
+    brand_keys: list[str | None] = field(default_factory=list)  # brand each lookup was for
 
     def status(self) -> ChannelStatus:
         return ChannelStatus(channel=self.channel, label=self.channel, mode=self.mode)  # type: ignore[arg-type]
@@ -129,14 +130,19 @@ def install_fakes(monkeypatch, *, adapters: dict[str, FakeAdapter] | None = None
         "facebook_page": FakeAdapter("facebook_page"),
         "instagram": FakeAdapter("instagram"),
         "x": FakeAdapter("x"),
+        "linkedin": FakeAdapter("linkedin"),
         "google_business": FakeAdapter("google_business", mode="export_only"),
         "whatsapp": FakeAdapter("whatsapp", mode="export_only"),
         "export": FakeAdapter("export", mode="export_only"),
         "sandbox": FakeAdapter("sandbox"),
     }
     table.update(adapters or {})
-    monkeypatch.setattr(service, "_get_adapter", lambda ch: table[ch])
+    def get_adapter(ch, brand_key=None):
+        table[ch].brand_keys.append(brand_key)
+        return table[ch]
+
+    monkeypatch.setattr(service, "_get_adapter", get_adapter)
     monkeypatch.setattr(
-        service, "channel_statuses", lambda: [a.status() for a in table.values()]
+        service, "channel_statuses", lambda brand_key=None: [a.status() for a in table.values()]
     )
     return gen, table

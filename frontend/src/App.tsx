@@ -1,7 +1,9 @@
 import { lazy, Suspense } from "react";
 import { Link, Route, Routes, useLocation } from "react-router-dom";
 import { AppHeader } from "./components/AppHeader";
+import { EmptyState } from "./components/EmptyState";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { RouteFocus } from "./components/RouteFocus";
 import { Toaster } from "./components/Toaster";
 import { useT } from "./i18n";
 import { BrandListPage } from "./pages/BrandListPage";
@@ -28,13 +30,17 @@ function sectionKey(pathname: string): string {
 function NotFound() {
   const t = useT();
   return (
-    <div className="card empty-state">
-      <h1>{t("common.notFound.title")}</h1>
-      <p className="muted">{t("common.notFound.body")}</p>
-      <p>
-        <Link to="/app">{t("common.notFound.back")}</Link>
-      </p>
-    </div>
+    <EmptyState
+      as="h1"
+      icon="compass"
+      title={t("common.notFound.title")}
+      body={t("common.notFound.body")}
+      primary={
+        <Link to="/app" className="btn btn-primary">
+          {t("common.notFound.back")}
+        </Link>
+      }
+    />
   );
 }
 
@@ -42,10 +48,12 @@ export default function App() {
   const t = useT();
   const { pathname } = useLocation();
 
-  // The landing page brings its own nav and footer.
+  // The landing page brings its own nav and footer. RouteFocus stays the first child in both
+  // branches, so React keeps the same instance (and its "previous page") across landing ↔ app.
   if (pathname === "/") {
     return (
       <>
+        <RouteFocus />
         <Suspense fallback={null}>
           <LandingPage />
         </Suspense>
@@ -56,6 +64,7 @@ export default function App() {
 
   return (
     <>
+      <RouteFocus />
       <a href="#main" className="skip-link">
         {t("common.app.skipToContent")}
       </a>
