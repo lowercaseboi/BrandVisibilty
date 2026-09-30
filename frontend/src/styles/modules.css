@@ -23,11 +23,11 @@
 }
 
 /* Everything unshared fades out quickly, so the moving card reads as the one thing that stays. */
-:root[data-vt] ::view-transition-old(root) {
+:root[data-vt]::view-transition-old(root) {
   animation: vt-fade-out 0.2s var(--ease) both;
 }
 
-:root[data-vt] ::view-transition-new(root) {
+:root[data-vt]::view-transition-new(root) {
   animation: vt-fade-in 0.3s var(--ease) 0.06s both;
 }
 
@@ -155,6 +155,7 @@
 .module-section-head h2 {
   margin: 2px 0 0;
   font-family: var(--display);
+  word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
   font-size: var(--fs-xl);
 }
 

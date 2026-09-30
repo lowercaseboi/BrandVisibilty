@@ -2,6 +2,30 @@
 #   UI:       http://localhost:8080
 #   API docs: http://localhost:8000/docs
 # Provider keys: put any of them in .env.local (copy .env.example). No keys = offline synthetic demo data.
+#
+# Campaign Studio (approve/publish to Meta, X, Google Business Profile export, WhatsApp
+# share, or the local sandbox) reads a few more settings from that same .env.local:
+#   ADMIN_TOKEN      gates approve/publish/delete (header X-Admin-Token). Unset: only the
+#                    sandbox, export-pack and WhatsApp-share channels work (nothing
+#                    external ever gets called, so this is fine for a local demo).
+#   SECRET_KEY       Fernet key for encrypting stored platform tokens. Generate one with
+#                    python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+#   PUBLIC_BASE_URL  the public origin that serves generated campaign images
+#                    (GET /media/<campaign_id>/<file>). Serving through this compose
+#                    file's frontend, that's PUBLIC_BASE_URL=http://<host>:8080/api —
+#                    nginx's /api/ rule proxies /api/media/... to the backend's
+#                    /media/... (see frontend/nginx.conf), and the backend builds
+#                    Instagram's image URL as f"{PUBLIC_BASE_URL}/media/...". Instagram
+#                    fetches that URL itself, so <host> must be reachable from Meta's
+#                    servers, not just from your machine — localhost will not work; use a
+#                    LAN IP only if Instagram/Meta can reach it (usually they can't), or
+#                    the cloudflared tunnel below for a real public URL.
+#   See docs/CHANNEL_SETUP.md for the per-channel keys (Meta, X, GBP) and step-by-step setup.
+#
+# Single worker: the backend must run as exactly one process (see DEPLOY.md "Run exactly
+# one backend worker" — analysis jobs live in an in-process queue, so extra workers would
+# each keep their own, silently dropping/duplicating jobs). Don't add `deploy.replicas`
+# or pass `--workers N` to uvicorn here; this compose file already runs one instance.
 name: brand-visibility
 
 services:
@@ -32,6 +56,21 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
+
+  # Optional public tunnel, for when Instagram (or anyone outside your LAN) needs to reach
+  # this machine's PUBLIC_BASE_URL. Uncomment, add TUNNEL_TOKEN=... to .env.local (from
+  # the Cloudflare Zero Trust dashboard: Networks -> Tunnels -> Create a tunnel -> choose
+  # "Docker" as the connector), then point that tunnel's public hostname at the frontend
+  # service (port 80) in the tunnel's dashboard config, and set
+  # PUBLIC_BASE_URL=https://<that-hostname>/api.
+  # cloudflared:
+  #   image: cloudflare/cloudflared:latest
+  #   command: tunnel run
+  #   environment:
+  #     TUNNEL_TOKEN: ${TUNNEL_TOKEN:?set TUNNEL_TOKEN in .env.local}
+  #   depends_on:
+  #     - frontend
+  #   restart: unless-stopped
 
 volumes:
   brandlens-data:

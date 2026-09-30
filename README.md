@@ -1,9 +1,7 @@
 # AI Visibility & Brand Intelligence Platform
 
-**Does ChatGPT, Gemini or Claude recommend your brand when a customer asks?** This platform measures it. It asks
-LLMs the questions real customers ask, such as *"best vada pav in Mumbai"* or *"good opticians near Dadar"*, and
-detects which brands the answers mention and in what position. From that it computes visibility scores with
-confidence intervals, finds the specific gaps, and turns each gap into a traceable, prioritised recommendation.
+**Does ChatGPT, Gemini or Claude recommend your brand when a customer asks?** This platform measures it, finds the
+specific reasons it doesn't, and turns each reason into a ready-to-publish social post or GBP update.
 
 Final-year B.E. project (AI & Data Science), built by a team of 4. The pilot brands are Gajanan Vada Pav,
 V.A. Mayekar Opticians and a local perfume brand.
@@ -13,48 +11,95 @@ Brand config ──► Query set ──► LLM providers ──► Mention detec
  (AC-1)          (frozen,      (any you have     (deterministic,       (pure,     (deterministic)    (each has a gap_id,
                  ~30 queries)   a key for)        alias-based)          + 95% CI)                     AC-7)
                                                                                       │
-                                              JSONL tracking history ◄────────────────┘ ──► REST API ──► React dashboard
+                                              JSONL tracking history ◄────────────────┘
+                                                          │
+                                                          ▼
+                                    REST API ──► React dashboard ──► Campaign Studio ──► approve ──► publish/export
 ```
 
 ## What it does
 
-- **Made for shop owners, not analysts.** The dashboard answers three questions in plain words:
-  - *How visible am I?* A score out of 100 with a rating word and an honest range.
-  - *Who does AI recommend instead?* How often each competitor is named, next to you.
-  - *What should I do next?* The top 3 suggestions, each with concrete steps (Google Business Profile, Justdial,
-    reviews, Instagram…).
-  - It also shows one real AI answer with the names highlighted.
-  - The rigour is one switch away: **Show the numbers behind this** reveals the confidence interval, admission
-    checks, gap IDs and the priority maths.
+Open a brand and you land on its **hub**, four modules deep:
+
+| Module | Answers |
+|--------|---------|
+| **Brand details** | Who is this brand — name, category, city, competitors, the questions it's tracked on. |
+| **Analysis** | *How visible am I?* Composite score (0–100) with a confidence interval, Coverage / Prominence / Share of Voice, per-provider breakdown, and a live evidence view — one real AI answer with brand and competitor names highlighted. |
+| **Gaps & evidence** | *Why?* Every detected gap (presence, prominence, competitive, source, representation), each linked back to the raw answers that prove it. |
+| **Recommendation engine (board)** | *What should I do?* A kanban of prioritised suggestions, each traceable to a `gap_id` — drag a card to track it, or turn it into a campaign. |
+
+From a recommendation, **Campaign Studio** drafts channel-specific copy and a generated image, you review and
+**approve** it (locking its content hash), then **publish** — to Meta (Facebook Page + Instagram), X, a Google
+Business Profile export, a WhatsApp share link, or a local sandbox — or just export a zip of the assets and copy.
+Every attempt is logged, published or blocked, so nothing external ever happens silently.
+
+Other things worth knowing:
 - **English, हिंदी and मराठी**, with light and dark themes. Shop names can be written in any script.
-- **Bring your own model.** Supports Gemini, OpenAI, Groq, OpenRouter, Anthropic Claude, Ollama, and any
-  OpenAI-compatible endpoint. With `providers=auto`, every provider that has a key is queried. With no keys at all,
-  the pipeline runs on a clearly labelled **synthetic** offline provider, so the demo always works.
-- **Frozen query sets.** Templates generate up to 30 distinct queries per brand (no repeats). Up to 20 are unprompted: category
-  discovery, problem-first, alternative-seeking, attribute-constrained, local and recommendation-seeking. Up to 10
-  are prompted: identity, fit, cost and head-to-head. The query set is hashed so runs stay comparable over time.
-- **Editable questions.** Customers can see exactly what the AIs are asked, switch suggested questions off and add
-  their own. Questions that name the brand are asked and shown as evidence, but are not scored.
-- **Metrics, computed over the unprompted subset only:**
-  - **Coverage** is the share of answers that mention the brand.
-  - **Prominence** is how early the brand appears when it is mentioned.
-  - **Share of Voice** is the brand's share of all brand mentions, competitors included.
-  - **Composite** = 0.4·Coverage + 0.3·Prominence + 0.3·SoV, with a **cluster-bootstrap 95% CI** that resamples
-    queries, not individual calls.
-- **Deterministic gap detection.** Gaps are typed as presence, prominence, competitive, source or representation.
-  Every gap links back to the raw LLM answers that prove it.
-- **Recommendations.** Priority is based on the counterfactual composite gain, with confidence and an effort label.
-  Every recommendation carries a non-null `gap_id`, so none are untraceable.
-- **Tracking history.** Every run appends a snapshot. The dashboard shows the score trend, the per-provider coverage,
-  and an evidence view with the brand and competitor mentions highlighted.
-- **Robust collection.** Retries with backoff (honouring `Retry-After`) handle 429, 5xx and timeouts. A failing
-  provider marks the run `partial` instead of killing it.
-  - A provider stuck on a rate limit is skipped automatically after 2 minutes without an answer.
-  - While a run is going you can skip one AI, finish now with the answers collected so far, or cancel.
+- **Bring your own model.** Gemini, OpenAI, Groq, OpenRouter, Anthropic Claude, Ollama, or any OpenAI-compatible
+  endpoint. `providers=auto` queries every provider that has a key. No keys at all → the pipeline runs on a clearly
+  labelled **synthetic** offline provider, so the demo always works.
+- **Frozen query sets.** Templates generate up to 30 distinct queries per brand. Up to 20 are unprompted (category
+  discovery, problem-first, alternative-seeking, attribute-constrained, local, recommendation-seeking); up to 10 are
+  prompted (identity, fit, cost, head-to-head). The set is hashed so runs stay comparable over time. Customers can
+  view, edit, disable or add questions.
+- **Metrics, computed over the unprompted subset only** (PRD §10.1): Coverage (share of answers mentioning the
+  brand), Prominence (how early it appears when mentioned), Share of Voice (its share of all brand mentions), and
+  Composite = 0.4·Coverage + 0.3·Prominence + 0.3·SoV with a cluster-bootstrap 95% CI that resamples queries, not
+  individual calls.
+- **Recommendations** are prioritised by counterfactual composite-score gain, with a confidence estimate and an
+  effort label, and validated before they ever reach the board (an unknown action, a class mismatch, or a missing
+  `gap_id` is rejected — AC-7).
+- **Claim-checked copy.** Before a campaign can be approved, its copy is checked for numbers, prices, dates and
+  superlatives that aren't backed by the brand's own profile.
+- **Tracking history.** Every run appends a snapshot; raw provider answers are stored separately from the light
+  snapshot line (`docs/CONTRACT.md`). The dashboard shows the score trend and a per-run evidence view.
+- **Robust collection.** Retries with backoff (honouring `Retry-After`) handle 429s, 5xx and timeouts. A provider
+  stuck on a rate limit is skipped after 2 minutes without an answer; a failing provider marks the run `partial`
+  instead of killing it. While a run is going you can skip one AI, finish early with the answers collected so far,
+  or cancel.
+
+## Architecture
+
+```
+backend/src/app/
+  querysets/        query templates, draft generation, freezing
+  collection/       LLM provider adapters (providers/) + retry/backoff; sources/ is an empty stub (no web/social
+                     collection yet — see Known limitations)
+  analysis/         mention detector, scorer (pure function, no I/O — DESIGN §1.6/§4), gap detector (deterministic)
+  recommendation/   engine (counterfactual priority + validation gate) + an optional LLM drafter for prose only
+                     (gap detection stays deterministic — DESIGN §5.1)
+  pipeline/         run_pipeline(): shared by the CLI and the API
+  tracking/         snapshot builder + JSONL store (DATA_DIR/tracking/), board state
+  brands/           pilot brands + user-created brands (DATA_DIR/brands.json)
+  distribution/     Campaign Studio: copywriter (+ claim check), imagegen/ (Pillow/qrcode, offline-first with
+                     Gemini/Cloudflare image providers), channels/ (Meta, X, Google Business Profile, local sandbox)
+  interface/        FastAPI app, in-memory job runner, response schemas
+  config/           settings: env vars / .env.local, keys never logged
+  db/, orchestration/, models/   PostgreSQL + Celery/Redis scaffolding for a planned v2 (see Known limitations)
+frontend/src/
+  pages/brand/       the hub + its four modules (DetailsModule, AnalysisModule, GapsModule, BoardModule) and
+                       CampaignStudio
+  components/        board, campaign, dashboard, evidence, hub, brandinfo, questions, module, landing
+  i18n/              en / hi / mr, checked for missing keys by `npm run lint`
+docs/CONTRACT.md      module / API / snapshot contract the backend and frontend share
+docs/CHANNEL_SETUP.md how to connect Meta, X and Google Business Profile to Campaign Studio
+docs/DETECTOR_VALIDATION.md   AC-12 tooling: export a blind labelling sheet, compute precision/recall/Cohen's kappa
+```
+
+| Doc | What it covers |
+|-----|----------------|
+| [PRD_v3.md](PRD_v3.md) | Requirements, scope and acceptance criteria (the *what*) |
+| [DESIGN_v1.md](DESIGN_v1.md) | Architecture, ER model and query/scoring methodology (the *how*) |
+| [docs/CONTRACT.md](docs/CONTRACT.md) | Current module signatures, snapshot schema and HTTP API |
+| [docs/CHANNEL_SETUP.md](docs/CHANNEL_SETUP.md) | Connecting Campaign Studio to Meta, X and Google Business Profile |
+| [docs/DETECTOR_VALIDATION.md](docs/DETECTOR_VALIDATION.md) | AC-12: labelling the mention detector against human judgement |
+| [RUNNING.md](RUNNING.md) | Full run guide: provider keys, `make` shortcuts, terminal reports, local dev, storage migration |
+| [DEPLOY.md](DEPLOY.md) | Hosting a live demo (Render + Vercel) |
+| [frontend/README.md](frontend/README.md) | Frontend dev, checks and routes |
 
 ## Quick start
 
-You need only Docker.
+**Docker (recommended) — you only need Docker:**
 
 ```bash
 git clone https://github.com/lowercaseboi/BrandVisibilty.git && cd BrandVisibilty
@@ -62,81 +107,99 @@ cp .env.example .env.local     # optional: paste ANY one provider key
 make up                        # = docker compose up --build -d
 ```
 
-- UI: http://localhost:8080
-- API docs (Swagger): http://localhost:8000/docs
+- UI: http://localhost:8080 — API docs (Swagger): http://localhost:8000/docs
 
-The first start seeds synthetic demo data for the 3 pilot brands. Open a brand, click **Run analysis**, and watch
-the job progress.
+The first start seeds synthetic demo data for the 3 pilot brands and, if it finds a pre-split snapshot history from
+an older image, upgrades it automatically (`scripts/migrate_split_observations.py`, safe to run repeatedly). Open a
+brand, click **Run analysis**, and watch the job progress. The backend container runs as a non-root user.
 
-**[RUNNING.md](RUNNING.md)** has the full guide: provider keys, the `make` shortcuts, the terminal reports, local
-development without Docker, and Windows/OneDrive notes.
+**Local, without Docker** (needs [uv](https://docs.astral.sh/uv/) and Node 22):
 
-## Stack
-
-| Layer    | Tech |
-|----------|------|
-| Backend  | Python 3.11, FastAPI, pydantic-settings, httpx, managed with [uv](https://docs.astral.sh/uv/) |
-| Frontend | React 19, Vite, TypeScript. Charts are inline SVG, with no UI kit. |
-| Runtime  | Docker Compose (backend + nginx-served frontend), with a named volume for data |
-| Planned  | PostgreSQL (ER model in DESIGN_v1), Celery + Redis orchestration |
-
-## Repository layout
-
-```
-backend/
-  src/app/
-    querysets/        query templates, draft generation, freezing
-    collection/       provider adapters (providers/), registry, retry/backoff
-    analysis/         mention detector, scorer (pure), gap detector (deterministic)
-    recommendation/   recommendation engine; optional LLM drafter (off by default)
-    brands/           pilot brands + user-created brands (DATA_DIR/brands.json)
-    pipeline/         run_pipeline(): shared by the CLI and the API
-    tracking/         snapshot builder + JSONL store (DATA_DIR/tracking/)
-    interface/        FastAPI app, in-memory job runner, response schemas
-    config/           settings: env vars / .env.local, keys never logged
-  scripts/            run_tracking_loop.py (CLI runs), report.py (terminal report)
-  tests/              unit tests; tests/integration hits live Gemini only if a key is set
-frontend/src/         pages (brands, dashboard, evidence, providers), components, API client
-docs/CONTRACT.md      module / API / snapshot contract the backend and frontend share
-docker-compose.yml, Makefile, .env.example
+```bash
+cd backend && uv sync && uv run python scripts/run_tracking_loop.py --brand all --providers synthetic
+make dev-backend      # terminal 1 → API on :8000
+make dev-frontend     # terminal 2 → UI on http://localhost:5173
 ```
 
-## Documentation
+**[RUNNING.md](RUNNING.md)** has the full guide, including every `make` shortcut, terminal reports, and
+Windows/OneDrive notes.
 
-| Doc | What it covers |
-|-----|----------------|
-| [PRD_v3.md](PRD_v3.md) | Requirements, scope and acceptance criteria (the *what*) |
-| [DESIGN_v1.md](DESIGN_v1.md) | Architecture, ER model and query/scoring methodology (the *how*) |
-| [docs/CONTRACT.md](docs/CONTRACT.md) | Current module signatures, snapshot schema and HTTP API |
-| [RUNNING.md](RUNNING.md) | How to run, configure providers and use the CLI |
-| [frontend/README.md](frontend/README.md) | Frontend dev, checks and routes |
-| [DEPLOY.md](DEPLOY.md) | Hosting the backend (Render) and frontend (Vercel) for a live demo |
+## Configuration
+
+Everything below goes in `.env.local` at the repo root (copy `.env.example`; it's git-ignored, so a filled-in copy
+never gets committed). Leave everything blank to run fully offline on synthetic data.
+
+| Group | Variables | Notes |
+|-------|-----------|-------|
+| **LLM providers** | `GEMINI_API_KEY`, `OPENAI_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `OLLAMA_BASE_URL`, `CUSTOM_LLM_BASE_URL`/`CUSTOM_LLM_API_KEY`/`CUSTOM_LLM_MODEL` | Any one enables `providers=auto`; see the table in [RUNNING.md](RUNNING.md#bring-your-own-model). |
+| **Image generation** | `IMAGE_PROVIDERS` (default `gemini,cloudflare,template`), `GEMINI_IMAGE_MODEL`, `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN` | `template` (offline, Pillow-rendered) always works and is the final fallback. |
+| **Channels** | `META_PAGE_ID`/`META_PAGE_TOKEN`/`IG_USER_ID`, `X_API_KEY`/`X_API_SECRET`/`X_ACCESS_TOKEN`/`X_ACCESS_SECRET`, `GBP_ACCOUNT_ID`/`GBP_LOCATION_ID`/`GBP_ACCESS_TOKEN`, `COPY_PROVIDER` | Unconfigured channels still work as **export-only**. Full setup: [docs/CHANNEL_SETUP.md](docs/CHANNEL_SETUP.md). |
+| **Campaign Studio gate** | `ADMIN_TOKEN`, `SECRET_KEY`, `PUBLIC_BASE_URL` | `ADMIN_TOKEN` gates approve/publish/delete (header `X-Admin-Token`); unset → only sandbox/export/WhatsApp work. `SECRET_KEY` encrypts stored platform tokens. `PUBLIC_BASE_URL` is the public origin serving `/media/...` — behind this repo's `docker-compose.yml`, that's `http://<host>:8080/api`. |
+| **Storage** | `DATA_DIR` (default `backend/data` locally, `/data` in Docker) | See *Storage & migration* below. |
+| **CORS** (deployed only) | `CORS_ORIGINS`, `CORS_ORIGIN_REGEX` | Not needed for localhost; see [DEPLOY.md](DEPLOY.md). |
+
+## Storage & migration
+
+Each run appends a light snapshot line to `DATA_DIR/tracking/<brand_key>.jsonl` (scores, gaps, recommendations,
+counts); the run's raw provider answers live separately, one file per run, at
+`DATA_DIR/tracking/<brand_key>/<run_id>.observations.jsonl`. Docker's entrypoint runs
+`scripts/migrate_split_observations.py` on every start to upgrade any older, pre-split history — it's idempotent and
+a no-op once a volume is current, so it never slows down or blocks a normal boot. Outside Docker, or to preview the
+change first, see the manual commands in [RUNNING.md](RUNNING.md#upgrading-old-snapshot-history-one-time).
 
 ## Tests
 
 ```bash
-make test        # = cd backend && uv run pytest -q
-cd frontend && npm run build && npm run lint
+make test                          # backend: cd backend && uv run pytest -q
+cd backend && uv run pytest --cov=app.recommendation   # engine coverage
+cd frontend && npx tsc -b && npm run lint && npx vitest run && npx vite build
 ```
 
-`tests/integration/test_gemini_smoke.py` calls the real Gemini API. It is skipped unless you opt in with
-`RUN_LIVE_TESTS=1 make test` and have `GEMINI_API_KEY` set. It can fail on Google-side 429/503 errors that have
-nothing to do with the code.
+`backend/tests/integration/test_gemini_smoke.py` calls the real Gemini API and is skipped unless you opt in with
+`RUN_LIVE_TESTS=1 make test` with `GEMINI_API_KEY` set. `npm run lint` also checks for missing hi/mr translation
+keys against the English source (`frontend/scripts/check-i18n.mjs`).
 
-## MVP status
+## Acceptance criteria status
 
-**Built:** everything in *What it does* above, including the REST API, the dashboard, the CLI and Docker.
+Read against [PRD_v3.md §16](PRD_v3.md#16-acceptance-criteria).
 
-**Designed, not yet built** (see DESIGN_v1): PostgreSQL persistence, Celery/Redis orchestration (an in-process job
-thread stands in for it for now), web-source collection, Dev.to distribution, an admin quota view, the AC-12 detector
-validation study, and LLM drafting of recommendation prose.
+| AC | Requirement | Status |
+|----|-------------|--------|
+| AC-1 | Brand analysis input | **Met** — validated create/update, clear errors on invalid/empty input. |
+| AC-2 | Multi-source data collection | **Partial** — every LLM provider stores its response with provider, model, timestamp and query context; `collection/sources/` (web/social) is an empty stub, not implemented. |
+| AC-3 | Sampled collection | **Met** — Coverage etc. computed as a rate over the unprompted subset only; the prompted subset (brand-naming questions) is stored and shown as evidence but never scored. |
+| AC-4 | Raw observation storage | **Met** — observations are stored per run, separate from the derived snapshot, and retrievable via `GET /brands/{key}/snapshots/{run_id}/observations`. |
+| AC-5 | Visibility scoring | **Met** — composite per §10.6, pure function, CI and component breakdown always returned, traceable to mention-level evidence. |
+| AC-6 | Gap identification | **Met** — deterministic detector, 5 gap types, each with supporting evidence. |
+| AC-7 | Recommendation reasoning | **Met** — every recommendation carries a non-null `gap_id`; the validation gate rejects an unknown action, a class mismatch or a missing `gap_id`; priority is a counterfactual score-impact simulation. |
+| AC-8 | Visibility tracking | **Partial** — runs on demand (UI/API/CLI) with a cluster-bootstrap/Theil–Sen trend verdict; there is no scheduler, so "runs on schedule" is not implemented. |
+| AC-9 | Failure handling | **Met** — retry with backoff honouring `Retry-After`, per-provider skip after repeated failures or a stalled rate limit, run saved `partial`, failures visible in job status and logs. |
+| AC-10 | Distribution approval gate | **Met (adapted channel set)** — publish/approve is gated by `ADMIN_TOKEN`, every attempt is logged whatever the outcome (published/exported/failed/blocked). The v1 channel is Meta + X + a Google Business Profile export + WhatsApp-share + a local sandbox, in place of the PRD's Dev.to. |
+| AC-11 | Cost/quota visibility | **Pending** — `GET /providers` and `GET /channels` show configured vs. not; there's no admin view of per-provider usage or remaining quota/credit. |
+| AC-12 | Detector reliability | **Partial** — the full tooling exists (`docs/DETECTOR_VALIDATION.md`: blind-labelling export/import, precision/recall, Cohen's kappa) but no real human-labelled round has been run yet, so no numbers are published. |
+
+## Known limitations
+
+- **PostgreSQL + Celery/Redis are scaffolding, not wired in.** `db/`, `orchestration/`, `models/` and the
+  corresponding dependencies (`sqlalchemy`, `alembic`, `psycopg`, `celery`, `redis`) exist for the ER model in
+  DESIGN_v1 but the app runs entirely on JSONL files and an in-process job thread today.
+- **One backend worker only.** Analysis and campaign jobs live in an in-process queue; running more than one
+  uvicorn worker would give each its own queue and job table (see [DEPLOY.md](DEPLOY.md#run-exactly-one-backend-worker)).
+- **No authentication** beyond `ADMIN_TOKEN` gating Campaign Studio's write actions. Anyone who can reach the API
+  can create brands, start runs and edit questions — fine on localhost or a trusted network, not for a public
+  deployment without adding auth in front of it.
+- **No scheduled runs, no web/social source collection, no admin quota view** — see the AC table above.
+- **AC-12 needs a real labelling round** before its precision/recall/kappa numbers mean anything.
+- Instagram publishing needs `PUBLIC_BASE_URL` to be reachable *from Meta's servers*, not just from your machine —
+  see the note in `docker-compose.yml` and [docs/CHANNEL_SETUP.md](docs/CHANNEL_SETUP.md).
 
 ## Security
 
-Provider keys live only in `.env.local`, which is gitignored, or in real environment variables. They are sent only in
-request headers, never in URLs. They are never logged or returned by the API, and the Providers page and
-`make providers` show only whether a provider is configured. To contribute, copy `.env.example`. Never commit a
-filled-in env file.
+Provider keys and channel credentials live only in `.env.local` (git-ignored) or real environment variables. They
+are sent only in request headers, never in URLs, and are never logged or returned by the API — the Providers page,
+`GET /channels` and `make providers` show only whether something is configured. To contribute, copy `.env.example`.
+Never commit a filled-in env file; if a key does leak, revoke it at the provider immediately.
 
-The API has **no authentication**. Anyone who can reach port 8000 can create brands, start runs and edit questions.
-That is fine on localhost or a trusted network for the demo. Do not expose it publicly without adding auth.
+The API itself has no authentication; `ADMIN_TOKEN` only gates Campaign Studio's approve/publish/delete actions.
+That's fine on localhost or a trusted network for the demo — do not expose it publicly without adding auth in
+front of it.

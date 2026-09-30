@@ -19,27 +19,35 @@ export function viewTransitionFinished(): Promise<void> | null {
   return running;
 }
 
+/** True when navigations will morph: the View Transitions API exists and motion isn't reduced. */
+export function canMorph(): boolean {
+  if (typeof document === "undefined") return false;
+  const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  return !!(document as VTDocument).startViewTransition && !reduce;
+}
+
 /**
  * Navigate inside a View Transition, so elements sharing a `view-transition-name` on both pages
  * morph between them (brand list card → hub centre card, hub module card → module header) and
  * everything else cross-fades. Same pattern as the theme toggle (settings/theme.tsx). Falls back
  * to a plain navigation without the API or under prefers-reduced-motion.
  *
- * While the transition runs, `<html data-vt>` is set so the regular `.page-enter` rise animation
- * doesn't fight the morph (base.css / modules.css).
+ * While the transition runs, `<html data-vt="…">` is set — to `kind`, "nav" by default — so the
+ * regular `.page-enter` rise animation doesn't fight the morph (base.css / modules.css) and a
+ * particular kind of morph can have its own timing (e.g. "pick", the brand list's picked card
+ * being set down in the hub: hub.css).
  */
-export function useTransitionNavigate(): (to: string) => void {
+export function useTransitionNavigate(): (to: string, kind?: string) => void {
   const navigate = useNavigate();
   return useCallback(
-    (to: string) => {
+    (to: string, kind = "nav") => {
       const doc = document as VTDocument;
-      const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-      if (!doc.startViewTransition || reduce) {
+      if (!doc.startViewTransition || !canMorph()) {
         navigate(to);
         return;
       }
       const root = document.documentElement;
-      root.dataset.vt = "nav";
+      root.dataset.vt = kind;
       const vt = doc.startViewTransition(() => flushSync(() => navigate(to)));
       const done = vt.finished.catch(() => {}).finally(() => {
         delete root.dataset.vt;

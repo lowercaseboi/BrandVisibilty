@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import math
 import random
+import re
 import threading
 import time
 from collections.abc import Callable, Sequence
@@ -104,6 +105,22 @@ def _short_error(exc: BaseException) -> str:
     if isinstance(exc, (httpx.TimeoutException, TimeoutError)):
         return "timed out"
     return type(exc).__name__
+
+
+# Anything in an exception message that could be a URL, a credential or a long opaque token.
+_SECRETISH = re.compile(
+    r"https?://\S+|(?i:\b(?:api[_-]?key|key|token|secret|password|authorization)\b\s*[=:]\s*\S+)|\b[A-Za-z0-9_\-]{32,}\b"
+)
+
+
+def recommendation_error_summary(exc: BaseException) -> str:
+    """Short, safe description of a recommendation-drafting failure for the snapshot record:
+    the exception type plus the first line of its message, with URLs, key=value credentials and
+    long opaque tokens redacted, capped at 160 characters."""
+    lines = str(exc).strip().splitlines()
+    first = _SECRETISH.sub("[redacted]", lines[0]) if lines else ""
+    first = _truncate(first, 160)
+    return f"{type(exc).__name__}: {first}" if first else type(exc).__name__
 
 
 def _truncate(text: str, limit: int = 60) -> str:
@@ -378,7 +395,7 @@ def run_pipeline(
     RuntimeError only if not a single scored observation was collected.
     """
     from app.collection.registry import resolve_provider_ids
-    from app.recommendation.engine import recommend
+    from app.recommendation.engine import recommend_detailed
 
     if samples < 1:
         raise ValueError("samples must be >= 1")
@@ -457,13 +474,18 @@ def run_pipeline(
     progress.note("Scoring answers…")
     analysis_result = score(observations, SELF_ENTITY_ID, competitor_ids, rng=random.Random(_BOOTSTRAP_SEED))
     gaps = detect_gaps(observations, SELF_ENTITY_ID, competitor_ids)
+    # A drafting failure must not lose a collected run, and must not pass for "nothing to
+    # recommend" either: the snapshot records it (recommendation_status / _error).
+    recommendation_status, recommendation_error = "ok", None
     try:
-        recommendations = recommend(
+        drafted = recommend_detailed(
             gaps, observations, SELF_ENTITY_ID, competitor_ids, entity_names=brand.entity_names()
         )
+        recommendations, recommendations_total = list(drafted.passed), drafted.total
     except Exception as exc:  # noqa: BLE001 - never throw away a collected run over drafting
+        recommendation_status, recommendation_error = "failed", recommendation_error_summary(exc)
         progress.note(f"Recommendations could not be drafted ({type(exc).__name__}); saving the run without them")
-        recommendations = []
+        recommendations, recommendations_total = [], 0
 
     # 6. Snapshot -> store. Admission/completeness is judged on the scored questions only;
     # brand-named answers are appended afterwards so they show up as evidence.
@@ -481,6 +503,9 @@ def run_pipeline(
         analysis_result=analysis_result,
         gaps=[asdict(g) for g in gaps],
         recommendations=[asdict(r) for r in recommendations],
+        recommendation_status=recommendation_status,
+        recommendation_error=recommendation_error,
+        recommendations_total=recommendations_total,
         started_at=started_at,
         completed_at=completed_at,
         entity_alias_table=brand.alias_table(),

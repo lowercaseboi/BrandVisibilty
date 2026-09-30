@@ -68,6 +68,23 @@ settings) for the new CORS config to take effect.
   reached the backend and CORS is correctly configured (an open devtools Network tab will
   show a CORS error if not).
 
+## 5. Campaign Studio in production
+
+Three more settings matter once someone actually approves and publishes a campaign from the deployed app, on top
+of the provider keys from step 1 (all documented in `.env.example` and [docs/CHANNEL_SETUP.md](docs/CHANNEL_SETUP.md)):
+
+- `ADMIN_TOKEN` — required to approve/publish/delete campaigns (header `X-Admin-Token`). Leaving it unset doesn't
+  break anything; it just limits publishing to the sandbox, export-pack and WhatsApp-share channels, which never
+  call an external API.
+- `SECRET_KEY` — a Fernet key encrypting any stored platform tokens. Generate one with
+  `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.
+- `PUBLIC_BASE_URL` — the public origin serving `GET /media/<campaign_id>/<file>` (generated campaign images).
+  Instagram fetches that URL itself, so it has to be reachable from Meta's servers. On Render this is simply your
+  Render service's own URL, e.g. `PUBLIC_BASE_URL=https://brand-visibility-backend.onrender.com`.
+
+For a local demo instead of a hosted one, `docker-compose.yml` has a commented-out `cloudflared` service that gives
+`PUBLIC_BASE_URL` a real public hostname without deploying anywhere — see the comment above it for setup.
+
 ## Alternatives to Render/Vercel
 
 - **Railway or Fly.io** instead of Render: both can build `backend/Dockerfile` directly

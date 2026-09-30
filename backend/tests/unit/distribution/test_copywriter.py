@@ -70,6 +70,52 @@ def test_unsupported_claims_are_flagged(text):
     assert any("Unsupported claim" in i for i in v.issues), v.issues
 
 
+@pytest.mark.parametrize(
+    "text",
+    [
+        "open till 11pm",
+        "₹20 only",
+        "since 1978",
+        "50% off",
+        "सबसे स्वादिष्ट वडा पाव",
+        "#1 in Mumbai",
+        "delivery in 10 minutes",
+        "२० रुपये",  # Devanagari digits
+    ],
+)
+def test_profile_aware_adversarial_copy_is_flagged(text):
+    v = cw.validate_variant(Variant(channel="facebook_page", text=f"Gajanan Vada Pav. {text}"), FACTS)
+    assert any("Unsupported claim" in i for i in v.issues), v.issues
+
+
+def test_no_duplicate_message_for_the_same_token():
+    # "50% off" is caught by both the old unconditional "discount" regex and the new profile-aware
+    # percentage check; only one issue should name it.
+    v = cw.validate_variant(Variant(channel="facebook_page", text="Gajanan Vada Pav. 50% off today"), FACTS)
+    percent_issues = [i for i in v.issues if "50%" in i or "50" in i]
+    assert len(percent_issues) == 1, v.issues
+
+
+def test_number_backed_by_the_profile_is_not_flagged():
+    perfume = cw.BrandFacts.from_config(get_brand("perfume_pilot"))
+    v = cw.validate_variant(
+        Variant(channel="facebook_page", text=f"{perfume.name}. A perfume under 1000 rupees, made for daily wear."),
+        perfume,
+    )
+    assert not [i for i in v.issues if "Unsupported claim" in i], v.issues
+
+
+def test_city_name_does_not_back_an_unrelated_number():
+    v = cw.validate_variant(Variant(channel="facebook_page", text="Gajanan Vada Pav in Mumbai. Rated 5 stars!"), FACTS)
+    assert any("Unsupported claim" in i for i in v.issues), v.issues
+
+
+def test_brand_name_with_digits_backs_its_own_digit():
+    facts = cw.BrandFacts(name="Store24", category="store", cities=("Pune",))
+    v = cw.validate_variant(Variant(channel="facebook_page", text="Store24 is open now, visit us in Pune."), facts)
+    assert not [i for i in v.issues if "Unsupported claim" in i], v.issues
+
+
 def test_competitor_named_and_placeholder_are_flagged():
     v = cw.validate_variant(Variant(channel="x", text="Gajanan vs Ashok Vada Pav [add fact]"), FACTS)
     assert any("competitor" in i for i in v.issues)
@@ -148,6 +194,34 @@ def test_llm_exception_falls_back_to_template():
 
     draft = cw.draft_campaign(kits.kit_for("video"), FACTS, gap=GAP, recommendation=REC, provider_id="gemini", llm=boom)
     assert draft.drafted_by == "template"
+
+
+@pytest.mark.parametrize("action", sorted(kits.KITS))
+def test_template_deliverables_carry_no_unsupported_claim(action):
+    # Regression guard: static scaffolding text (character-limit headers, timing cues, generic
+    # copy) must never itself trip the profile-aware check.
+    kit = kits.kit_for(action)
+    draft = cw.draft_campaign(kit, FACTS, gap=GAP, recommendation=REC, competitor="Ashok Vada Pav", provider_id=None)
+    for d in draft.deliverables:
+        assert "claim_issues" not in d.extra, (d.kind, d.extra["claim_issues"])
+
+
+def test_deliverable_claim_issues_are_surfaced_in_extra():
+    from app.distribution.types import Deliverable
+
+    d = Deliverable(kind="listing", title="Listing", body="body", extra={"description": "Open since 1978, best in town."})
+    issues = cw.deliverable_claim_issues(d, FACTS)
+    assert any("Unsupported claim" in i for i in issues)
+    attached = cw._attach_deliverable_issues(d, FACTS)
+    assert "claim_issues" in attached.extra
+    assert attached.extra["claim_issues"] == "\n".join(issues)
+
+
+def test_video_script_body_numbers_are_not_scanned():
+    from app.distribution.types import Deliverable
+
+    d = Deliverable(kind="video_script", title="Script", body="0-3s — Hook. 25-30s — End card.")
+    assert cw.deliverable_claim_issues(d, FACTS) == []
 
 
 def test_resolve_copy_provider():

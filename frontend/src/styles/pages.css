@@ -315,6 +315,7 @@
   justify-content: center;
   gap: 3px;
   font-family: var(--display);
+  word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
   font-variant-numeric: tabular-nums;
   font-size: 34px;
   font-weight: 600;

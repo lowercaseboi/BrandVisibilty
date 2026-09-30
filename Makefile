@@ -5,7 +5,7 @@ SAMPLES ?= 3
 ROUND ?=
 ARGS ?=
 
-.PHONY: up down logs reset run report history evidence providers test dev-backend dev-frontend
+.PHONY: up down logs reset run report history evidence providers test dev-backend dev-frontend migrate migrate-local
 
 up:            ## build + start everything (UI :8080, API :8000/docs)
 	docker compose up --build -d
@@ -20,6 +20,12 @@ logs:          ## follow backend + frontend logs
 
 reset:         ## stop and DELETE all collected snapshots (re-seeds on next `make up`)
 	docker compose down -v
+
+migrate:       ## docker: check/upgrade the snapshot storage layout (now automatic on `make up`; this is for a one-off check without restarting)
+	docker compose exec backend python scripts/migrate_split_observations.py --data-dir /data
+
+migrate-local: ## local: same, against backend/data (or $DATA_DIR) without Docker
+	cd backend && uv run python scripts/migrate_split_observations.py
 
 run:           ## run the pipeline: make run BRAND=gajanan_vada_pav PROVIDERS=gemini SAMPLES=3
 	docker compose exec backend python scripts/run_tracking_loop.py --brand $(BRAND) --providers $(PROVIDERS) --samples $(SAMPLES) $(if $(ROUND),--round $(ROUND)) $(ARGS)

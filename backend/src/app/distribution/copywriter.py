@@ -12,9 +12,18 @@ Two paths, same output shape:
   LLM call / parse fails. Tests use this path.
 
 Validation (both paths): per-channel TEXT_LIMITS (hashtags and link included), hashtag
-normalisation and caps, and a claim check — superlatives ("best", "#1", "award-winning"…), prices
-and discounts are not in any brand profile, so they're flagged in `variant.issues` (LLM hashtags
-carrying such claims are dropped) instead of being silently kept.
+normalisation and caps, and a claim check — two layers:
+  - an unconditional regex list below (`_CLAIM_PATTERNS`) for claims no brand profile could ever
+    back (prices, discounts, awards, guarantees…);
+  - the profile-aware rule in `claims.py`: nothing numeric, temporal or superlative unless that
+    exact token is backed by the brand profile (a "24 hours" job line backs "24"; the city name
+    backs nothing numeric). See `claim_issues()` below, which runs both layers without reporting
+    the same token twice.
+Anything unsupported is flagged in `variant.issues` (LLM hashtags carrying such claims are dropped)
+instead of being silently kept. The same check runs over deliverables' user-facing text; since
+`Deliverable` has no `issues` field (DESIGN ER entity, shared with work in flight elsewhere), those
+surface in `extra["claim_issues"]` (newline-separated) until the schema grows one — see
+`deliverable_claim_issues()`.
 """
 
 from __future__ import annotations
@@ -27,6 +36,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from app.distribution import claims as claimcheck
 from app.distribution.kits import Kit, image_prompt
 from app.distribution.types import TEXT_LIMITS, ChannelId, Deliverable, Variant
 
@@ -178,22 +188,44 @@ def compose(variant: Variant) -> str:
     return "\n\n".join(p for p in parts if p)
 
 
-def find_claims(text: str) -> list[str]:
-    """Unsupported claims found in `text`, as 'label ("matched text")'."""
-    found: list[str] = []
+def _old_claim_matches(text: str) -> list[tuple[str, str]]:
+    """(label, matched substring) for every _CLAIM_PATTERNS hit — claims no profile can ever back."""
+    found: list[tuple[str, str]] = []
     for pattern, label in _CLAIMS:
         m = pattern.search(text)
         if m:
-            found.append(f'{label} ("{m.group(0).strip()}")')
+            found.append((label, m.group(0).strip()))
     return found
 
 
-def tag_claims(tag: str) -> list[str]:
+def find_claims(text: str) -> list[str]:
+    """Unsupported claims found in `text` (the unconditional regex layer), as 'label ("matched")'."""
+    return [f'{label} ("{matched}")' for label, matched in _old_claim_matches(text)]
+
+
+def claim_issues(text: str, facts: BrandFacts) -> list[str]:
+    """Every unsupported-claim issue for `text`: the profile-aware token check (`claims.py`) plus
+    the unconditional regex list above, without reporting the same token twice (a profile-aware
+    match "wins" over an unconditional one that overlaps it, e.g. new "₹20" over old bare "₹")."""
+    if not text or not text.strip():
+        return []
+    new_tokens = claimcheck.unsupported_claims(text, facts.as_prompt_dict())
+    issues = [claimcheck.issue_message(t) for t in new_tokens]
+    new_texts = [t.text.lower() for t in new_tokens]
+    for label, matched in _old_claim_matches(text):
+        low = matched.lower()
+        if any(low in nt or nt in low for nt in new_texts):
+            continue
+        issues.append(f'Unsupported claim — {label} ("{matched}") is not in the brand profile; remove it or verify it')
+    return issues
+
+
+def tag_claims(tag: str, facts: BrandFacts) -> list[str]:
     """Claims inside a hashtag: CamelCase and digits are split into words first
     ('#BestInMumbai' -> 'Best In Mumbai'), and '#1' style tags are checked as written."""
     body = tag.lstrip("#")
     words = re.sub(r"(?<=[a-z])(?=[A-Z0-9])|(?<=[0-9])(?=[A-Za-z])", " ", body).replace("_", " ")
-    return find_claims(words) or find_claims(tag)
+    return claim_issues(words, facts) or claim_issues(tag, facts)
 
 
 def _trim_to(text: str, limit: int) -> str:
@@ -220,7 +252,7 @@ def validate_variant(variant: Variant, facts: BrandFacts, *, fix: bool = False) 
         tags = normalize_hashtags(variant.hashtags)
         kept: list[str] = []
         for tag in tags:
-            if tag_claims(tag):
+            if tag_claims(tag, facts):
                 issues.append(f"Removed hashtag {tag}: unsupported claim")
             else:
                 kept.append(tag)
@@ -244,11 +276,10 @@ def validate_variant(variant: Variant, facts: BrandFacts, *, fix: bool = False) 
     elif over > 0:
         issues.append(f"Too long: {len(compose(variant))}/{limit} characters (hashtags and link included)")
 
-    for claim in find_claims(variant.text):
-        issues.append(f"Unsupported claim — {claim} is not in the brand profile; remove it or verify it")
+    issues.extend(claim_issues(variant.text, facts))
     if not fix:
         for tag in variant.hashtags:
-            if tag_claims(tag):
+            if tag_claims(tag, facts):
                 issues.append(f"Hashtag {tag} carries an unsupported claim")
     if _PLACEHOLDER.search(variant.text):
         issues.append("Contains a [placeholder] — replace it before approving")
@@ -299,7 +330,7 @@ def _core_sentences(kit: Kit, facts: BrandFacts, competitor: str | None) -> list
         # The competitor is named only in the long-form comparison, never in a social post.
         "comparison_page": f"Comparing {cat} options? Here is what {n} offers, so you can decide for yourself.",
         "use_case_page": f"Made for {audiences}." if audiences else f"Here is who {n} is for.",
-        "faq_page": f"We answered the questions people ask most about {n}.",
+        "faq_page": f"We answered the questions people often ask about {n}.",
         "video": f"Watch our new short video about {n}.",
         "clarify_category_descriptor": f"In one line: {is_a}",
         "add_attribute_claim": f"Ask us what makes {n} different.",
@@ -449,7 +480,7 @@ def _profile_copy(facts: BrandFacts) -> Deliverable:
     job = _safe_job(facts)
     gbp = " ".join(s for s in [is_a, f"We serve {aud}." if aud else "", f"Come to us to {job}." if job else ""] if s)
     ig_bio = f"{cat[:1].upper() + cat[1:]}" + (f" · {facts.city}" if facts.city else "")
-    about = "\n\n".join(s for s in [is_a, f"Our customers include {aud}." if aud else "", "[Add your story: when you started and what you're known for — facts only.]"] if s)
+    about = "\n\n".join(s for s in [is_a, f"Our customers include {aud}." if aud else "", "[Add your story: when you started and what you're known for — checkable facts.]"] if s)
     body = (
         f"# Profile copy for {n}\n\nUse the same category wording everywhere the brand is listed.\n\n"
         f"## Google Business Profile description (max 750 characters)\n\n{gbp[:750]}\n\n"
@@ -562,14 +593,86 @@ def _community_answer(facts: BrandFacts) -> Deliverable:
     n, cat, city = facts.name, facts.category, facts.city
     answer = (
         f"If you're looking for {_a(cat)}" + (f" in {city}" if city else "") + f", {n} is one option. "
-        "[Answer the actual question first, in your own words, with specifics.]\n\n"
+        "[Answer the actual question directly, in your own words, with specifics.]\n\n"
         f"Disclosure: I'm associated with {n}."
     )
     body = (
-        f"# Community answer\n\nPost only where it genuinely answers the question, and always keep the "
-        f"disclosure. This is never posted automatically.\n\n{answer}"
+        f"# Community answer\n\nPost where it genuinely answers the question — and nowhere else — and always keep "
+        f"the disclosure. This is never posted automatically.\n\n{answer}"
     )
     return Deliverable(kind="community_answer", title=f"Community answer: {n}", body=body, extra={"answer": answer})
+
+
+# --- deliverable claim check ---------------------------------------------------------------------
+
+# Which of a deliverable's `extra` fields hold the actual user-facing copy to check. Kept narrow and
+# deliberate:
+#  - "video_script" is skipped entirely: its body's own timing cues ("0-3s", "25-30s"…) and shot
+#    numbering are structural, not brand claims, and would false-positive as bare numbers.
+#  - "profile_copy" and "listing" check only the named extra fields, not `body`, because `body` also
+#    carries our own instructional headers (e.g. "(max 750 characters)") which aren't claims either.
+#  - "review_request" checks only the message, not the WhatsApp share link in `extra`/`body`, whose
+#    percent-encoding (`%20`…) is not a number to catch.
+#  - "faq" is read back out of the generated JSON-LD Q&A pairs.
+#  - everything else (article, outreach_email, community_answer) has no such scaffolding, so the
+#    whole body is checked — this is also where an LLM-authored long-form body would be caught.
+# Caveat: `merge_llm` keeps a deliverable's `extra` from the template baseline when only its `body`
+# is replaced by the LLM (PRD/DESIGN don't give Deliverable a place to regenerate `extra`), so an
+# LLM-authored profile_copy/listing/review_request body is not independently re-checked here — a
+# known gap alongside `extra["claim_issues"]` itself (see module docstring).
+_DELIVERABLE_EXTRA_FIELDS: dict[str, tuple[str, ...]] = {
+    "profile_copy": ("gbp_description", "ig_bio", "about"),
+    "listing": ("description",),
+    "review_request": ("message",),
+}
+_DELIVERABLE_SKIP = {"video_script"}
+
+
+def _faq_pair_texts(deliverable: Deliverable) -> list[str]:
+    try:
+        data = json.loads(deliverable.extra.get("jsonld", ""))
+    except (json.JSONDecodeError, TypeError):
+        return []
+    if not isinstance(data, dict):
+        return []
+    texts = []
+    for item in data.get("mainEntity", []) if isinstance(data.get("mainEntity"), list) else []:
+        if not isinstance(item, dict):
+            continue
+        q = item.get("name", "")
+        a = (item.get("acceptedAnswer") or {}).get("text", "") if isinstance(item.get("acceptedAnswer"), dict) else ""
+        texts.append(f"{q} {a}")
+    return texts
+
+
+def deliverable_claim_texts(deliverable: Deliverable) -> list[str]:
+    """The user-facing strings inside `deliverable` that could carry a claim (see the table above)."""
+    if deliverable.kind in _DELIVERABLE_SKIP:
+        return []
+    if deliverable.kind == "faq":
+        return _faq_pair_texts(deliverable)
+    fields = _DELIVERABLE_EXTRA_FIELDS.get(deliverable.kind)
+    if fields:
+        return [v for f in fields if (v := deliverable.extra.get(f))]
+    return [deliverable.body]
+
+
+def deliverable_claim_issues(deliverable: Deliverable, facts: BrandFacts) -> list[str]:
+    """Same rule as `claim_issues`, applied to a deliverable. See the module docstring for where
+    these surface (`extra["claim_issues"]`), since `Deliverable` has no `issues` field."""
+    issues: list[str] = []
+    for text in deliverable_claim_texts(deliverable):
+        issues.extend(claim_issues(text, facts))
+    return issues
+
+
+def _attach_deliverable_issues(deliverable: Deliverable, facts: BrandFacts) -> Deliverable:
+    issues = deliverable_claim_issues(deliverable, facts)
+    if not issues:
+        return deliverable
+    extra = dict(deliverable.extra)
+    extra["claim_issues"] = "\n".join(issues)
+    return Deliverable(kind=deliverable.kind, title=deliverable.title, body=deliverable.body, extra=extra)
 
 
 def _template_deliverables(kit: Kit, facts: BrandFacts, competitor: str | None, headline: str) -> list[Deliverable]:
@@ -593,7 +696,7 @@ def _template_deliverables(kit: Kit, facts: BrandFacts, competitor: str | None, 
             out.append(_outreach_email(facts))
         elif kind == "community_answer":
             out.append(_community_answer(facts))
-    return out
+    return [_attach_deliverable_issues(d, facts) for d in out]
 
 
 def template_draft(kit: Kit, facts: BrandFacts, *, competitor: str | None = None) -> Draft:
@@ -614,10 +717,12 @@ def template_draft(kit: Kit, facts: BrandFacts, *, competitor: str | None = None
 
 SYSTEM_PROMPT = (
     "You are a careful marketing copywriter for a small local business. You write honest, specific "
-    "social posts and web copy. You state ONLY facts given to you. You never invent prices, discounts, "
-    "offers, awards, rankings, addresses, phone numbers, opening hours or statistics, and you never use "
-    "superlatives such as 'best', '#1', 'top-rated', 'famous' or 'cheapest'. Where a fact is needed but "
-    "not given, write a [bracketed placeholder] — only in long-form deliverables, never in social posts. "
+    "social posts and web copy. You state ONLY facts given to you. You never invent numbers, prices, "
+    "discounts, percentages, times, dates, opening hours, durations, founding years, offers, awards, "
+    "rankings, addresses, phone numbers or statistics that are not in the brand facts given to you, and "
+    "you never use superlatives such as 'best', '#1', 'top-rated', 'famous', 'fastest', 'only' or "
+    "'cheapest' unless that exact word is already in the brand facts. Where a fact is needed but not "
+    "given, write a [bracketed placeholder] — only in long-form deliverables, never in social posts. "
     "You reply with one JSON object and nothing else."
 )
 
@@ -724,7 +829,10 @@ def merge_llm(base: Draft, data: dict[str, Any], kit: Kit, facts: BrandFacts, co
             if isinstance(item, dict) and (q := _str(item.get("q"), 300)) and (a := _str(item.get("a"), 1500))
         ]
         if len(pairs) >= 3:
-            base.deliverables = [_faq_deliverable(facts, pairs) if d.kind == "faq" else d for d in base.deliverables]
+            base.deliverables = [
+                _attach_deliverable_issues(_faq_deliverable(facts, pairs), facts) if d.kind == "faq" else d
+                for d in base.deliverables
+            ]
             used += 1
 
     dels_in = data.get("deliverables") if isinstance(data.get("deliverables"), dict) else {}
@@ -737,7 +845,8 @@ def merge_llm(base: Draft, data: dict[str, Any], kit: Kit, facts: BrandFacts, co
         body = _str(got.get("body"), 12_000)
         if not body:
             continue
-        base.deliverables[i] = Deliverable(kind=d.kind, title=_str(got.get("title"), 200) or d.title, body=body, extra=dict(d.extra))
+        new_d = Deliverable(kind=d.kind, title=_str(got.get("title"), 200) or d.title, body=body, extra=dict(d.extra))
+        base.deliverables[i] = _attach_deliverable_issues(new_d, facts)
         used += 1
     return base, used
 

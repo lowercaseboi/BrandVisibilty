@@ -453,4 +453,58 @@ export const dashboard = {
   "recs.draftedTemplate": "Drafted by fixed rules — no AI involved",
   "recs.draftedOther": "Drafted by: {by}",
   "recs.reasoning": "Server rationale (English):",
+
+  // ---------------------------------------------------------------- recommendation card, "Why" line
+  // One plain sentence per card, built from the gap and the responses behind it. "You" is the brand
+  // owner's brand. {competitor} is a competitor's brand name, {ai} an AI product name such as
+  // "Google Gemini", {question} a customer question quoted verbatim (keep it as is; it may be in any
+  // language), {rank} a list position like 3.
+  "recs.plain.nameInstead": "AI assistants name {competitor} instead of you when people ask “{question}”.",
+  "recs.plain.nameInsteadAi": "{ai} names {competitor} instead of you when people ask “{question}”.",
+  "recs.plain.missing": "AI assistants don't mention you when people ask “{question}”.",
+  "recs.plain.missingAi": "{ai} doesn't mention you when people ask “{question}”.",
+  "recs.plain.ahead": "AI assistants put {competitor} ahead of you when people ask “{question}”.",
+  "recs.plain.low": "AI assistants mention you, but only after {competitor}, when people ask “{question}”.",
+  "recs.plain.lowGeneric": "AI assistants mention you, but near the bottom of the list (position {rank}), when people ask “{question}”.",
+
+  // ---------------------------------------------------------------- recommendation card, full reasoning
+  // Three sentences shown together: a finding (what the data shows), the recommended action and the
+  // simulated effect on the score. From the engine's reasoning_key / reasoning_params.
+  // {brand} and {competitor} are brand names; {provider} an AI product name such as "Google Gemini";
+  // {intent_example} one of the "intent.*" examples above, already in quotes; {gap_type} a gap type
+  // name such as "Low presence". Percent values are whole numbers and the % sign is in the text.
+  // {evidence_count}, {changed_count}, {non_mentioning_count}, {dominant_source_count} are counts;
+  // {mean_rank} and {delta} are numbers with one decimal; {closure_rank} is a list position (2 or 3).
+  "recs.why.finding.presence_overall_none": "{brand} is not named in any of {evidence_count} AI answers about its category; assistants don't associate it with the category yet.",
+  "recs.why.finding.presence_overall_partial": "{brand} is named in only {coverage_pct}% of {evidence_count} AI answers about its category; assistants don't associate it with the category yet.",
+  "recs.why.finding.presence_provider_none": "{provider} never names {brand} in any of its {evidence_count} answers, so this assistant's sources don't know the brand yet.",
+  "recs.why.finding.presence_provider_partial": "{provider} names {brand} in only {coverage_pct}% of its {evidence_count} answers, so this assistant's sources don't know the brand yet.",
+  "recs.why.finding.presence_intent_none": "{brand} never appears in answers to questions like {intent_example}, across {evidence_count} AI responses.",
+  "recs.why.finding.presence_intent_partial": "{brand} appears in only {coverage_pct}% of answers to questions like {intent_example}, across {evidence_count} AI responses.",
+  "recs.why.finding.presence_intent_none_generic": "{brand} never appears in answers to one type of question, across {evidence_count} AI responses.",
+  "recs.why.finding.presence_intent_partial_generic": "{brand} appears in only {coverage_pct}% of answers to one type of question, across {evidence_count} AI responses.",
+  "recs.why.finding.prominence": "{brand} is mentioned in {coverage_pct}% of answers, but usually as an afterthought (average position {mean_rank} in the list, across {evidence_count} responses).",
+  "recs.why.finding.competitive": "{competitor} shows up alongside {brand} in {co_occurrence_pct}% of answers and is ranked ahead of it in {beat_pct}% of those ({evidence_count} responses).",
+  "recs.why.finding.representation": "When asked about {brand} directly, {disagreement_pct}% of answers describe it inconsistently with its real profile.",
+  "recs.why.finding.representation_conflicting": "When asked about {brand} directly, {disagreement_pct}% of answers describe it inconsistently with its real profile, and the assistants disagree with each other.",
+  "recs.why.finding.source": "{non_mentioning_count} of the {dominant_source_count} websites and videos that dominate this category never mention {brand}.",
+  "recs.why.finding.generic": "A gap was detected for {brand}: {gap_type}.",
+  "recs.why.action.comparison_page_vs": "Recommended: publish a “{brand} vs {competitor}” comparison page that states where {brand} wins.",
+  "recs.why.action.comparison_page": "Recommended: publish a comparison page between {brand} and its main competitors that states where {brand} wins.",
+  "recs.why.action.use_case_page_intent": "Recommended: publish a use-case page for questions like {intent_example}, spelling out who {brand} is for and when to choose it.",
+  "recs.why.action.use_case_page": "Recommended: publish a use-case page spelling out who {brand} is for and when to choose it.",
+  "recs.why.action.faq_page": "Recommended: publish an FAQ answering the exact questions people ask, naming {brand} in each answer.",
+  "recs.why.action.video": "Recommended: produce a short video targeting these questions, with {brand} named in the title and description.",
+  "recs.why.action.clarify_category_descriptor": "Recommended: use one consistent category description of {brand} everywhere it is listed.",
+  "recs.why.action.add_attribute_claim": "Recommended: claim one distinctive, checkable attribute (price, speed, speciality) for {brand} consistently.",
+  "recs.why.action.correct_outdated_description": "Recommended: correct outdated or wrong descriptions of {brand} on its own pages and listings.",
+  "recs.why.action.submit_to_directory": "Recommended: list {brand} on the directories and local listings AI assistants draw on (maps, review and category directories).",
+  "recs.why.action.pitch_listicle": "Recommended: pitch {brand} for inclusion in “best of” roundups and lists for the category.",
+  "recs.why.action.seek_review_coverage_provider": "Recommended: get {brand} reviewed by bloggers, food or local guides, or the press, in sources {provider} is likely to read.",
+  "recs.why.action.seek_review_coverage": "Recommended: get {brand} reviewed by bloggers, food or local guides, or the press.",
+  "recs.why.action.community_answer": "Recommended: answer real community questions (Reddit, Quora, local forums) where {brand} fits.",
+  "recs.why.assumption.presence": "If this lifted presence in half of the answers that currently leave it out ({changed_count} answers, as a mention at position {closure_rank}), the visibility score would rise by about {delta} points (simulated).",
+  "recs.why.assumption.prominence": "If this moved it up to position {closure_rank} in the {changed_count} answers where it ranks lower, the visibility score would rise by about {delta} points (simulated).",
+  "recs.why.assumption.competitive": "If it ranked ahead of {competitor} in the {changed_count} answers where it currently trails, the visibility score would rise by about {delta} points (simulated).",
+  "recs.why.assumption.unscored": "This gap isn't measured by the visibility score (it comes from brand-named questions or from websites), so no score change is simulated; it is ranked on evidence alone.",
 } as const;

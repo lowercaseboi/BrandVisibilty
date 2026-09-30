@@ -14,7 +14,8 @@ third but above the ~340 px strip Instagram/WhatsApp cover with their reply UI (
 below the ~250 px top UI); landscape puts a left-hand block over a horizontal scrim.
 
 Devanagari: Pillow shapes complex scripts only with libraqm (conjuncts, matra reordering, reph).
-The official Pillow wheels bundle it, so `RAQM_AVAILABLE` is normally True. Without raqm Pillow
+Pillow's Windows/macOS wheels bundle it, but the Linux wheels load the system libraqm at runtime,
+so on Linux install it (Debian/Ubuntu: `libraqm0`; the backend Dockerfile does). Without raqm Pillow
 falls back to its BASIC layout: text still renders (no exception) but Devanagari clusters are
 visibly mis-shaped (e.g. the i-matra ि drawn after its consonant). Latin text is unaffected.
 Mixed-script lines use one font per word (Noto Sans Devanagari for Devanagari words, Noto Sans

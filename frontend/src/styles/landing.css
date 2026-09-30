@@ -74,6 +74,7 @@
 
 .lp-h1 {
   font-family: var(--display);
+  word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
   font-size: clamp(2.3rem, 4.4vw, 3.9rem);
   line-height: 1.06;
   font-weight: 600;
@@ -98,6 +99,7 @@
 
 .lp-h2 {
   font-family: var(--display);
+  word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
   font-size: clamp(1.7rem, 3vw, 2.5rem);
   line-height: 1.15;
   font-weight: 600;
@@ -1157,6 +1159,7 @@
   align-items: center;
   gap: 10px;
   font-family: var(--display);
+  word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
   font-size: 17px;
   font-weight: 600;
   letter-spacing: -0.03em;

@@ -1,0 +1,324 @@
+[
+ {
+  "gap_type": "presence",
+  "evidence_count": 2,
+  "detail": {
+   "coverage": 0.0,
+   "scope": "overall"
+  },
+  "action": "add_attribute_claim",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "Gajanan Vada Pav is not named in any of 2 AI answers about its category; assistants don't associate it with the category yet. Recommended: claim one distinctive, checkable attribute (price, speed, speciality) for Gajanan Vada Pav consistently. If this lifted presence in half of the answers that currently omit it (3 answers, as a rank-3 mention), the visibility score would rise by ~1.2 points (simulated)."
+ },
+ {
+  "gap_type": "presence",
+  "evidence_count": 3,
+  "detail": {
+   "coverage": 0.0,
+   "provider_id": "gemini",
+   "scope": "provider"
+  },
+  "action": "add_attribute_claim",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "gemini never names Gajanan Vada Pav in any of its 3 answers, so this assistant's sources don't know the brand yet. Recommended: claim one distinctive, checkable attribute (price, speed, speciality) for Gajanan Vada Pav consistently. If this lifted presence in half of the answers that currently omit it (3 answers, as a rank-3 mention), the visibility score would rise by ~1.2 points (simulated)."
+ },
+ {
+  "gap_type": "presence",
+  "evidence_count": 4,
+  "detail": {
+   "coverage": 0.0,
+   "intent_type": "category_discovery",
+   "scope": "intent"
+  },
+  "action": "add_attribute_claim",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "Gajanan Vada Pav never appears in 'best for ...'-type answers (intent: category discovery), across 4 AI responses. Recommended: claim one distinctive, checkable attribute (price, speed, speciality) for Gajanan Vada Pav consistently. If this lifted presence in half of the answers that currently omit it (3 answers, as a rank-3 mention), the visibility score would rise by ~1.2 points (simulated)."
+ },
+ {
+  "gap_type": "presence",
+  "evidence_count": 4,
+  "detail": {
+   "coverage": 0.0,
+   "intent_type": "custom",
+   "scope": "intent"
+  },
+  "action": "add_attribute_claim",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "Gajanan Vada Pav never appears in these answers (intent: custom), across 4 AI responses. Recommended: claim one distinctive, checkable attribute (price, speed, speciality) for Gajanan Vada Pav consistently. If this lifted presence in half of the answers that currently omit it (3 answers, as a rank-3 mention), the visibility score would rise by ~1.2 points (simulated)."
+ },
+ {
+  "gap_type": "presence",
+  "evidence_count": 2,
+  "detail": {
+   "coverage": 0.05,
+   "scope": "overall"
+  },
+  "action": "add_attribute_claim",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "Gajanan Vada Pav is named in only 5% of 2 AI answers about its category; assistants don't associate it with the category yet. Recommended: claim one distinctive, checkable attribute (price, speed, speciality) for Gajanan Vada Pav consistently. If this lifted presence in half of the answers that currently omit it (3 answers, as a rank-3 mention), the visibility score would rise by ~1.2 points (simulated)."
+ },
+ {
+  "gap_type": "presence",
+  "evidence_count": 3,
+  "detail": {
+   "coverage": 0.05,
+   "provider_id": "gemini",
+   "scope": "provider"
+  },
+  "action": "add_attribute_claim",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "gemini names Gajanan Vada Pav in only 5% of its 3 answers, so this assistant's sources don't know the brand yet. Recommended: claim one distinctive, checkable attribute (price, speed, speciality) for Gajanan Vada Pav consistently. If this lifted presence in half of the answers that currently omit it (3 answers, as a rank-3 mention), the visibility score would rise by ~1.2 points (simulated)."
+ },
+ {
+  "gap_type": "presence",
+  "evidence_count": 4,
+  "detail": {
+   "coverage": 0.05,
+   "intent_type": "category_discovery",
+   "scope": "intent"
+  },
+  "action": "add_attribute_claim",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "Gajanan Vada Pav appears in only 5% of 'best for ...'-type answers (intent: category discovery), across 4 AI responses. Recommended: claim one distinctive, checkable attribute (price, speed, speciality) for Gajanan Vada Pav consistently. If this lifted presence in half of the answers that currently omit it (3 answers, as a rank-3 mention), the visibility score would rise by ~1.2 points (simulated)."
+ },
+ {
+  "gap_type": "presence",
+  "evidence_count": 4,
+  "detail": {
+   "coverage": 0.05,
+   "intent_type": "custom",
+   "scope": "intent"
+  },
+  "action": "add_attribute_claim",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "Gajanan Vada Pav appears in only 5% of answers (intent: custom), across 4 AI responses. Recommended: claim one distinctive, checkable attribute (price, speed, speciality) for Gajanan Vada Pav consistently. If this lifted presence in half of the answers that currently omit it (3 answers, as a rank-3 mention), the visibility score would rise by ~1.2 points (simulated)."
+ },
+ {
+  "gap_type": "prominence",
+  "evidence_count": 7,
+  "detail": {
+   "coverage": 0.45,
+   "mean_rank": 4.25
+  },
+  "action": "add_attribute_claim",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "Gajanan Vada Pav is mentioned in 45% of answers, but usually as an afterthought (average position 4.2 in the list, across 7 responses). Recommended: claim one distinctive, checkable attribute (price, speed, speciality) for Gajanan Vada Pav consistently. If this moved it up to position 2 in the 3 answers where it ranks lower, the visibility score would rise by ~1.2 points (simulated)."
+ },
+ {
+  "gap_type": "competitive",
+  "evidence_count": 12,
+  "detail": {
+   "beat_rate": 0.8333,
+   "co_occurrence_rate": 0.5,
+   "competitor_id": "comp-a"
+  },
+  "action": "add_attribute_claim",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "Ashok Vada Pav shows up alongside Gajanan Vada Pav in 50% of answers and is ranked ahead of it in 83% of those (12 responses). Recommended: claim one distinctive, checkable attribute (price, speed, speciality) for Gajanan Vada Pav consistently. If it ranked ahead of Ashok Vada Pav in the 3 answers where it currently trails, the visibility score would rise by ~1.2 points (simulated)."
+ },
+ {
+  "gap_type": "representation",
+  "evidence_count": 1,
+  "detail": {
+   "disagree_with_each_other": true,
+   "disagreement_rate": 0.6
+  },
+  "action": "add_attribute_claim",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "When asked about Gajanan Vada Pav directly, 60% of answers describe it inconsistently with its real profile, and the assistants disagree with each other. Recommended: claim one distinctive, checkable attribute (price, speed, speciality) for Gajanan Vada Pav consistently. This gap isn't measured by the visibility score (it comes from brand-named questions or the web layer), so no score change is simulated; it is ranked on evidence alone."
+ },
+ {
+  "gap_type": "representation",
+  "evidence_count": 1,
+  "detail": {
+   "disagree_with_each_other": false,
+   "disagreement_rate": 0.6
+  },
+  "action": "add_attribute_claim",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "When asked about Gajanan Vada Pav directly, 60% of answers describe it inconsistently with its real profile. Recommended: claim one distinctive, checkable attribute (price, speed, speciality) for Gajanan Vada Pav consistently. This gap isn't measured by the visibility score (it comes from brand-named questions or the web layer), so no score change is simulated; it is ranked on evidence alone."
+ },
+ {
+  "gap_type": "source",
+  "evidence_count": 2,
+  "detail": {
+   "dominant_source_count": 9,
+   "non_mentioning_count": 6
+  },
+  "action": "add_attribute_claim",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "6 of the 9 web/video sources that dominate this category never mention Gajanan Vada Pav. Recommended: claim one distinctive, checkable attribute (price, speed, speciality) for Gajanan Vada Pav consistently. This gap isn't measured by the visibility score (it comes from brand-named questions or the web layer), so no score change is simulated; it is ranked on evidence alone."
+ },
+ {
+  "gap_type": "presence",
+  "evidence_count": 2,
+  "detail": {
+   "coverage": 0.0,
+   "scope": "overall"
+  },
+  "action": "clarify_category_descriptor",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "Gajanan Vada Pav is not named in any of 2 AI answers about its category; assistants don't associate it with the category yet. Recommended: use one consistent category description of Gajanan Vada Pav everywhere it is listed. If this lifted presence in half of the answers that currently omit it (3 answers, as a rank-3 mention), the visibility score would rise by ~1.2 points (simulated)."
+ },
+ {
+  "gap_type": "presence",
+  "evidence_count": 2,
+  "detail": {
+   "coverage": 0.0,
+   "scope": "overall"
+  },
+  "action": "community_answer",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "Gajanan Vada Pav is not named in any of 2 AI answers about its category; assistants don't associate it with the category yet. Recommended: answer real community questions (Reddit, Quora, local forums) where Gajanan Vada Pav fits. If this lifted presence in half of the answers that currently omit it (3 answers, as a rank-3 mention), the visibility score would rise by ~1.2 points (simulated)."
+ },
+ {
+  "gap_type": "presence",
+  "evidence_count": 2,
+  "detail": {
+   "coverage": 0.0,
+   "scope": "overall"
+  },
+  "action": "comparison_page",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "Gajanan Vada Pav is not named in any of 2 AI answers about its category; assistants don't associate it with the category yet. Recommended: publish a 'Gajanan Vada Pav vs its main competitors' comparison page that states where Gajanan Vada Pav wins. If this lifted presence in half of the answers that currently omit it (3 answers, as a rank-3 mention), the visibility score would rise by ~1.2 points (simulated)."
+ },
+ {
+  "gap_type": "competitive",
+  "evidence_count": 12,
+  "detail": {
+   "beat_rate": 0.8333,
+   "co_occurrence_rate": 0.5,
+   "competitor_id": "comp-a"
+  },
+  "action": "comparison_page",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "Ashok Vada Pav shows up alongside Gajanan Vada Pav in 50% of answers and is ranked ahead of it in 83% of those (12 responses). Recommended: publish a 'Gajanan Vada Pav vs Ashok Vada Pav' comparison page that states where Gajanan Vada Pav wins. If it ranked ahead of Ashok Vada Pav in the 3 answers where it currently trails, the visibility score would rise by ~1.2 points (simulated)."
+ },
+ {
+  "gap_type": "presence",
+  "evidence_count": 2,
+  "detail": {
+   "coverage": 0.0,
+   "scope": "overall"
+  },
+  "action": "correct_outdated_description",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "Gajanan Vada Pav is not named in any of 2 AI answers about its category; assistants don't associate it with the category yet. Recommended: correct outdated or wrong descriptions of Gajanan Vada Pav on its own pages and listings. If this lifted presence in half of the answers that currently omit it (3 answers, as a rank-3 mention), the visibility score would rise by ~1.2 points (simulated)."
+ },
+ {
+  "gap_type": "presence",
+  "evidence_count": 2,
+  "detail": {
+   "coverage": 0.0,
+   "scope": "overall"
+  },
+  "action": "faq_page",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "Gajanan Vada Pav is not named in any of 2 AI answers about its category; assistants don't associate it with the category yet. Recommended: publish an FAQ answering the exact questions people ask, naming Gajanan Vada Pav in each answer. If this lifted presence in half of the answers that currently omit it (3 answers, as a rank-3 mention), the visibility score would rise by ~1.2 points (simulated)."
+ },
+ {
+  "gap_type": "presence",
+  "evidence_count": 2,
+  "detail": {
+   "coverage": 0.0,
+   "scope": "overall"
+  },
+  "action": "pitch_listicle",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "Gajanan Vada Pav is not named in any of 2 AI answers about its category; assistants don't associate it with the category yet. Recommended: pitch Gajanan Vada Pav for inclusion in 'best of' roundups and listicles for the category. If this lifted presence in half of the answers that currently omit it (3 answers, as a rank-3 mention), the visibility score would rise by ~1.2 points (simulated)."
+ },
+ {
+  "gap_type": "presence",
+  "evidence_count": 2,
+  "detail": {
+   "coverage": 0.0,
+   "scope": "overall"
+  },
+  "action": "seek_review_coverage",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "Gajanan Vada Pav is not named in any of 2 AI answers about its category; assistants don't associate it with the category yet. Recommended: get Gajanan Vada Pav reviewed by bloggers, food/local guides or press. If this lifted presence in half of the answers that currently omit it (3 answers, as a rank-3 mention), the visibility score would rise by ~1.2 points (simulated)."
+ },
+ {
+  "gap_type": "presence",
+  "evidence_count": 3,
+  "detail": {
+   "coverage": 0.0,
+   "provider_id": "gemini",
+   "scope": "provider"
+  },
+  "action": "seek_review_coverage",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "gemini never names Gajanan Vada Pav in any of its 3 answers, so this assistant's sources don't know the brand yet. Recommended: get Gajanan Vada Pav reviewed by bloggers, food/local guides or press in sources gemini is likely to read. If this lifted presence in half of the answers that currently omit it (3 answers, as a rank-3 mention), the visibility score would rise by ~1.2 points (simulated)."
+ },
+ {
+  "gap_type": "presence",
+  "evidence_count": 2,
+  "detail": {
+   "coverage": 0.0,
+   "scope": "overall"
+  },
+  "action": "submit_to_directory",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "Gajanan Vada Pav is not named in any of 2 AI answers about its category; assistants don't associate it with the category yet. Recommended: list Gajanan Vada Pav on the directories and local listings AI assistants draw on (maps, review and category directories). If this lifted presence in half of the answers that currently omit it (3 answers, as a rank-3 mention), the visibility score would rise by ~1.2 points (simulated)."
+ },
+ {
+  "gap_type": "presence",
+  "evidence_count": 2,
+  "detail": {
+   "coverage": 0.0,
+   "scope": "overall"
+  },
+  "action": "use_case_page",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "Gajanan Vada Pav is not named in any of 2 AI answers about its category; assistants don't associate it with the category yet. Recommended: publish a use-case page spelling out who Gajanan Vada Pav is for and when to choose it. If this lifted presence in half of the answers that currently omit it (3 answers, as a rank-3 mention), the visibility score would rise by ~1.2 points (simulated)."
+ },
+ {
+  "gap_type": "presence",
+  "evidence_count": 4,
+  "detail": {
+   "coverage": 0.0,
+   "intent_type": "category_discovery",
+   "scope": "intent"
+  },
+  "action": "use_case_page",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "Gajanan Vada Pav never appears in 'best for ...'-type answers (intent: category discovery), across 4 AI responses. Recommended: publish a use-case page for category discovery searches spelling out who Gajanan Vada Pav is for and when to choose it. If this lifted presence in half of the answers that currently omit it (3 answers, as a rank-3 mention), the visibility score would rise by ~1.2 points (simulated)."
+ },
+ {
+  "gap_type": "presence",
+  "evidence_count": 2,
+  "detail": {
+   "coverage": 0.0,
+   "scope": "overall"
+  },
+  "action": "video",
+  "changed_count": 3,
+  "delta": 1.25,
+  "text": "Gajanan Vada Pav is not named in any of 2 AI answers about its category; assistants don't associate it with the category yet. Recommended: produce a short video targeting these queries, with Gajanan Vada Pav named in title and description. If this lifted presence in half of the answers that currently omit it (3 answers, as a rank-3 mention), the visibility score would rise by ~1.2 points (simulated)."
+ }
+]

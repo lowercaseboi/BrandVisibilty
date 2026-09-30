@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Gap } from "../../api/types";
 import { countGapTypes, sparkPoints } from "./previewMath";
-import { PORT_FRACTION, busWire, cableWire, computeWires, spineX, wireLayout } from "./wireGeometry";
+import { PORT_FRACTION, SPARK_REST, SPARK_SPEED, busWire, cableWire, computeWires, sparkPeriod, spineX, wireLayout } from "./wireGeometry";
 import type { Box } from "./wireGeometry";
 
 // Desktop: a 300×400 centre card with a 300×200 module in each corner, 100px gutters.
@@ -93,6 +93,22 @@ describe("stacked (mobile) layout", () => {
   it("skips modules that haven't been measured", () => {
     const { wires } = computeWires(centre, { tl, br });
     expect(Object.keys(wires).sort()).toEqual(["br", "tl"]);
+  });
+});
+
+describe("sparkPeriod", () => {
+  it("fits the longest wire plus the rest between sparks", () => {
+    const p = sparkPeriod([180, 260, 240]);
+    expect(p).toBeGreaterThanOrEqual(260 + SPARK_SPEED * SPARK_REST);
+    expect(p).toBeLessThan(260 + SPARK_SPEED * SPARK_REST + 60);
+  });
+
+  it("doesn't change when a card settles a few px (the running spark never jumps)", () => {
+    expect(sparkPeriod([250, 200])).toBe(sparkPeriod([252.5, 198]));
+  });
+
+  it("still leaves a rest with no wires measured", () => {
+    expect(sparkPeriod([])).toBeGreaterThanOrEqual(SPARK_SPEED * SPARK_REST);
   });
 });
 

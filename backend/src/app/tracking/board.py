@@ -12,12 +12,20 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
+import threading
+from collections.abc import Callable
 from pathlib import Path
 
 from app import paths
 
 MAX_CARDS = 500
 MAX_KEY_LEN = 300
+
+# Serialises board writes within this process: the API's PUT and the Campaign Studio's
+# automatic card moves (service._set_board_column) both write the same file, and a
+# load-modify-save racing another write would silently drop one of the moves.
+_LOCK = threading.RLock()
 
 
 def _boards_dir() -> Path:
@@ -67,19 +75,35 @@ def validate_cards(cards: dict) -> None:
 
 
 def save_board(brand_key: str, cards: dict) -> dict:
-    """Validate and persist atomically (tempfile in the same directory + `os.replace`).
-    Returns the stored state, same shape as `load_board`."""
+    """Validate and persist atomically (a unique tempfile in the same directory + `os.replace`,
+    so two writers never share a temp file). Returns the stored state, same shape as `load_board`."""
     validate_cards(cards)
     path = _path_for(brand_key)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
     payload = {"brand_key": brand_key, "cards": cards}
-    try:
-        tmp.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
-        os.replace(tmp, path)
-    finally:
-        tmp.unlink(missing_ok=True)  # no-op once os.replace has moved it into place
+    text = json.dumps(payload, indent=2, ensure_ascii=False)
+    with _LOCK:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(text)
+            os.replace(tmp, path)
+        finally:
+            if os.path.exists(tmp):  # only left behind when the write or replace failed
+                os.unlink(tmp)
     return payload
+
+
+def update_board(brand_key: str, fn: Callable[[dict], dict | None]) -> dict:
+    """Load, change and save the board as one step with respect to other board writes in this
+    process. `fn` gets a copy of the cards and returns the new cards, or None for no change.
+    Returns the stored state."""
+    with _LOCK:
+        state = load_board(brand_key)
+        cards = fn(dict(state["cards"]))
+        if cards is None:
+            return state
+        return save_board(brand_key, cards)
 
 
 def delete_board(brand_key: str) -> None:

@@ -13,20 +13,23 @@
 .hub {
   /* One sequence out of the brand card: each wire grows from the centre card toward its corner,
      and its module card emerges from behind the centre card and rides out to the wire's end.
-     --hub-delay is when the first wire starts: almost at once on a direct load, or as the
-     list → hub morph (modules.css, 0.42s) is landing. Everything settles within ~0.85s of a click. */
+     --hub-delay is when the first wire starts: almost at once on a direct load, or as the picked
+     card lands from the list (the "pick" morph below). From the click: ~0.2s lift, the morph
+     from ~0.3s, wires from ~0.55s, and the last module card settled by ~1.05s. */
   --hub-delay: 40ms;
   --hub-stagger: 30ms;
   --hub-draw: 0.34s;
-  --hub-emerge: 0.4s;
+  --hub-emerge: 0.38s;
   --hub-out: cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
+/* Reached through the list → hub morph: start as the card touches down (its fast-start easing
+   has it on its spot about halfway through the 0.46s morph; the settle plays under the wires). */
 .hub.is-vt {
-  --hub-delay: 300ms;
+  --hub-delay: 250ms;
 }
 
 /* Back from a module: that module's header shrinks back into its card (the view transition), so
@@ -55,12 +58,116 @@
 /* Unpaired shared elements in a navigation morph (the other brand cards on the list, the module
    cards when going back to the list) fade out quickly / in a touch later, all inside the morph's
    0.42s, so the one card that moves is what the eye follows and nothing outlasts it. */
-:root[data-vt] ::view-transition-old(*):only-child {
+:root[data-vt]::view-transition-old(*):only-child {
   animation: vt-fade-out 0.18s var(--ease) both;
 }
 
-:root[data-vt] ::view-transition-new(*):only-child {
+:root[data-vt]::view-transition-new(*):only-child {
   animation: vt-fade-in 0.26s var(--ease) 0.12s both;
+}
+
+/* ---------- list → hub: pick a card from the deck ---------- */
+
+/* Opening a brand (BrandListPage + components/hub/pickCard.ts): the chosen card is picked up in place
+   — it lifts toward the viewer, leans toward the middle of the screen, casts a deeper shadow and
+   lights its rim — while the rest of the deck is set aside: the other cards drop back, shrink and
+   slide away from it, and the section headings and the add-brand area fade. Once the lift has
+   played (200ms) the View Transition starts from exactly this pose and carries the card to the
+   hub's centre (the "pick" timing below). The (0,4,0) selectors outrank modules.css's
+   `:root[data-vt] .stagger > *`, which would otherwise collapse these animations to zero length. */
+.home.is-picking .sample-card.is-picked {
+  z-index: 3;
+  animation: card-pick 0.2s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+
+.home.is-picking .sample-card.is-picked::before {
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+@keyframes card-pick {
+  to {
+    /* translateZ under perspective ≈ 1.07× and the scale the rest: ~1.08× in all. */
+    transform: perspective(1100px) translate3d(0, -8px, 70px) rotateX(var(--pick-rx, 4deg))
+      rotateY(var(--pick-ry, 0deg)) scale(1.012);
+    border-color: color-mix(in srgb, var(--accent) 70%, var(--line));
+    /* Same five layers as .card's rest shadow (so it interpolates), then two more: the offset
+       "print" shadow drops further away, the frame ring turns accent, plus a soft cast shadow and
+       an accent glow. */
+    box-shadow:
+      0 0 0 calc(1px + var(--frame-gap)) var(--bg),
+      0 0 0 calc(2px + var(--frame-gap)) color-mix(in srgb, var(--accent) 85%, transparent),
+      12px 16px 0 -1px var(--bg),
+      12px 16px 0 0 color-mix(in srgb, var(--accent) 30%, var(--line)),
+      inset 0 1px 0 var(--glass-highlight),
+      0 44px 70px -26px rgb(0 0 0 / 0.7),
+      0 0 48px -8px color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+}
+
+.home.is-picking .sample-card:not(.is-picked) {
+  pointer-events: none;
+  animation: card-set-aside 0.24s var(--ease) forwards;
+  /* Part of the page snapshot, not morph groups of their own: they fade with the page. */
+  view-transition-name: none !important;
+}
+
+@keyframes card-set-aside {
+  to {
+    opacity: 0.16;
+    transform: translate3d(var(--away-x, 0px), var(--away-y, 8px), 0) scale(0.93);
+  }
+}
+
+.home.is-picking .home-section > :not(.sample-grid),
+.home.is-picking > .alert {
+  opacity: 0.12;
+  transform: translateY(-6px);
+  transition:
+    opacity 0.2s var(--ease),
+    transform 0.2s var(--ease);
+}
+
+/* The picked card's morph into the hub's centre card: it keeps its quick start, runs a hair past
+   its spot and settles back (a ~2% overshoot), and as it touches down it presses in slightly and
+   springs back to full size — set down on the table. The lift's scale, tilt and height unwind
+   along the way because the morph starts from the lifted pose. Scoped by view-transition-class
+   so the page (root) and header groups don't also dip; where the class isn't supported these
+   rules are simply dropped and the card uses the plain morph timing (modules.css). */
+.sample-card {
+  view-transition-class: brand-card;
+}
+
+:root[data-vt="pick"]::view-transition-group(*.brand-card) {
+  animation-duration: 0.46s;
+  animation-timing-function: cubic-bezier(0.25, 1.25, 0.45, 1);
+}
+
+:root[data-vt="pick"]::view-transition-image-pair(*.brand-card) {
+  animation: vt-set-down 0.46s ease-out both;
+}
+
+/* The brand card's images keep their ink overflow — the lifted card's rim ring, cast shadow and
+   glow, the hub card's halo — instead of modules.css's clip, which would switch them off the
+   instant the morph takes over (and pop the halo back on as it ends). */
+:root[data-vt]::view-transition-old(*.brand-card),
+:root[data-vt]::view-transition-new(*.brand-card) {
+  overflow: visible;
+}
+
+@keyframes vt-set-down {
+  0%,
+  58% {
+    transform: none;
+  }
+
+  78% {
+    transform: scale(0.975);
+  }
+
+  100% {
+    transform: none;
+  }
 }
 
 /* ---------- stage ---------- */
@@ -376,6 +483,7 @@
 
 .hub-module-title {
   font-family: var(--display);
+  word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
   font-size: 19px;
   font-weight: 600;
   letter-spacing: -0.04em;
@@ -416,6 +524,7 @@
 
 .hub-pv-num {
   font-family: var(--display);
+  word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
   font-size: 26px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -650,6 +759,7 @@
   right: 5px;
   bottom: 3px;
   font-family: var(--display);
+  word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
   font-size: 15px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -704,8 +814,10 @@
 
 .hub-wire {
   --wire-delay: calc(var(--hub-delay) + var(--i, 0) * var(--hub-stagger));
-  /* One dash period (70px) per --flow-dur: an unhurried current, a little quicker when active. */
-  --flow-dur: 3.2s;
+  /* One dash period (70px) per --flow-dur: a steady current (~39px/s). The hovered wire speeds up
+     through its animations' playback rate (LiveWires.tsx), never by changing this duration —
+     that would snap the dashes to a different phase. */
+  --flow-dur: 1.8s;
   transition: opacity var(--dur-slow) var(--ease);
 }
 
@@ -762,7 +874,7 @@
   }
 }
 
-/* Current: bright dashes flowing out of the brand card, plus a spark (animateMotion) now and then. */
+/* Current: bright dashes flowing out of the brand card, plus a spark every few seconds. */
 .hub-wire-flow {
   opacity: 0;
   animation: hub-flow-in 0.5s var(--ease) calc(var(--wire-delay) + var(--hub-draw)) forwards;
@@ -807,8 +919,47 @@
   }
 }
 
+/* The spark: a zero-length round-capped dash (a dot) and a short streak behind it, one per
+   --spark-p px of pattern (LiveWires.tsx sets the dasharray), slid out along the wire at a constant
+   speed. The pattern only repeats past the wire's end, so after the spark leaves at the module's
+   port the wire rests until the next one comes out of the brand card's port — no fades or keyTimes,
+   just one linear loop. The wires take turns, a quarter cycle apart; the first leaves as soon as
+   its wire has drawn. */
+.hub-wire-spark,
+.hub-wire-spark-tail {
+  animation: hub-spark var(--spark-dur) linear infinite backwards;
+  animation-delay: calc(var(--wire-delay) + var(--hub-draw) + 0.1s + var(--i, 0) * var(--spark-dur) / 4);
+}
+
 .hub-wire-spark {
-  fill: color-mix(in srgb, var(--accent) 35%, white);
+  stroke: color-mix(in srgb, var(--accent) 30%, white);
+  stroke-width: 4.6;
+}
+
+.hub-wire-spark-tail {
+  stroke: color-mix(in srgb, var(--accent) 55%, white);
+  stroke-width: 2;
+  opacity: 0.6;
+  stroke-dashoffset: var(--spark-tail);
+  animation-name: hub-spark-tail;
+}
+
+@keyframes hub-spark {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: calc(-1 * var(--spark-p));
+  }
+}
+
+@keyframes hub-spark-tail {
+  from {
+    stroke-dashoffset: var(--spark-tail);
+  }
+  to {
+    stroke-dashoffset: calc(var(--spark-tail) - var(--spark-p));
+  }
 }
 
 /* Ports: a socket ring on each card's edge with a lit core; the halo pulses outward. */
@@ -872,13 +1023,9 @@
   }
 }
 
-/* Hover / focus a module: its wire runs hotter and a little faster, the others dim. */
+/* Hover / focus a module: its wire runs hotter (and ~1.4× faster, LiveWires.tsx), the others dim. */
 .hub-wires[data-active] .hub-wire:not(.is-active) {
   opacity: 0.35;
-}
-
-.hub-wire.is-active {
-  --flow-dur: 2.2s;
 }
 
 .hub-wire.is-active .hub-wire-core {

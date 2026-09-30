@@ -76,3 +76,45 @@ def test_invalid_brand_key_rejected():
     for bad in ("", "../x", "a/b", ".hidden"):
         with pytest.raises(ValueError):
             board.board_path(bad)
+
+
+def test_concurrent_saves_never_collide_on_a_temp_file(tmp_path, monkeypatch):
+    """Regression: every writer used the same `.<file>.<pid>.tmp`, so two threads saving at once
+    could replace each other's temp file and one save failed with FileNotFoundError."""
+    import threading
+
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
+    errors = []
+
+    def save(i):
+        try:
+            board.save_board("b", {f"k{i}": {"column": "saved", "order": 0, "updated_at": "t"}})
+        except Exception as exc:  # noqa: BLE001 - collected for the assertion
+            errors.append(exc)
+
+    threads = [threading.Thread(target=save, args=(i,)) for i in range(30)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert errors == []
+    assert len(board.load_board("b")["cards"]) == 1
+    assert [p.name for p in (tmp_path / "boards").iterdir()] == ["b.json"]  # no temp files left behind
+
+
+def test_update_board_is_atomic_and_skips_no_op_writes(tmp_path, monkeypatch):
+    import threading
+
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
+    assert board.update_board("b", lambda cards: None) == {"brand_key": "b", "cards": {}}
+    assert not board.board_path("b").exists()  # nothing to change, nothing written
+
+    def add(i):
+        board.update_board("b", lambda cards: {**cards, f"k{i}": {"column": "saved", "order": i, "updated_at": "t"}})
+
+    threads = [threading.Thread(target=add, args=(i,)) for i in range(30)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert len(board.load_board("b")["cards"]) == 30

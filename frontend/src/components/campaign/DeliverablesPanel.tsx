@@ -59,7 +59,10 @@ function DeliverableItem({
 }) {
   const t = useT();
   const bodyId = useId();
-  const extras = Object.entries(d.extra ?? {}).filter(([k, v]) => k !== "jsonld" && !!v);
+  // The backend's claim check puts unsupported numbers / superlatives found in this text under
+  // extra.claim_issues (newline-joined); they're warnings to fix before pasting, not extra fields.
+  const claimIssues = (d.extra?.claim_issues ?? "").split("\n").filter(Boolean);
+  const extras = Object.entries(d.extra ?? {}).filter(([k, v]) => k !== "jsonld" && k !== "claim_issues" && !!v);
   return (
     <li className="cs-deliverable">
       <div className="cs-deliverable-head">
@@ -85,6 +88,13 @@ function DeliverableItem({
           />
         </div>
       </fieldset>
+      {claimIssues.length > 0 && (
+        <ul className="cs-issues" role="alert" aria-label={t("board.campaign.deliverables.claims")}>
+          {claimIssues.map((m, i) => (
+            <li key={i}>{m}</li>
+          ))}
+        </ul>
+      )}
       {d.extra?.jsonld && (
         <div className="cs-jsonld">
           <span className="cs-field-head">

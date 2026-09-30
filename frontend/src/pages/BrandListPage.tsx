@@ -1,13 +1,15 @@
-import { useState } from "react";
-import type { MouseEvent } from "react";
+import { useCallback, useState } from "react";
+import type { FocusEvent, MouseEvent } from "react";
+import { Link } from "react-router-dom";
 import { deleteBrand, getLatestSnapshot, listBrands, peekLatestSnapshot } from "../api/client";
 import type { BrandSummary } from "../api/types";
 import { useAsync } from "../api/useAsync";
 import { AddBrandForm } from "../components/AddBrandForm";
 import { BrandCardBody } from "../components/hub/BrandCardBody";
 import { forgetBrand, peekBrands, rememberBrands } from "../components/hub/brandCache";
+import { pickCard } from "../components/hub/pickCard";
 import { brandHref, brandVtName } from "../components/module/modules";
-import { TransitionLink } from "../components/module/transition";
+import { canMorph, useTransitionNavigate } from "../components/module/transition";
 import { toast } from "../components/Toaster";
 import { useT } from "../i18n";
 import { Details } from "../settings/details";
@@ -23,6 +25,32 @@ function TrashIcon() {
   );
 }
 
+/**
+ * Opening a brand is picking a card from a deck: the card lifts toward you in place while the rest
+ * of the deck is set aside (components/hub/pickCard.ts, hub.css), then the View Transition carries
+ * it into the centre of the brand hub, where the wires and module cards grow out of it. Returns the
+ * cards' click handler. Keyboard Enter on the link is a click too, so it plays the same; a modified
+ * or middle click is left to the browser (new tab), and without View Transitions or under reduced
+ * motion the link simply navigates.
+ */
+function usePickCard() {
+  const go = useTransitionNavigate();
+  return useCallback(
+    (e: MouseEvent<HTMLAnchorElement>, to: string) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      const card = e.currentTarget.closest<HTMLElement>(".sample-card");
+      if (card?.closest(".is-picking")) return; // a card is already in the air
+      if (!card || !canMorph()) {
+        go(to);
+        return;
+      }
+      void pickCard(card).then(() => go(to, "pick"));
+    },
+    [go],
+  );
+}
+
 function BrandCard({ brand, onDeleted }: { brand: BrandSummary; onDeleted?: () => void }) {
   const t = useT();
   const latest = useAsync(
@@ -35,8 +63,15 @@ function BrandCard({ brand, onDeleted }: { brand: BrandSummary; onDeleted?: () =
   const snap = latest.status === "ready" ? latest.data : cached;
   const [play, setPlay] = useState(0);
   const replay = () => setPlay((n) => n + 1);
+  // Keyboard focus replays the ring like a hover does; the focus a click brings must not, or the
+  // score would drop to zero and count up again while the card is being picked up.
+  const replayOnFocus = (e: FocusEvent<HTMLElement>) => {
+    if (e.currentTarget.matches(":focus-visible")) replay();
+  };
   const [deleting, setDeleting] = useState(false);
+  const pick = usePickCard();
   const href = brandHref(brand.brand_key);
+  const open = (e: MouseEvent<HTMLAnchorElement>) => pick(e, href);
   // Shared with the hub's centre card: the browser morphs this card into it (and back).
   const vt = { viewTransitionName: brandVtName(brand.brand_key) };
 
@@ -71,9 +106,9 @@ function BrandCard({ brand, onDeleted }: { brand: BrandSummary; onDeleted?: () =
   // Sample (pilot) brands: the plain link card — no delete button.
   if (brand.is_pilot) {
     return (
-      <TransitionLink to={href} className="card sample-card" style={vt} onMouseEnter={replay} onFocus={replay}>
+      <Link to={href} className="card sample-card" style={vt} onClick={open} onMouseEnter={replay} onFocus={replayOnFocus}>
         {body}
-      </TransitionLink>
+      </Link>
     );
   }
 
@@ -84,9 +119,9 @@ function BrandCard({ brand, onDeleted }: { brand: BrandSummary; onDeleted?: () =
   // of a hover-only corner button.
   return (
     <div className={`card sample-card sample-card-user${deleting ? " is-deleting" : ""}`} style={vt}>
-      <TransitionLink to={href} className="sample-card-link" onMouseEnter={replay} onFocus={replay}>
+      <Link to={href} className="sample-card-link" onClick={open} onMouseEnter={replay} onFocus={replayOnFocus}>
         {body}
-      </TransitionLink>
+      </Link>
       <div className="sample-card-footer">
         <button
           type="button"

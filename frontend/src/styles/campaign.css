@@ -103,6 +103,7 @@
 .cs-panel-head h2 {
   margin: 0;
   font-family: var(--display);
+  word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
   font-size: var(--fs-lg);
 }
 
@@ -198,6 +199,7 @@
 .cs-headline {
   margin: 0;
   font-family: var(--display);
+  word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
   font-size: var(--fs-xl);
   line-height: 1.25;
   color: var(--text-h);
@@ -424,6 +426,7 @@
 
 .cs-counter {
   font-family: var(--display);
+  word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
   font-size: var(--fs-xs);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -909,6 +912,7 @@
 .cs-dialog-body h2 {
   margin: 0;
   font-family: var(--display);
+  word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
   font-size: var(--fs-lg);
 }
 
@@ -1099,6 +1103,7 @@
   background: var(--accent);
   color: var(--on-accent);
   font-family: var(--display);
+  word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
   font-size: 16px;
   font-weight: 700;
 }

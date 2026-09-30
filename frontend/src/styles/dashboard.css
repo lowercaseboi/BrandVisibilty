@@ -95,6 +95,7 @@
 
 .score-big {
   font-family: var(--display);
+  word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
   font-size: var(--fs-hero);
   font-weight: 600;
   letter-spacing: -0.06em;
@@ -526,6 +527,7 @@
 
 .run-qcount {
   font-family: var(--display);
+  word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
   font-size: var(--fs-xl);
   font-weight: 600;
   letter-spacing: -0.04em;

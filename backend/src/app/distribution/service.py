@@ -176,19 +176,24 @@ def _competitor_name(gap: dict[str, Any], entities: dict[str, str], cfg: Any) ->
 
 
 def _set_board_column(brand_key: str, key: str, column: str, *, keep_if: tuple[str, ...] = ()) -> None:
-    """Move the recommendation's board card. Never breaks the campaign flow on a board error."""
+    """Move the recommendation's board card (forwards only: callers pass `keep_if` for the columns
+    it must never leave). The load-modify-save runs under the board's lock, so it can't drop a
+    concurrent move. Never breaks the campaign flow on a board error."""
     from app.tracking import board
 
-    try:
-        state = board.load_board(brand_key)
-        cards = dict(state["cards"])
+    def move(cards: dict) -> dict | None:
         card = cards.get(key)
-        if card and (card.get("column") in keep_if or card.get("column") == column):
-            return
-        order = 1 + max((c.get("order", 0) for c in cards.values() if c.get("column") == column), default=-1)
+        current = card.get("column") if isinstance(card, dict) else None
+        if current is not None and (current in keep_if or current == column):
+            return None
+        orders = [c.get("order") for c in cards.values() if isinstance(c, dict) and c.get("column") == column]
+        order = 1 + max((o for o in orders if isinstance(o, int)), default=-1)
         cards[key] = {"column": column, "order": order, "updated_at": now_iso()}
-        board.save_board(brand_key, cards)
-    except (OSError, ValueError, KeyError, TypeError):
+        return cards
+
+    try:
+        board.update_board(brand_key, move)
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
         log.warning("Could not update the board card %s for %s", key, brand_key)
 
 
@@ -235,43 +240,84 @@ def create_campaign(
     if action not in kits.KITS:
         raise ValueError(f"Action {action!r} is not in the closed action vocabulary")
 
-    now = now_iso()
-    campaign = Campaign(
-        campaign_id=_new_id("cmp"),
-        brand_key=brand_key,
-        recommendation_id=recommendation_id,
-        gap_id=gap_id,
-        action=action,
-        suggestion_key=suggestion_key(action, gap),
-        status="generating",
-        created_at=now,
-        updated_at=now,
-        headline=kits.KITS[action].label,
-    )
-    store.save_campaign(campaign)
-    _audit(brand_key, actor, "campaign.create", campaign.campaign_id, recommendation_id=recommendation_id, gap_id=gap_id, action=action)
-    _set_board_column(brand_key, campaign.suggestion_key, "in_progress", keep_if=("done",))
-
     competitor = _competitor_name(gap, entities, cfg)
     context = {"rec": rec, "gap": gap, "competitor": competitor}
+    holder: dict[str, str] = {}
 
     def task(on_progress: ProgressFn) -> dict[str, Any]:
-        done = generate_content(brand_key, campaign.campaign_id, context=context, on_progress=on_progress)
+        done = generate_content(brand_key, holder["campaign_id"], context=context, on_progress=on_progress)
         return {"message": f"Campaign ready ({done.drafted_by} copy, {len(done.assets)} images)"}
+
+    # Check-and-create is one step under the lock, so two concurrent requests for the same
+    # recommendation (a double click, two tabs, a client retry) get the same campaign instead of
+    # two parallel drafts. The job is submitted and its id stored inside the same step, so a
+    # second request always sees a job it can hand back.
+    with _LOCK:
+        existing = _in_flight(brand_key, recommendation_id, jobs)
+        if existing is not None:
+            return existing
+        now = now_iso()
+        campaign = Campaign(
+            campaign_id=_new_id("cmp"),
+            brand_key=brand_key,
+            recommendation_id=recommendation_id,
+            gap_id=gap_id,
+            action=action,
+            suggestion_key=suggestion_key(action, gap),
+            status="generating",
+            created_at=now,
+            updated_at=now,
+            headline=kits.KITS[action].label,
+        )
+        holder["campaign_id"] = campaign.campaign_id
+        job = None
+        if jobs is not None:
+            store.save_campaign(campaign)  # before the job can start and load it
+            try:
+                job = jobs.submit_task(
+                    brand_key, kind="campaign", fn=task, message="Queued: drafting campaign",
+                    extra={"campaign_id": campaign.campaign_id},
+                )
+            except Exception:
+                store.save_campaign(replace(campaign, status="failed"))  # never leave an orphan "generating"
+                raise
+            # The job can't finish meanwhile: its final save needs this lock.
+            campaign.job_id = job["job_id"]
+        store.save_campaign(campaign)
+    _audit(brand_key, actor, "campaign.create", campaign.campaign_id, recommendation_id=recommendation_id, gap_id=gap_id, action=action)
+    _set_board_column(brand_key, campaign.suggestion_key, "in_progress", keep_if=("done",))
 
     if jobs is None:
         task(lambda *_: None)
         return _load(brand_key, campaign.campaign_id), None
-
-    job = jobs.submit_task(
-        brand_key, kind="campaign", fn=task, message="Queued: drafting campaign", extra={"campaign_id": campaign.campaign_id}
-    )
-    with _LOCK:
-        current = _load(brand_key, campaign.campaign_id)
-        if current.status == "generating":  # the job may already have finished
-            current.job_id = job["job_id"]
-            store.save_campaign(current)
     return _load(brand_key, campaign.campaign_id), job
+
+
+_LIVE_JOB_STATES = frozenset({"queued", "running"})
+# Without a job manager (CLI / synchronous use) there's no job to ask, so a "generating" campaign
+# older than this is taken to be left over from a crashed process rather than still drafting.
+_SYNC_IN_FLIGHT_SECONDS = 600
+
+
+def _in_flight(brand_key: str, recommendation_id: str, jobs: Any | None) -> tuple[Campaign, dict[str, Any] | None] | None:
+    """A campaign for this recommendation that is still being drafted, with its live job — or
+    None. A "generating" campaign whose job is gone or finished (or, without a job manager, that
+    is too old) is stale and doesn't count. Must be called with `_LOCK` held."""
+    for c in store.list_campaigns(brand_key):  # newest first
+        if c.recommendation_id != recommendation_id or c.status != "generating":
+            continue
+        if jobs is None:
+            try:
+                age = (datetime.now(UTC) - datetime.fromisoformat(c.updated_at)).total_seconds()
+            except (TypeError, ValueError):
+                continue
+            if age < _SYNC_IN_FLIGHT_SECONDS:
+                return c, None
+            continue
+        job = jobs.get(c.job_id) if c.job_id else None
+        if job is not None and job.get("status") in _LIVE_JOB_STATES:
+            return c, job
+    return None
 
 
 def generate_content(

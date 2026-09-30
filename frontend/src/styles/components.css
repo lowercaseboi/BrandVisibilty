@@ -87,6 +87,7 @@
 
 .brand-mark-name {
   font-family: var(--display);
+  word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
   font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.05em;
@@ -1882,6 +1883,7 @@ a.card:active {
 .metric-strip dd {
   margin: 0;
   font-family: var(--display);
+  word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
   font-size: var(--fs-lg);
   font-weight: 600;
   letter-spacing: -0.04em;

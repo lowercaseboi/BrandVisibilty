@@ -10,6 +10,7 @@ CONTRACT_KEYS = {
     "collection_started_at", "collection_completed_at", "collection_span_days", "query_set_content_hash",
     "query_set_template_version", "sampling_config", "observation_count", "mentioned_count", "cluster_count",
     "analysis_result", "gaps", "recommendations", "admission", "entities", "raw_observations",
+    "recommendation_status", "recommendation_error", "recommendations_total",
 }
 ADMISSION_KEYS = {
     "admissible", "status", "reasons", "query_coverage", "sample_completeness", "missing_query_ids",
@@ -136,3 +137,43 @@ def test_normalize_snapshot_defaults_unscored_observation_count():
     assert mixed["unscored_observation_count"] == 2
     stored = normalize_snapshot({"run_id": "r", "unscored_observation_count": 5, "raw_observations": []})
     assert stored["unscored_observation_count"] == 5
+
+
+def test_build_snapshot_records_recommendation_status_and_total():
+    snap = _snapshot([_raw("synthetic", 0, 0)])
+    assert (snap["recommendation_status"], snap["recommendation_error"], snap["recommendations_total"]) == ("ok", None, 0)
+    now = datetime.now(UTC)
+    result = AnalysisResult(0.5, 0.7, 0.4, 55.0, 40.0, 70.0, (), 1, 1, ("synthetic",))
+    capped = build_snapshot(
+        brand_key="demo", brand_name="Demo", entities={}, providers=["synthetic"], query_ids=["q0"], samples_per_query=1,
+        query_set_content_hash="abc", query_set_template_version="v1", sampling_config={}, raw_observations=[],
+        analysis_result=result, gaps=[], recommendations=[{"recommendation_id": "rec-1", "gap_id": "gap-1"}],
+        started_at=now, completed_at=now, recommendations_total=14,
+        recommendation_status="failed", recommendation_error="ZeroDivisionError: division by zero",
+    )
+    assert capped["recommendations_total"] == 14 and capped["recommendation_status"] == "failed"
+    assert capped["recommendation_error"] == "ZeroDivisionError: division by zero"
+
+
+def test_old_snapshots_normalise_to_ok_with_backfilled_counts():
+    from app.interface.schemas import Snapshot
+    from app.interface.snapshots import normalize_snapshot
+
+    old_rec = {"recommendation_id": "rec-1", "gap_id": "gap-1", "action": "faq_page", "evidence_refs": ["o1", "o2"],
+               "reasoning": "English only."}
+    snap = normalize_snapshot({"run_id": "r", "brand_key": "demo", "recommendations": [old_rec], "raw_observations": []})
+    assert snap["recommendation_status"] == "ok" and snap["recommendation_error"] is None
+    assert snap["recommendations_total"] == 1
+    (rec,) = snap["recommendations"]
+    assert rec["evidence_count"] == 2 and "reasoning_key" not in rec  # UI falls back to `reasoning`
+    Snapshot.model_validate({**snap, "mention_summary": {"total_answers": 0, "entities": {}}})
+
+    # a stored total below the list length (or garbage) can't claim fewer than are shown
+    odd = normalize_snapshot({"run_id": "r", "recommendations": [old_rec], "recommendations_total": 0,
+                              "recommendation_status": "weird"})
+    assert odd["recommendations_total"] == 1 and odd["recommendation_status"] == "ok"
+    kept = normalize_snapshot({"run_id": "r", "recommendations": [{**old_rec, "evidence_count": 7}],
+                               "recommendations_total": 14, "recommendation_status": "failed",
+                               "recommendation_error": "KeyError: 'x'"})
+    assert kept["recommendations_total"] == 14 and kept["recommendations"][0]["evidence_count"] == 7
+    assert (kept["recommendation_status"], kept["recommendation_error"]) == ("failed", "KeyError: 'x'")

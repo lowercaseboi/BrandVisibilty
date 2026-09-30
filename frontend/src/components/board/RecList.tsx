@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import type { BoardColumn } from "../../api/types";
+import type { BoardColumn, Observation } from "../../api/types";
 import { useFormat, useT } from "../../i18n";
 import { actionTitle } from "../dashboard/actions";
 import { BOARD_FILTERS, filterCounts, listCards, matchesFilter } from "./boardModel";
@@ -13,6 +13,9 @@ export interface RecListProps {
   runId: string | null;
   entities?: Record<string, string>;
   labelOf: (providerId: string) => string;
+  /** The run's responses by id (for each card's plain "Why"); null until loaded. */
+  observations: ReadonlyMap<string, Observation> | null;
+  campaignsReady: boolean;
   onStatus: (key: string, to: BoardColumn) => void;
   onRemove: (key: string) => void;
 }
@@ -23,7 +26,8 @@ export interface RecListProps {
  * a card out of the current filter, focus returns to that filter's button. Changes are announced in
  * a polite live region.
  */
-export function RecList({ columns, brandKey, runId, entities, labelOf, onStatus, onRemove }: RecListProps) {
+export function RecList(props: RecListProps) {
+  const { columns, brandKey, runId, entities, labelOf, observations, campaignsReady, onStatus, onRemove } = props;
   const t = useT();
   const fmt = useFormat();
   const [filter, setFilter] = useState<BoardFilter>("all");
@@ -84,6 +88,8 @@ export function RecList({ columns, brandKey, runId, entities, labelOf, onStatus,
               runId={runId}
               entities={entities}
               labelOf={labelOf}
+              observations={observations}
+              campaignsReady={campaignsReady}
               onStatus={(to) => changeStatus(card, to)}
               onRemove={() => remove(card)}
             />

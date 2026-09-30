@@ -97,7 +97,15 @@ def normalize_snapshot(record: dict[str, Any], *, include_raw: bool = False) -> 
         }
         for g in (snap.get("gaps") or [])
     ]
-    snap["recommendations"] = list(snap.get("recommendations") or [])
+    snap["recommendations"] = [_normalize_recommendation(r) for r in (snap.get("recommendations") or [])]
+    # Older records predate these: a missing status means drafting didn't fail (it only
+    # started being recorded with the field), and the total can't exceed what was stored.
+    if snap.get("recommendation_status") not in ("ok", "failed"):
+        snap["recommendation_status"] = "ok"
+    snap.setdefault("recommendation_error", None)
+    total = snap.get("recommendations_total")
+    if not isinstance(total, int) or total < len(snap["recommendations"]):
+        snap["recommendations_total"] = len(snap["recommendations"])
 
     admission = dict(snap.get("admission") or {})
     admission.setdefault("admissible", True)
@@ -126,6 +134,16 @@ def normalize_snapshot(record: dict[str, Any], *, include_raw: bool = False) -> 
     else:
         snap.pop("raw_observations", None)
     return snap
+
+
+def _normalize_recommendation(rec: Any) -> Any:
+    """Backfill `evidence_count` on recommendations stored before it existed: the engine's
+    evidence refs are the gap's, so their count is the n behind `confidence`. Records without
+    `reasoning_key` are left as they are (the UI falls back to the English `reasoning`)."""
+    if not isinstance(rec, dict) or "evidence_count" in rec:
+        return rec
+    refs = rec.get("evidence_refs")
+    return {**rec, "evidence_count": len(refs) if isinstance(refs, list) else 0}
 
 
 def _normalize_observation(obs: dict[str, Any], default_provider: str) -> dict[str, Any]:

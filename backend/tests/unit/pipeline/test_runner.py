@@ -44,7 +44,7 @@ class _FakeRec:
     action: str
 
 
-def _install_fakes(monkeypatch, rounds=None):
+def _install_fakes(monkeypatch, rounds=None, *, real_engine=False):
     registry = types.ModuleType("app.collection.registry")
     registry.resolve_provider_ids = lambda spec: spec.split(",")
     registry.provider_label = lambda pid: {"steady": "Steady AI"}.get(pid, pid)
@@ -61,12 +61,15 @@ def _install_fakes(monkeypatch, rounds=None):
     retry.Skipped = Skipped
     retry.query_with_retry = lambda provider, prompt, params, **kwargs: provider.query(prompt, params)
     engine = types.ModuleType("app.recommendation.engine")
-    engine.recommend = lambda gaps, obs, self_id, comp_ids, *, entity_names=None, max_recommendations=10: [
-        _FakeRec(f"rec-{i}", f"gap-{i}", "do something") for i, _ in enumerate(gaps)
-    ]
+    engine.recommend_detailed = lambda gaps, obs, self_id, comp_ids, *, entity_names=None, max_recommendations=10: (
+        types.SimpleNamespace(
+            passed=[_FakeRec(f"rec-{i}", f"gap-{i}", "do something") for i, _ in enumerate(gaps)], total=len(gaps)
+        )
+    )
     monkeypatch.setitem(sys.modules, "app.collection.registry", registry)
     monkeypatch.setitem(sys.modules, "app.collection.retry", retry)
-    monkeypatch.setitem(sys.modules, "app.recommendation.engine", engine)
+    if not real_engine:
+        monkeypatch.setitem(sys.modules, "app.recommendation.engine", engine)
 
 
 def test_run_pipeline_partial_run_is_saved(tmp_path, monkeypatch):
@@ -420,3 +423,62 @@ def test_daily_quota_exhausted_skips_the_provider_at_once(tmp_path, monkeypatch)
     assert final["state"] == "skipped" and final["skip_reason"] == "unavailable"
     assert final["note"] == "daily quota used up, resets in about 7 minutes" and final["failed"] == 1
     assert snap["status"] == "partial" and messages[-1][1] == messages[-1][2] == 2 * n
+
+
+# --------------------------------------------------------------------------- recommendation step
+
+
+def test_recommendations_from_the_real_engine_carry_total_and_reasoning_keys(tmp_path, monkeypatch):
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
+    _install_fakes(monkeypatch, real_engine=True)
+    from app.pipeline.runner import run_pipeline
+    from app.recommendation.reasoning import render_reasoning
+
+    snap = run_pipeline("gajanan_vada_pav", providers="steady", samples=1)
+    assert snap["recommendation_status"] == "ok" and snap["recommendation_error"] is None
+    recs = snap["recommendations"]
+    assert recs and snap["recommendations_total"] >= len(recs)
+    for rec in recs:
+        assert rec["gap_id"]  # AC-7
+        assert rec["evidence_count"] == len(rec["evidence_refs"])
+        assert render_reasoning(rec["reasoning_key"], rec["reasoning_params"]) == rec["reasoning"]
+
+
+def test_recommendation_failure_is_recorded_and_the_run_is_kept(tmp_path, monkeypatch):
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
+    _install_fakes(monkeypatch)
+    from app.interface.snapshots import normalize_snapshot
+    from app.pipeline.runner import run_pipeline
+
+    ok = run_pipeline("gajanan_vada_pav", providers="steady", samples=1)
+    assert ok["recommendation_status"] == "ok" and ok["recommendations_total"] == len(ok["recommendations"])
+
+    def boom(*args, **kwargs):
+        raise ZeroDivisionError("division by zero at https://api.example.test/v1?key=abc\nsecond line")
+
+    monkeypatch.setattr(sys.modules["app.recommendation.engine"], "recommend_detailed", boom)
+    messages = []
+    failed = run_pipeline("gajanan_vada_pav", providers="steady", samples=1, on_progress=lambda m, d, t: messages.append(m))
+
+    assert failed["recommendation_status"] == "failed"
+    assert failed["recommendation_error"] == "ZeroDivisionError: division by zero at [redacted]"
+    assert failed["recommendations"] == [] and failed["recommendations_total"] == 0
+    assert failed["gaps"] == ok["gaps"] and failed["gaps"]  # gap detection still ran
+    assert failed["analysis_result"] == ok["analysis_result"]  # scores intact
+    assert "Recommendations could not be drafted (ZeroDivisionError); saving the run without them" in messages
+    stored = store.load_snapshots("gajanan_vada_pav")
+    assert [s["run_id"] for s in stored] == [ok["run_id"], failed["run_id"]]  # the run is still saved
+    api = normalize_snapshot(stored[-1])
+    assert api["recommendation_status"] == "failed" and api["recommendation_error"].startswith("ZeroDivisionError")
+
+
+def test_recommendation_error_summary_is_short_and_safe():
+    from app.pipeline.runner import recommendation_error_summary as summary
+
+    assert summary(KeyError("x")) == "KeyError: 'x'"
+    assert summary(ValueError("")) == "ValueError"
+    leaky = RuntimeError("failed with api_key=sk-live-123 token: abc Bearer " + "A" * 40 + " at http://h/x?k=1")
+    text = summary(leaky)
+    assert "sk-live" not in text and "abc" not in text and "A" * 40 not in text and "http" not in text
+    assert text.startswith("RuntimeError: failed with [redacted]")
+    assert len(summary(RuntimeError("x " * 500))) <= len("RuntimeError: ") + 160

@@ -403,6 +403,19 @@ class SnapshotRecommendation(_OpenModel):
     reasoning: str | None = None
     evidence_refs: list[str] | None = None
     drafted_by: str | None = None
+    evidence_count: int | None = Field(
+        default=None,
+        description="How many AI answers back the gap: the n in confidence = max(0.2, min(1, n/10))",
+    )
+    reasoning_key: str | None = Field(
+        default=None,
+        description="Translatable key of the finding sentence (backend/src/app/recommendation/REASONING_KEYS.md); "
+        "absent on older records — fall back to `reasoning`",
+    )
+    reasoning_params: dict[str, str | int | float] | None = Field(
+        default=None,
+        description="Params for the finding sentence, plus `action_key` / `assumption_key` naming the other two",
+    )
 
 
 class SnapshotAdmission(_OpenModel):
@@ -450,6 +463,18 @@ class Snapshot(_OpenModel):
     analysis_result: SnapshotAnalysis
     gaps: list[SnapshotGap]
     recommendations: list[SnapshotRecommendation]
+    recommendation_status: Literal["ok", "failed"] = Field(
+        default="ok",
+        description='"failed" when drafting recommendations crashed: the run and its scores are fine, '
+        "`recommendations` is empty for that reason (not because nothing was found). Older records: \"ok\"",
+    )
+    recommendation_error: str | None = Field(
+        default=None, description="Short, safe failure summary (exception type + first line) when failed"
+    )
+    recommendations_total: int | None = Field(
+        default=None,
+        description="Valid recommendations before the engine's cap; more than len(recommendations) when capped",
+    )
     admission: SnapshotAdmission
     entities: dict[str, str]
     mention_summary: MentionSummaryOut

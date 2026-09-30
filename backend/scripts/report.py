@@ -253,6 +253,10 @@ def show_recommendations(s: dict) -> None:
     recs = s.get("recommendations") or []
     gap_types = {g.get("gap_id"): g.get("gap_type") for g in s.get("gaps") or []}
     rule(f"Recommendations ({len(recs)})")
+    if s.get("recommendation_status") == "failed":
+        # A drafting crash is not a clean bill of health — say so instead of "no recommendations".
+        print(c(f"  recommendations could not be drafted for this run: {s.get('recommendation_error') or 'unknown error'}", "yellow"))
+        return
     if not recs:
         print(c("  no recommendations", "grey"))
         return

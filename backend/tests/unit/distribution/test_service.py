@@ -283,3 +283,179 @@ def test_concurrent_edits_do_not_lose_updates(env):
         t.join()
     stored = service.get_campaign(BRAND, c.campaign_id)
     assert all(v.text == f"Gajanan Vada Pav {v.channel}" for v in stored.variants if v.channel in channels)
+
+
+# --------------------------------------------------------------------------- audit regressions
+# (recommendation → campaign → publish → board, across runs and concurrent requests)
+
+
+def _later_run(recommendations, gaps, run_id="run-2"):
+    """A newer stored run for the same brand (the helpers' SNAPSHOT is run-1)."""
+    from .campaign_helpers import SNAPSHOT
+
+    store_snapshot({**SNAPSHOT, "run_id": run_id, "recommendations": recommendations, "gaps": gaps})
+
+
+def _hold_drafting(monkeypatch):
+    """Make campaign drafting block until the returned event is set (keeps it "generating")."""
+    release = threading.Event()
+    real = service.draft_campaign
+
+    def slow(*args, **kwargs):
+        assert release.wait(10)
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(service, "draft_campaign", slow)
+    return release
+
+
+def _wait_job(manager, job_id):
+    for _ in range(500):
+        if manager.get(job_id)["status"] in ("completed", "failed"):
+            return manager.get(job_id)
+        time.sleep(0.01)
+    raise AssertionError("job did not finish")
+
+
+def test_concurrent_creates_for_one_recommendation_share_one_campaign(env, monkeypatch):
+    from app.interface.jobs import JobManager
+
+    release = _hold_drafting(monkeypatch)
+    manager = JobManager(lambda: None)
+    results = []
+    threads = [
+        threading.Thread(target=lambda: results.append(service.create_campaign(BRAND, "rec-comp", jobs=manager)))
+        for _ in range(4)
+    ]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert len({c.campaign_id for c, _ in results}) == 1
+    assert len({job["job_id"] for _, job in results}) == 1  # everyone gets the live job to poll
+    assert len(service.list_campaigns(BRAND)) == 1
+    assert [e.action for e in store.load_audit(BRAND)] == ["campaign.create"]
+    release.set()
+    assert _wait_job(manager, results[0][1]["job_id"])["status"] == "completed"
+    assert service.get_campaign(BRAND, results[0][0].campaign_id).status == "ready"
+
+
+def test_concurrent_synchronous_creates_share_one_campaign(env, monkeypatch):
+    release = _hold_drafting(monkeypatch)
+    results = []
+    first = threading.Thread(target=lambda: results.append(service.create_campaign(BRAND, "rec-comp")))
+    first.start()
+    for _ in range(500):  # until the first campaign exists and is drafting
+        if service.list_campaigns(BRAND):
+            break
+        time.sleep(0.01)
+    second, job = service.create_campaign(BRAND, "rec-comp")
+    assert job is None and second.status == "generating"
+    release.set()
+    first.join()
+    assert results[0][0].campaign_id == second.campaign_id
+    assert len(service.list_campaigns(BRAND)) == 1
+
+
+def test_stale_generating_campaign_does_not_block_a_new_one(env):
+    from dataclasses import replace as dc_replace
+
+    from app.interface.jobs import JobManager
+
+    old = _create()
+    store.save_campaign(dc_replace(old, status="generating", job_id="job-that-no-longer-exists"))
+    manager = JobManager(lambda: None)
+    fresh, job = service.create_campaign(BRAND, "rec-comp", jobs=manager)
+    assert fresh.campaign_id != old.campaign_id and job is not None
+    _wait_job(manager, job["job_id"])
+    # synchronous callers: a "generating" campaign from long ago is a crash leftover, not in flight
+    store.save_campaign(dc_replace(old, status="generating", job_id=None, updated_at="2020-01-01T00:00:00+00:00"))
+    again, _ = service.create_campaign(BRAND, "rec-comp")
+    assert again.campaign_id not in (old.campaign_id, fresh.campaign_id)
+
+
+def test_failed_campaign_can_be_created_again(env, monkeypatch):
+    real = service.draft_campaign
+
+    def boom(*a, **k):
+        raise RuntimeError("no copy")
+
+    monkeypatch.setattr(service, "draft_campaign", boom)
+    with pytest.raises(RuntimeError):
+        service.create_campaign(BRAND, "rec-comp")
+    monkeypatch.setattr(service, "draft_campaign", real)
+    retry = _create()  # the Studio's "try again" on a failed campaign
+    assert retry.status == "ready"
+    assert sorted(c.status for c in service.list_campaigns(BRAND)) == ["failed", "ready"]
+
+
+def test_campaign_for_a_recommendation_missing_from_the_latest_run(env):
+    """A campaign made before a new run dropped its recommendation still opens, approves and
+    publishes, and so does one created afterwards from the older run; the board card (a ghost
+    in the latest run) still moves to done."""
+    from .campaign_helpers import SNAPSHOT
+
+    before = _create("rec-comp")
+    _later_run(
+        recommendations=[{"recommendation_id": "rec-dir", "gap_id": "gap-local", "action": "submit_to_directory",
+                          "action_class": "distribution"}],
+        gaps=[g for g in SNAPSHOT["gaps"] if g["gap_id"] == "gap-local"],
+    )
+    _, gap, _ = service.find_recommendation(BRAND, "rec-comp")  # found in run-1
+    assert gap["gap_id"] == "gap-comp"
+    after, _ = service.create_campaign(BRAND, "rec-comp")
+    assert after.gap_id == "gap-comp" and after.suggestion_key == before.suggestion_key
+    for c in (before, after):
+        assert service.get_campaign(BRAND, c.campaign_id).status == "ready"
+        service.approve(BRAND, c.campaign_id)
+        published = service.publish(BRAND, c.campaign_id, ["sandbox"], public_base_url=None)
+        assert published.status == "published"
+    assert board.load_board(BRAND)["cards"]["comparison_page|ashok_vada_pav"]["column"] == "done"
+
+
+def test_board_card_never_moves_back_from_done(env):
+    _, adapters = env
+    c = _create()
+    service.approve(BRAND, c.campaign_id)
+    service.publish(BRAND, c.campaign_id, ["sandbox"], public_base_url=None)
+    key = c.suggestion_key
+    assert board.load_board(BRAND)["cards"][key]["column"] == "done"
+    # a second campaign for the same suggestion, and a failed publish of it, keep the card done
+    second = _create()
+    assert board.load_board(BRAND)["cards"][key]["column"] == "done"
+    adapters["sandbox"].ok = False
+    service.approve(BRAND, second.campaign_id)
+    assert service.publish(BRAND, second.campaign_id, ["sandbox"], public_base_url=None).status == "failed"
+    assert board.load_board(BRAND)["cards"][key]["column"] == "done"
+
+
+def test_concurrent_board_moves_are_not_lost(env):
+    keys = [f"faq_page|c{i}" for i in range(30)]
+    threads = [threading.Thread(target=service._set_board_column, args=(BRAND, k, "in_progress")) for k in keys]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    cards = board.load_board(BRAND)["cards"]
+    assert set(keys) <= set(cards)
+    assert sorted(cards[k]["order"] for k in keys) == list(range(30))
+
+
+def test_board_move_survives_a_corrupt_card(env):
+    board.save_board(BRAND, {"x|": "not-a-card", "y|": {"column": "in_progress", "order": "7"}})
+    service._set_board_column(BRAND, "faq_page|", "in_progress")
+    card = board.load_board(BRAND)["cards"]["faq_page|"]
+    assert (card["column"], card["order"]) == ("in_progress", 0)
+
+
+def test_video_recommendation_becomes_a_script_campaign(env):
+    from .campaign_helpers import SNAPSHOT
+
+    gap = {"gap_id": "gap-howto", "gap_type": "presence", "evidence_refs": ["o3"],
+           "detail": {"scope": "intent", "intent_type": "problem_first", "coverage": 0.0}, "is_inferred": False}
+    rec = {"recommendation_id": "rec-video", "gap_id": "gap-howto", "action": "video", "action_class": "content",
+           "reasoning": "How-to answers never name the brand."}
+    _later_run([*SNAPSHOT["recommendations"], rec], [*SNAPSHOT["gaps"], gap])
+    c, _ = service.create_campaign(BRAND, "rec-video")
+    assert c.status == "ready" and c.gap_id == "gap-howto" and c.suggestion_key == "video|"
+    assert "video_script" in {d.kind for d in c.deliverables}

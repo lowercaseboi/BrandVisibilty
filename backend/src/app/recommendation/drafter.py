@@ -9,7 +9,8 @@ or touch evidence. It is OFF by default: the MVP ships template reasoning
 
 A future implementation returns the new prose; the caller then stores it with
 `dataclasses.replace(rec, reasoning=..., drafted_by=<provider_id>)` and re-runs
-the validation gate.
+the validation gate. `reasoning_key` / `reasoning_params` stay as they are: they
+describe the same facts in template form, so a translated UI keeps rendering them.
 """
 
 from __future__ import annotations

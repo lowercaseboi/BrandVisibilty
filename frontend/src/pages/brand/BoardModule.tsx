@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { createCampaign, listCampaigns } from "../../api/client";
-import type { BoardColumn, Campaign } from "../../api/types";
+import { createCampaign, getObservations, listCampaigns } from "../../api/client";
+import type { BoardColumn, Campaign, Observation } from "../../api/types";
+import { useAsync } from "../../api/useAsync";
+import { InfoTip } from "../../components/InfoTip";
+import { HowItWorks } from "../../components/board/HowItWorks";
 import { buildBoard, clearLegacyDone, migrateLegacyDone, removeCard, setStatus } from "../../components/board/boardModel";
 import { RecList } from "../../components/board/RecList";
+import { capLine } from "../../components/board/recView";
 import { useBoardState } from "../../components/board/useBoardState";
 import {
   CampaignIndexContext,
@@ -17,8 +21,50 @@ import { ModuleShell } from "../../components/module/ModuleShell";
 import { brandHref } from "../../components/module/modules";
 import { TransitionLink, useTransitionNavigate } from "../../components/module/transition";
 import { toast } from "../../components/Toaster";
-import { useT } from "../../i18n";
+import { useFormat, useT } from "../../i18n";
+import { Details } from "../../settings/details";
 import { useBrandData } from "./BrandContext";
+
+/** Drafting crashed for this run: the scores are fine, the suggestions just need another run. */
+function DraftFailed({ brandKey, error }: { brandKey: string; error: string | null | undefined }) {
+  const t = useT();
+  return (
+    <div className="card board-empty-state board-failed" role="status">
+      <p className="eyebrow board-failed-eyebrow">
+        <span className="board-notice-dot" aria-hidden="true" />
+        {t("board.eyebrow")}
+      </p>
+      <h2>{t("board.failed.title")}</h2>
+      <p className="muted">{t("board.failed.body")}</p>
+      {error && (
+        <Details>
+          <p className="board-failed-detail small">{t("board.failed.detail", { error })}</p>
+        </Details>
+      )}
+      <TransitionLink to={brandHref(brandKey, "analysis")} className="btn btn-primary">
+        {t("board.failed.cta")}
+      </TransitionLink>
+    </div>
+  );
+}
+
+/** Placeholder cards while the saved statuses load (same shimmer as the hub previews). */
+function BoardSkeleton() {
+  const t = useT();
+  return (
+    <div className="rec-skeleton" role="status" aria-label={t("board.skeleton.label")}>
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="card rec-skeleton-card" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function EmptyBoard({ brandKey, noneFound }: { brandKey: string; noneFound: boolean }) {
   const t = useT();
@@ -41,6 +87,7 @@ function EmptyBoard({ brandKey, noneFound }: { brandKey: string; noneFound: bool
  */
 export function BoardModule() {
   const t = useT();
+  const fmt = useFormat();
   const { brandKey, latest, labelOf } = useBrandData();
   const { state, status, retrying, commit, retry } = useBoardState(brandKey);
   const shortDate = useShortDate();
@@ -49,6 +96,23 @@ export function BoardModule() {
   const recs = latest?.recommendations;
   const gaps = latest?.gaps;
   const entities = latest?.entities;
+  // Old snapshots have no status: treat them as "ok". A failed run keeps its saved statuses as they
+  // are (no ghost "resolved" cards, no sync or migration saves) until a run drafts suggestions again.
+  const draftFailed = latest?.recommendation_status === "failed";
+  const cap = capLine(latest?.recommendations_total, recs?.length ?? 0);
+
+  // The run's responses, for each card's plain "Why" (a real customer question). Loaded after the
+  // cards render; until then (or if it fails) cards show the translated gap finding instead.
+  const runId = latest?.run_id ?? null;
+  const hasRecs = (recs?.length ?? 0) > 0;
+  const obsState = useAsync(
+    () => (runId && hasRecs ? getObservations(brandKey, runId) : Promise.resolve(null)),
+    [brandKey, runId, hasRecs],
+  );
+  const observations = useMemo(() => {
+    const list: Observation[] = obsState.status === "ready" ? (obsState.data?.observations ?? []) : [];
+    return list.length ? new Map(list.map((o) => [o.observation_id, o])) : null;
+  }, [obsState]);
   const columns = useMemo(() => buildBoard(recs, gaps, entities, state), [recs, gaps, entities, state]);
   const groups = useMemo(
     () => groupSuggestions(recs ?? [], new Map((gaps ?? []).map((g) => [g.gap_id, g]))),
@@ -59,7 +123,7 @@ export function BoardModule() {
   // loaded (again if a retry turns "offline" into "ready"); storage is cleared only after a save.
   const migratedIn = useRef<BoardStatus | null>(null);
   useEffect(() => {
-    if (status === "loading" || !latest || migratedIn.current === status) return;
+    if (status === "loading" || !latest || draftFailed || migratedIn.current === status) return;
     migratedIn.current = status;
     const m = migrateLegacyDone(brandKey, state, groups);
     if (!m) return;
@@ -74,7 +138,7 @@ export function BoardModule() {
         toast(t.n("board.toast.migrated", m.migrated.length));
       })
       .catch(() => {});
-  }, [status, latest, brandKey, state, groups, commit, t]);
+  }, [status, latest, draftFailed, brandKey, state, groups, commit, t]);
 
   const onStatus = useCallback(
     (key: string, to: BoardColumn) => {
@@ -102,11 +166,11 @@ export function BoardModule() {
   // Once per loaded list (a failed save reverts the board; retrying in a loop would hammer the API).
   const syncedFor = useRef<Campaign[] | null>(null);
   useEffect(() => {
-    if (status !== "ready" || !latest || !campaigns?.length || syncedFor.current === campaigns) return;
+    if (status !== "ready" || !latest || draftFailed || !campaigns?.length || syncedFor.current === campaigns) return;
     syncedFor.current = campaigns;
     const next = syncBoardWithCampaigns(state, columns, campaigns);
     if (next !== state) commit(next).catch(() => {});
-  }, [status, latest, campaigns, state, columns, commit]);
+  }, [status, latest, draftFailed, campaigns, state, columns, commit]);
 
   const campaignIndex = useMemo<CampaignIndexValue>(() => {
     const byKey = indexCampaigns(campaigns ?? []);
@@ -139,7 +203,8 @@ export function BoardModule() {
 
   let body;
   if (!latest) body = <EmptyBoard brandKey={brandKey} noneFound={false} />;
-  else if (status === "loading") body = <p className="status">{t("board.loading")}</p>;
+  else if (draftFailed) body = <DraftFailed brandKey={brandKey} error={latest.recommendation_error} />;
+  else if (status === "loading") body = <BoardSkeleton />;
   else if (!hasCards) body = <EmptyBoard brandKey={brandKey} noneFound />;
   else
     body = (
@@ -152,6 +217,12 @@ export function BoardModule() {
           </div>
           {runDate && <p className="board-run">{t("board.meta.run", { date: runDate })}</p>}
         </div>
+        {cap && (
+          <p className="board-cap">
+            {t("board.cap.line", { n: fmt.number(cap.n), total: fmt.number(cap.total) })}
+            <InfoTip text={t("board.cap.tip")} label={t("board.cap.tipLabel")} />
+          </p>
+        )}
         {status === "offline" && (
           <p className="board-notice" role="status">
             <span className="board-notice-dot" aria-hidden="true" />
@@ -168,6 +239,8 @@ export function BoardModule() {
             runId={latest.run_id}
             entities={entities}
             labelOf={labelOf}
+            observations={observations}
+            campaignsReady={campaigns !== null}
             onStatus={onStatus}
             onRemove={onRemove}
           />
@@ -175,5 +248,12 @@ export function BoardModule() {
       </section>
     );
 
-  return <ModuleShell id="recommendations">{body}</ModuleShell>;
+  return (
+    <ModuleShell id="recommendations">
+      <div className="board-stack">
+        <HowItWorks />
+        {body}
+      </div>
+    </ModuleShell>
+  );
 }

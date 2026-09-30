@@ -1,17 +1,15 @@
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties, RefObject } from "react";
 import type { ModuleId } from "../module/modules";
-import { CORNER_OF, computeWires } from "./wireGeometry";
+import { CORNER_OF, SPARK_SPEED, computeWires, sparkPeriod } from "./wireGeometry";
 import type { Box, Corner, WireGeom, WireLayout } from "./wireGeometry";
 
-/** Spark ("data packet") speed along every wire, px/s — one speed, so longer wires take longer. */
-const SPARK_SPEED = 80;
-/** Pause between sparks on one wire, s. */
-const SPARK_REST = 4.5;
-/** Offset between the wires' first sparks, s, so they never fire together. */
-const SPARK_OFFSET = 1.4;
-/** How much faster the hovered/focused wire's current flows. */
-const ACTIVE_RATE = 1.45;
+/** A spark's trailing streak, px. */
+const SPARK_TAIL = 16;
+/** How much faster the hovered/focused wire's current (dashes and spark) flows. */
+const ACTIVE_RATE = 1.4;
+/** Room for the glow around a wire's own box: the wide blur is stdDeviation 7 (≈ 3σ = 21px) plus the stroke. */
+const GLOW_PAD = 32;
 
 interface Geometry {
   w: number;
@@ -40,6 +38,18 @@ function boxWithin(el: HTMLElement, stage: HTMLElement): Box {
     return { left: r.left - s.left, top: r.top - s.top, width: r.width, height: r.height };
   }
   return { left, top, width: el.offsetWidth, height: el.offsetHeight };
+}
+
+/** A wire's filter region: the box spanning its two ports (every wire stays inside it), padded for the glow. */
+function glowRegion(geom: WireGeom) {
+  const x = Math.min(geom.start.x, geom.end.x) - GLOW_PAD;
+  const y = Math.min(geom.start.y, geom.end.y) - GLOW_PAD;
+  return {
+    x: Math.floor(x),
+    y: Math.floor(y),
+    width: Math.ceil(Math.abs(geom.end.x - geom.start.x) + 2 * GLOW_PAD),
+    height: Math.ceil(Math.abs(geom.end.y - geom.start.y) + 2 * GLOW_PAD),
+  };
 }
 
 function usePrefersReducedMotion(): boolean {
@@ -71,9 +81,11 @@ function Port({ x, y, className = "" }: { x: number; y: number; className?: stri
 /**
  * "Live wire" cables from the hub's centre card to its four module cards, drawn in an SVG laid
  * over the stage (pointer-events: none). Each wire is a dim cable with a glowing core that draws
- * itself out of the brand card as its module emerges, then carries current: bright dashes flowing from the
- * brand card outward, plus a spark that drifts along it every few seconds. The wire of the
- * hovered/focused module (`active`) runs hotter and a little faster while the others dim.
+ * itself out of the brand card as its module emerges, then carries current: bright dashes flowing
+ * from the brand card outward, plus a spark that shoots along it every few seconds (the wires take
+ * turns). The wire of the hovered/focused module (`active`) runs hotter and ~1.4× faster while the
+ * others dim. Everything that moves is a CSS animation of stroke-dashoffset (hub.css), so nothing
+ * restarts when React re-renders or the geometry is re-measured.
  *
  * Geometry is re-measured with a ResizeObserver on the stage and every card, when fonts load, and
  * after any animation in the stage ends. Under reduced motion the wires are static and glowing.
@@ -157,7 +169,7 @@ export function LiveWires({
     if (!svg || reduced) return;
     for (const g of svg.querySelectorAll<SVGGElement>(".hub-wire")) {
       const rate = g.dataset.id === active ? ACTIVE_RATE : 1;
-      for (const path of g.querySelectorAll(".hub-wire-pulse")) {
+      for (const path of g.querySelectorAll(".hub-wire-flow path")) {
         for (const anim of path.getAnimations?.() ?? []) {
           if (anim.playbackRate !== rate) anim.updatePlaybackRate(rate);
         }
@@ -167,9 +179,9 @@ export function LiveWires({
 
   if (!geo || geo.wires.length === 0) return null;
 
-  const glow = `hub-glow-${uid}`;
-  const glowHot = `hub-glow-hot-${uid}`;
   const shared = geo.layout === "bus" ? geo.wires[0].geom.start : null;
+  const period = sparkPeriod(geo.wires.map((w) => w.geom.length));
+  const sparkDur = period / SPARK_SPEED;
 
   return (
     <svg
@@ -177,6 +189,7 @@ export function LiveWires({
       className="hub-wires"
       data-layout={geo.layout}
       data-active={active ?? undefined}
+      style={{ "--spark-p": `${period}px`, "--spark-dur": `${sparkDur.toFixed(3)}s`, "--spark-tail": `${SPARK_TAIL}px` } as CSSProperties}
       width={geo.w}
       height={geo.h}
       viewBox={`0 0 ${geo.w} ${geo.h}`}
@@ -184,78 +197,70 @@ export function LiveWires({
       focusable="false"
     >
       <defs>
-        {/* User-space filter regions: a straight (zero-width) run would otherwise get no glow. */}
-        <filter id={glow} filterUnits="userSpaceOnUse" x={-40} y={-40} width={geo.w + 80} height={geo.h + 80}>
-          <feGaussianBlur in="SourceGraphic" stdDeviation="2.6" result="soft" />
-          <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="wide" />
-          <feMerge>
-            <feMergeNode in="wide" />
-            <feMergeNode in="soft" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-        <filter id={glowHot} filterUnits="userSpaceOnUse" x={-40} y={-40} width={geo.w + 80} height={geo.h + 80}>
-          <feGaussianBlur in="SourceGraphic" stdDeviation="1.6" result="soft" />
-          <feGaussianBlur in="SourceGraphic" stdDeviation="4.5" result="wide" />
-          <feMerge>
-            <feMergeNode in="wide" />
-            <feMergeNode in="wide" />
-            <feMergeNode in="soft" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
+        {/* One pair of glow filters per wire, its region just the wire's own box (user space, so a
+            straight zero-height run still glows). A whole-stage region would make every animated
+            dash re-blur and repaint the entire stage each frame. */}
+        {geo.wires.map(({ id, geom }) => {
+          const r = glowRegion(geom);
+          return (
+            <Fragment key={id}>
+              <filter id={`hub-glow-${uid}-${id}`} filterUnits="userSpaceOnUse" {...r}>
+                <feGaussianBlur in="SourceGraphic" stdDeviation="2.6" result="soft" />
+                <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="wide" />
+                <feMerge>
+                  <feMergeNode in="wide" />
+                  <feMergeNode in="soft" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+              <filter id={`hub-glow-hot-${uid}-${id}`} filterUnits="userSpaceOnUse" {...r}>
+                <feGaussianBlur in="SourceGraphic" stdDeviation="1.6" result="soft" />
+                <feGaussianBlur in="SourceGraphic" stdDeviation="4.5" result="wide" />
+                <feMerge>
+                  <feMergeNode in="wide" />
+                  <feMergeNode in="wide" />
+                  <feMergeNode in="soft" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </Fragment>
+          );
+        })}
       </defs>
 
-      {geo.wires.map(({ id, index, geom }) => {
-        const pathId = `hub-wire-${uid}-${id}`;
-        const travel = Math.max(0.6, geom.length / SPARK_SPEED);
-        const cycle = travel + SPARK_REST;
-        const k = (travel / cycle).toFixed(3);
-        return (
-          <g
-            key={id}
-            className={`hub-wire${active === id ? " is-active" : ""}`}
-            data-id={id}
-            style={{ "--i": index } as CSSProperties}
-          >
-            <path className="hub-wire-sheath" d={geom.d} pathLength={1} />
-            <path id={pathId} className="hub-wire-base" d={geom.d} pathLength={1} />
-            <g className="hub-wire-glow" filter={`url(#${glow})`}>
-              <path className="hub-wire-core" d={geom.d} pathLength={1} />
-            </g>
-            {!reduced && (
-              <g className="hub-wire-flow">
-                <g filter={`url(#${glowHot})`}>
-                  <path className="hub-wire-pulse" d={geom.d} />
-                  <path className="hub-wire-pulse hub-wire-pulse-boost" d={geom.d} />
-                  <circle className="hub-wire-spark" r={2.4} opacity={0}>
-                    <animateMotion
-                      dur={`${cycle.toFixed(2)}s`}
-                      begin={`${(1 + index * SPARK_OFFSET).toFixed(2)}s`}
-                      repeatCount="indefinite"
-                      keyPoints="0;1;1"
-                      keyTimes={`0;${k};1`}
-                      calcMode="linear"
-                    >
-                      <mpath href={`#${pathId}`} />
-                    </animateMotion>
-                    <animate
-                      attributeName="opacity"
-                      dur={`${cycle.toFixed(2)}s`}
-                      begin={`${(1 + index * SPARK_OFFSET).toFixed(2)}s`}
-                      repeatCount="indefinite"
-                      values="0;1;1;0;0"
-                      keyTimes={`0;0.04;${(Number(k) * 0.92).toFixed(3)};${k};1`}
-                    />
-                  </circle>
-                </g>
-              </g>
-            )}
-            {!shared && <Port x={geom.start.x} y={geom.start.y} className="hub-port-start" />}
-            <Port x={geom.end.x} y={geom.end.y} className="hub-port-end" />
+      {geo.wires.map(({ id, index, geom }) => (
+        <g
+          key={id}
+          className={`hub-wire${active === id ? " is-active" : ""}`}
+          data-id={id}
+          style={{ "--i": index } as CSSProperties}
+        >
+          <path className="hub-wire-sheath" d={geom.d} pathLength={1} />
+          <path className="hub-wire-base" d={geom.d} pathLength={1} />
+          <g className="hub-wire-glow" filter={`url(#hub-glow-${uid}-${id})`}>
+            <path className="hub-wire-core" d={geom.d} pathLength={1} />
           </g>
-        );
-      })}
+          {!reduced && (
+            <g className="hub-wire-flow">
+              <g filter={`url(#hub-glow-hot-${uid}-${id})`}>
+                <path className="hub-wire-pulse" d={geom.d} />
+                <path className="hub-wire-pulse hub-wire-pulse-boost" d={geom.d} />
+                {/* The spark: a round-capped zero-length dash (plus a short streak behind it) whose
+                    pattern repeats every `period` px, slid along by stroke-dashoffset — a plain CSS
+                    animation, so it never restarts on a re-render or re-measure. */}
+                <path
+                  className="hub-wire-spark-tail"
+                  d={geom.d}
+                  style={{ strokeDasharray: `${SPARK_TAIL} ${period - SPARK_TAIL}` }}
+                />
+                <path className="hub-wire-spark" d={geom.d} style={{ strokeDasharray: `0 ${period}` }} />
+              </g>
+            </g>
+          )}
+          {!shared && <Port x={geom.start.x} y={geom.start.y} className="hub-port-start" />}
+          <Port x={geom.end.x} y={geom.end.y} className="hub-port-end" />
+        </g>
+      ))}
       {shared && <Port x={shared.x} y={shared.y} className="hub-port-start hub-port-shared" />}
     </svg>
   );

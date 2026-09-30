@@ -100,6 +100,9 @@ def build_snapshot(
     completed_at: datetime,
     run_id: str | None = None,
     entity_alias_table: Sequence[EntityAlias] = (),
+    recommendation_status: str = "ok",
+    recommendation_error: str | None = None,
+    recommendations_total: int | None = None,
 ) -> dict:
     """Build the CONTRACT §5 record.
 
@@ -110,6 +113,12 @@ def build_snapshot(
     `entity_alias_table` is the brand's tracked entity/alias table (`brand.alias_table()`)
     as of this run — folded into `comparability_key` so editing competitors or aliases
     starts a new trend segment (see `comparability_key`'s docstring).
+
+    `recommendation_status` is "failed" when drafting recommendations crashed (the run and its
+    scores are still valid; `recommendation_error` holds a short safe message), so an empty
+    `recommendations` list is never mistaken for "nothing to recommend".
+    `recommendations_total` is how many valid recommendations existed before the engine's cap
+    (defaults to `len(recommendations)`).
     """
     planned_calls = len(providers) * len(query_ids) * samples_per_query
     successful_calls = len(raw_observations)
@@ -172,6 +181,9 @@ def build_snapshot(
         },
         "gaps": gaps,
         "recommendations": recommendations,
+        "recommendation_status": recommendation_status,
+        "recommendation_error": recommendation_error,
+        "recommendations_total": len(recommendations) if recommendations_total is None else recommendations_total,
         "admission": {
             "admissible": admissible,
             "status": "admissible" if admissible else "inadmissible",

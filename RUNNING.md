@@ -20,6 +20,13 @@ On the first start, the backend seeds **synthetic offline demo data** for the 3 
 dashboard is never empty. The UI labels this data as synthetic. Real runs appear alongside it. To skip seeding,
 start with `SEED_DEMO=0 make up`. This has to be a shell variable; setting it in `.env.local` has no effect.
 
+Every start also runs the storage migration below against `$DATA_DIR` automatically (idempotent, a no-op once a
+volume is current — see *Upgrading old snapshot history* further down), and the backend container itself runs as a
+non-root user: it starts as root only long enough to fix ownership of a fresh or pre-existing `/data` volume, then
+drops privileges before running any application code. This matters mainly if you bind-mount a host directory at
+`/data` instead of the named `brandlens-data` volume — the container will `chown` it to its internal `app` user
+(uid 1000), which is harmless but worth knowing before pointing it at a directory you care about the ownership of.
+
 ### Repo inside OneDrive (Windows)
 OneDrive turns synced files into cloud placeholders, and `docker compose build` fails on them with
 `invalid file request <path>`. Either clone outside OneDrive (e.g. `C:\dev`), or mirror to a local folder and
@@ -108,11 +115,19 @@ make reset    # stop and wipe all snapshots (re-seeds synthetic data on next `ma
 Snapshot lines no longer inline every raw LLM answer: each run's answers live in
 `DATA_DIR/tracking/<brand_key>/<run_id>.observations.jsonl`, and `<brand_key>.jsonl` keeps only the
 light snapshot (scores, gaps, recommendations, counts). Old history still loads, but the backend logs a
-one-line warning at startup until you split it. Stop the backend, then:
+one-line warning at startup until you split it.
+
+**Docker users don't need to do this by hand** — `docker-entrypoint.sh` runs the same script against `$DATA_DIR` on
+every container start, before demo seeding, and it's a fast no-op once a volume is already split. It's here for
+local (non-Docker) backends, for a `--dry-run` preview, or to run it once on demand without restarting the
+container (`make migrate` / `make migrate-local`, below). Stop the backend first if running it locally, so no run
+is appended while a file is being rewritten:
 ```bash
-cd backend && uv run python scripts/migrate_split_observations.py              # local backend/data (or $DATA_DIR)
+make migrate-local                                                             # local backend/data (or $DATA_DIR)
+cd backend && uv run python scripts/migrate_split_observations.py              # equivalent, run directly
 uv run python scripts/migrate_split_observations.py --data-dir /path --dry-run  # preview only
-docker compose run --rm backend python scripts/migrate_split_observations.py --data-dir /data  # Docker volume
+make migrate                                                                    # docker: against the running container
+docker compose run --rm backend python scripts/migrate_split_observations.py --data-dir /data  # or a one-off container
 ```
 It is idempotent (safe to re-run) and keeps the original file as `<brand_key>.jsonl.bak`.
 When sharing runs, copy the whole `tracking/` folder (the per-brand subfolders hold the answers).

@@ -64,7 +64,12 @@ def _summary(snapshot: dict) -> str:
         f"obs={snapshot['observation_count']} Coverage={r['coverage']:.1%} "
         f"Prominence={_fmt(r['prominence'])} SoV={_fmt(r['share_of_voice'], '{:.1%}')} "
         f"Composite={r['composite_score']:.1f} CI=[{r['ci_low']:.1f}, {r['ci_high']:.1f}] "
-        f"gaps={len(snapshot['gaps'])} recs={len(snapshot['recommendations'])}"
+        f"gaps={len(snapshot['gaps'])} recs="
+        + (
+            "FAILED"
+            if snapshot.get("recommendation_status") == "failed"
+            else f"{len(snapshot['recommendations'])}/{snapshot.get('recommendations_total', len(snapshot['recommendations']))}"
+        )
     )
 
 

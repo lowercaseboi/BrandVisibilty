@@ -141,3 +141,21 @@ export function computeWires(
   }
   return { layout, wires };
 }
+
+/** Spark ("data packet") speed along every wire, px/s — one speed, so longer wires take longer. */
+export const SPARK_SPEED = 120;
+/** Pause after a spark crosses the longest wire before that wire's next one leaves, s. */
+export const SPARK_REST = 2.5;
+/** The spark pattern's period is rounded up to a multiple of this, px. */
+const SPARK_STEP = 60;
+
+/**
+ * The spark's dash period, px: each wire carries one spark per `period` of travel, so at
+ * SPARK_SPEED it crosses the longest wire and then rests ~SPARK_REST before the next one leaves
+ * (shorter wires rest a little longer). The same for every wire and quantised, so a card settling
+ * a few px (fonts, data landing) doesn't change it — the running animation never jumps.
+ */
+export function sparkPeriod(lengths: number[]): number {
+  const longest = Math.max(0, ...lengths);
+  return Math.ceil((longest + SPARK_SPEED * SPARK_REST) / SPARK_STEP) * SPARK_STEP;
+}

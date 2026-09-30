@@ -2,7 +2,8 @@
 // snapshot's recommendations/gaps plus the saved BoardState, and gets back cards grouped by status
 // ("column" — the saved format predates the list view, which shows one priority-sorted grid with a
 // status control per card: listCards / setStatus / filterCounts). Saved state is keyed by the stable suggestion group key `action|competitor_id`, so a card
-// keeps its column across runs even though recommendation IDs change every run.
+// keeps its column across runs and across actions merged into one card. (Recommendation IDs are
+// themselves stable — a hash of the scope-based gap_id + action — but one card can group several.)
 //
 // Ghost cards: a saved key with no recommendation in the latest run is shown as "resolved in
 // latest run" (faded) in its saved column, titled from the key itself (action + competitor). A

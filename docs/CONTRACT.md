@@ -158,7 +158,11 @@ skipped")` (the job fails). Waits are announced as `Groq rate limited — waitin
                       "per_provider_coverage": [{"provider_id","coverage","observation_count","mentioned_count"}]},
   "gaps": [{"gap_id": "gap-<sha1[:10]>", "gap_type", "evidence_refs": [...], "detail": {...}, "is_inferred": false}],
   "recommendations": [{"recommendation_id", "gap_id", "action", "action_class", "priority", "delta_composite",
-                       "confidence", "effort", "reasoning", "evidence_refs": [...], "drafted_by": "template" | "<provider>"}],
+                       "confidence", "evidence_count", "effort", "reasoning",
+                       "reasoning_key", "reasoning_params": {"action_key", "assumption_key", ...},
+                       "evidence_refs": [...], "drafted_by": "template" | "<provider>"}],
+  "recommendation_status": "ok" | "failed", "recommendation_error": null | "<short, redacted message>",
+  "recommendations_total": 14,
   "admission": {"admissible", "status", "reasons": [], "query_coverage", "sample_completeness",
                 "missing_query_ids": [], "missing_providers": [], "collection_span_days", "policy_version": "v0"},
   "entities": {"self": "Gajanan Vada Pav", "<competitor_id>": "<display name>"},
@@ -168,6 +172,14 @@ skipped")` (the job fails). Waits are announced as `Groq rate limited — waitin
 ```
 
 `observation_id` is `"<provider_id>:q<idx>-s<sample>"`, and `query_id` is `"q<idx>"`.
+
+`recommendation_status` is `"failed"` when drafting raised; the run is still saved with its scores and gaps, and
+`recommendation_error` carries the exception type + first line (URLs and credential-like strings redacted, ≤160
+chars) so the UI can say "couldn't draft" instead of "none found". `recommendations_total` counts valid
+recommendations before the top-10 cap. `evidence_count` is the n behind `confidence = max(0.2, min(1, n/10))`.
+`reasoning` stays the English text; `reasoning_key` + `reasoning_params` (templates in
+`app/recommendation/reasoning.py`, listed in `REASONING_KEYS.md`) let the UI translate it. Older records normalise to
+`"ok"` / `null` / `len(recommendations)`, with `evidence_count = len(evidence_refs)` and no `reasoning_key`.
 
 `mention_summary` (`app/analysis/summary.py`, pure) counts answers per tracked entity over the **scored** raw
 observations only (PRD §10.1), so `total_answers == observation_count`. `entities` has exactly one entry per key of

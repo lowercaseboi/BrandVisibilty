@@ -169,6 +169,12 @@ export interface Recommendation {
   reasoning: string;
   evidence_refs: string[];
   drafted_by: string;
+  /** Responses behind it (confidence = min(1, n / 10), floored at 0.2). Older snapshots: absent. */
+  evidence_count?: number;
+  /** i18n key for `reasoning` (rendered as `dashboard.recs.why.<key>`); absent on older snapshots. */
+  reasoning_key?: string;
+  /** Values for the reasoning_key placeholders. */
+  reasoning_params?: Record<string, string | number>;
 }
 
 export interface SnapshotAdmission {
@@ -247,6 +253,12 @@ export interface Snapshot {
   mention_summary?: MentionSummary;
   /** AC-8 verdict on the history as of this run; only the newest snapshot carries it. */
   trend_verdict?: TrendVerdict;
+  /** "failed" when drafting recommendations crashed (the scores are still valid); absent = "ok". */
+  recommendation_status?: "ok" | "failed";
+  /** Short, safe message when recommendation_status is "failed". */
+  recommendation_error?: string | null;
+  /** Recommendations that passed validation before the display cap (≥ recommendations.length). */
+  recommendations_total?: number;
 }
 
 export type TrendStatus =

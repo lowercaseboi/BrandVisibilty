@@ -100,6 +100,7 @@ h3,
 h4 {
   color: var(--text-h);
   font-family: var(--display);
+  word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
   font-weight: 600;
   line-height: 1.25;
   letter-spacing: -0.03em;
@@ -234,6 +235,7 @@ hr {
    "/100" a light accent tint. Set in the display face. */
 .score-num {
   font-family: var(--display);
+  word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
   color: var(--score-glass-fill);
   -webkit-text-stroke: 1px var(--score-glass-edge);
   text-shadow:

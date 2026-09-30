@@ -10,11 +10,13 @@ Pipeline per gap:
      observations, re-run the pure Scorer, delta = new composite - base composite.
   3. priority = delta x confidence / effort.
   4. Validation gate (§5.6): gap_id exists, action in vocabulary, evidence resolves,
-     capped at `max_recommendations`.
+     one recommendation per id, capped at `max_recommendations` — and the gate reports how
+     many valid ones the cap cut, so the UI can say "top 10 of 14".
 
-Reasoning is a plain-English template here (`drafted_by="template"`). An LLM
-drafter can optionally rewrite the prose later (see `drafter.py`) without
-changing what was found or how it was ranked.
+Reasoning is a plain-English template here (`drafted_by="template"`), also emitted as a
+translatable key + params (`reasoning.py`, `REASONING_KEYS.md`). An LLM drafter can
+optionally rewrite the prose later (see `drafter.py`) without changing what was found or
+how it was ranked.
 """
 
 from __future__ import annotations
@@ -22,10 +24,12 @@ from __future__ import annotations
 import hashlib
 import math
 import random
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
+from typing import NamedTuple
 
 from app.analysis.scorer import score
 from app.analysis.types import EntityMention, Gap, Observation
+from app.recommendation import reasoning
 
 # ---------------------------------------------------------------------------
 # Closed action vocabulary (DESIGN §5.5) and effort constants (§5.4)
@@ -89,7 +93,8 @@ ACTION_LABEL: dict[str, str] = {
 
 PRESENCE_INTENT_ACTIONS: dict[str, tuple[str, ...]] = {
     "category_discovery": ("pitch_listicle", "use_case_page"),
-    "problem_first": ("faq_page", "community_answer"),
+    # "how do I ..." questions: a how-to video is the natural answer format next to an FAQ.
+    "problem_first": ("faq_page", "video"),
     "alternative_seeking": ("comparison_page",),
     "attribute_constrained": ("add_attribute_claim", "use_case_page"),
     "local_contextual": ("submit_to_directory", "seek_review_coverage"),
@@ -144,6 +149,12 @@ class Recommendation:
     reasoning: str
     evidence_refs: tuple[str, ...]
     drafted_by: str = "template"
+    # n behind `confidence` (= max(0.2, min(1, n/10))): how many AI answers back the gap.
+    evidence_count: int = 0
+    # Translatable form of `reasoning` (see REASONING_KEYS.md): the finding's template key, and
+    # the params for it plus `action_key` / `assumption_key` naming the other two sentences.
+    reasoning_key: str = ""
+    reasoning_params: dict[str, str | int | float] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -239,129 +250,6 @@ def _composite(observations: list[Observation], self_entity_id: str, competitor_
 
 
 # ---------------------------------------------------------------------------
-# Reasoning templates
-# ---------------------------------------------------------------------------
-
-
-def _pct(x: float) -> str:
-    return f"{x * 100:.0f}%"
-
-
-def _humanize(key: str) -> str:
-    return key.replace("_", " ")
-
-
-_INTENT_EXAMPLE = {
-    "category_discovery": "'best {category} for ...'",
-    "problem_first": "'how do I ...'",
-    "alternative_seeking": "'alternatives to ...'",
-    "attribute_constrained": "'most affordable / fastest ...'",
-    "local_contextual": "'... in <city>'",
-    "recommendation_seeking": "'who should I go to for ...'",
-}
-
-
-def _finding(gap: Gap, brand: str, names: dict[str, str], n_evidence: int) -> str:
-    d = gap.detail
-    if gap.gap_type == "presence":
-        cov = _pct(d.get("coverage", 0.0))
-        scope = d.get("scope")
-        if scope == "intent":
-            intent = d.get("intent_type", "")
-            example = _INTENT_EXAMPLE.get(intent, "").replace("{category} ", "")
-            example = f" {example}-type" if example else ""
-            share = f"never appears in{example or ' these'}" if d.get("coverage", 0.0) == 0 else f"appears in only {cov} of{example}"
-            return f"{brand} {share} answers (intent: {_humanize(intent)}), across {n_evidence} AI responses."
-        if scope == "provider":
-            named = "never names " + brand + " in any" if d.get("coverage", 0.0) == 0 else f"names {brand} in only {cov}"
-            return (
-                f"{d.get('provider_id', 'one provider')} {named} of its {n_evidence} answers, "
-                f"so this assistant's sources don't know the brand yet."
-            )
-        named = "is not named in any" if d.get("coverage", 0.0) == 0 else f"is named in only {cov}"
-        return (
-            f"{brand} {named} of {n_evidence} AI answers about its category; "
-            f"assistants don't associate it with the category yet."
-        )
-    if gap.gap_type == "prominence":
-        return (
-            f"{brand} is mentioned in {_pct(d.get('coverage', 0.0))} of answers, but usually as an afterthought "
-            f"(average position {d.get('mean_rank', 0):.1f} in the list, across {n_evidence} responses)."
-        )
-    if gap.gap_type == "competitive":
-        comp_id = d.get("competitor_id", "")
-        comp = names.get(comp_id, comp_id)
-        return (
-            f"{comp} shows up alongside {brand} in {_pct(d.get('co_occurrence_rate', 0.0))} of answers and is "
-            f"ranked ahead of it in {_pct(d.get('beat_rate', 0.0))} of those ({n_evidence} responses)."
-        )
-    if gap.gap_type == "representation":
-        return (
-            f"When asked about {brand} directly, {_pct(d.get('disagreement_rate', 0.0))} of answers describe it "
-            f"inconsistently with its real profile"
-            + (", and the assistants disagree with each other." if d.get("disagree_with_each_other") else ".")
-        )
-    if gap.gap_type == "source":
-        return (
-            f"{d.get('non_mentioning_count', 0)} of the {d.get('dominant_source_count', 0)} web/video sources "
-            f"that dominate this category never mention {brand}."
-        )
-    return f"A {gap.gap_type} gap was detected for {brand}."
-
-
-def _action_sentence(action: str, gap: Gap, brand: str, names: dict[str, str]) -> str:
-    d = gap.detail
-    comp_id = d.get("competitor_id")
-    comp = names.get(comp_id, comp_id) if comp_id else None
-    if action == "comparison_page":
-        target = comp or "its main competitors"
-        return f"Recommended: publish a '{brand} vs {target}' comparison page that states where {brand} wins."
-    if action == "use_case_page":
-        intent = d.get("intent_type")
-        focus = f" for {_humanize(intent)} searches" if intent else ""
-        return f"Recommended: publish a use-case page{focus} spelling out who {brand} is for and when to choose it."
-    if action == "faq_page":
-        return f"Recommended: publish an FAQ answering the exact questions people ask, naming {brand} in each answer."
-    if action == "video":
-        return f"Recommended: produce a short video targeting these queries, with {brand} named in title and description."
-    if action == "clarify_category_descriptor":
-        return f"Recommended: use one consistent category description of {brand} everywhere it is listed."
-    if action == "add_attribute_claim":
-        return f"Recommended: claim one distinctive, checkable attribute (price, speed, speciality) for {brand} consistently."
-    if action == "correct_outdated_description":
-        return f"Recommended: correct outdated or wrong descriptions of {brand} on its own pages and listings."
-    if action == "submit_to_directory":
-        return f"Recommended: list {brand} on the directories and local listings AI assistants draw on (maps, review and category directories)."
-    if action == "pitch_listicle":
-        return f"Recommended: pitch {brand} for inclusion in 'best of' roundups and listicles for the category."
-    if action == "seek_review_coverage":
-        where = f" in sources {d['provider_id']} is likely to read" if d.get("provider_id") else ""
-        return f"Recommended: get {brand} reviewed by bloggers, food/local guides or press{where}."
-    if action == "community_answer":
-        return f"Recommended: answer real community questions (Reddit, Quora, local forums) where {brand} fits."
-    return f"Recommended: {ACTION_LABEL.get(action, action)}."
-
-
-def _assumption(gap: Gap, n_changed: int, delta: float, names: dict[str, str]) -> str:
-    if gap.gap_type == "presence":
-        what = (
-            f"If this lifted presence in half of the answers that currently omit it ({n_changed} answers, "
-            f"as a rank-{PRESENCE_CLOSURE_RANK} mention)"
-        )
-    elif gap.gap_type == "prominence":
-        what = f"If this moved it up to position {PROMINENCE_CLOSURE_RANK} in the {n_changed} answers where it ranks lower"
-    elif gap.gap_type == "competitive":
-        comp_id = gap.detail.get("competitor_id", "")
-        what = f"If it ranked ahead of {names.get(comp_id, comp_id)} in the {n_changed} answers where it currently trails"
-    else:
-        return (
-            "This gap isn't measured by the visibility score (it comes from brand-named questions or the "
-            "web layer), so no score change is simulated; it is ranked on evidence alone."
-        )
-    return f"{what}, the visibility score would rise by ~{delta:.1f} points (simulated)."
-
-
-# ---------------------------------------------------------------------------
 # Validation gate (DESIGN §5.6)
 # ---------------------------------------------------------------------------
 
@@ -370,29 +258,80 @@ def _assumption(gap: Gap, n_changed: int, delta: float, names: dict[str, str]) -
 _EXTERNAL_EVIDENCE_TYPES = frozenset({"representation", "source"})
 
 
+class GateResult(NamedTuple):
+    """What the validation gate let through, and what it held back.
+
+    `passed` — the valid recommendations, ranked, at most `max_recommendations` of them.
+    `dropped` — valid recommendations cut only by the cap (disclosed: "top 10 of 14").
+    `rejected` — candidates refused outright: no/unknown gap_id (AC-7), action outside the
+    closed vocabulary or its class, no evidence that resolves, or a duplicate id.
+    """
+
+    passed: list[Recommendation]
+    dropped: int
+    rejected: int
+
+    @property
+    def total(self) -> int:
+        """Valid recommendations before the cap (`len(passed) + dropped`)."""
+        return len(self.passed) + self.dropped
+
+
+def _rank_key(rec: Recommendation) -> tuple:
+    # Priority first; ties (notably every zero-delta rec, whose priority is 0) fall back to
+    # the evidence behind them and then the cheaper action, so "ranked on evidence alone"
+    # holds for unscored gap types. The id makes the order deterministic; the last two keys
+    # only order copies of one id (which the gate then collapses), independent of input order.
+    return (
+        -rec.priority, -rec.delta_composite, -rec.confidence, rec.effort, rec.recommendation_id,
+        -rec.evidence_count, rec.reasoning,
+    )
+
+
 def validation_gate(
     recs: list[Recommendation],
     gaps: list[Gap],
     observations: list[Observation],
     max_recommendations: int,
-) -> list[Recommendation]:
-    """Drop anything untraceable or outside the vocabulary; filter evidence to real ids; cap count."""
-    gaps_by_id = {g.gap_id: g for g in gaps}
+) -> GateResult:
+    """Drop anything untraceable or outside the vocabulary; filter evidence to real ids; keep
+    one recommendation per id; rank; cap — reporting how many the cap cut."""
     obs_ids = {o.observation_id for o in observations}
-    passed: list[Recommendation] = []
+    # Evidence a gap may cite beyond the unprompted observations (prompted answers / web
+    # sources), per gap id — unioned, so a repeated gap id can't make this order-dependent.
+    external: dict[str, set[str]] = {}
+    for g in gaps:
+        refs = external.setdefault(g.gap_id, set())
+        if g.gap_type in _EXTERNAL_EVIDENCE_TYPES:
+            refs.update(g.evidence_refs)
+    valid: list[Recommendation] = []
+    rejected = 0
     for rec in recs:
-        gap = gaps_by_id.get(rec.gap_id) if rec.gap_id else None
-        if gap is None:  # AC-7: every recommendation must trace to an existing gap
+        if not rec.gap_id or rec.gap_id not in external:  # AC-7: must trace to an existing gap
+            rejected += 1
             continue
         if rec.action not in ACTION_VOCABULARY or ACTION_CLASS[rec.action] != rec.action_class:
+            rejected += 1
             continue
-        allowed = obs_ids | (set(gap.evidence_refs) if gap.gap_type in _EXTERNAL_EVIDENCE_TYPES else set())
+        allowed = obs_ids | external[rec.gap_id]
         refs = tuple(r for r in rec.evidence_refs if r in allowed)
         if not refs:
+            rejected += 1
             continue
-        passed.append(replace(rec, evidence_refs=refs) if refs != rec.evidence_refs else rec)
-    passed.sort(key=lambda r: (-r.priority, -r.delta_composite, r.recommendation_id))
-    return passed[: max(0, max_recommendations)]
+        valid.append(replace(rec, evidence_refs=refs) if refs != rec.evidence_refs else rec)
+    valid.sort(key=_rank_key)
+    # One recommendation per id (the same gap + action twice, e.g. a gap list with a repeated
+    # gap): keep the best-ranked copy so the board never shows two cards for one suggestion.
+    seen: set[str] = set()
+    unique: list[Recommendation] = []
+    for rec in valid:
+        if rec.recommendation_id in seen:
+            rejected += 1
+            continue
+        seen.add(rec.recommendation_id)
+        unique.append(rec)
+    cap = max(0, max_recommendations)
+    return GateResult(passed=unique[:cap], dropped=max(0, len(unique) - cap), rejected=rejected)
 
 
 # ---------------------------------------------------------------------------
@@ -408,7 +347,7 @@ def _confidence(n_evidence: int) -> float:
     return round(max(0.2, min(1.0, n_evidence / 10)), 3)
 
 
-def recommend(
+def recommend_detailed(
     gaps: list[Gap],
     observations: list[Observation],
     self_entity_id: str,
@@ -416,8 +355,8 @@ def recommend(
     *,
     entity_names: dict[str, str] | None = None,
     max_recommendations: int = 10,
-) -> list[Recommendation]:
-    """Turn detected gaps into ranked, validated recommendations (sorted by priority desc)."""
+) -> GateResult:
+    """Turn detected gaps into ranked, validated recommendations, plus the gate's counts."""
     names = dict(entity_names or {})
     brand = names.get(self_entity_id, self_entity_id)
     base = _composite(observations, self_entity_id, competitor_entity_ids)
@@ -429,12 +368,15 @@ def recommend(
         if n_changed:
             delta = max(0.0, _composite(modified, self_entity_id, competitor_entity_ids) - base)
         delta = round(delta, 2)
-        confidence = _confidence(len(gap.evidence_refs))
-        finding = _finding(gap, brand, names, len(gap.evidence_refs))
-        assumption = _assumption(gap, n_changed, delta, names)
+        n_evidence = len(gap.evidence_refs)
+        confidence = _confidence(n_evidence)
 
         for action in actions_for_gap(gap)[:2]:
             effort = ACTION_EFFORT[action]
+            text, key, params = reasoning.build(
+                action, gap, brand, names, n_evidence, n_changed, delta,
+                presence_rank=PRESENCE_CLOSURE_RANK, prominence_rank=PROMINENCE_CLOSURE_RANK,
+            )
             candidates.append(
                 Recommendation(
                     recommendation_id=_recommendation_id(gap.gap_id, action),
@@ -445,9 +387,29 @@ def recommend(
                     delta_composite=delta,
                     confidence=confidence,
                     effort=effort,
-                    reasoning=" ".join((finding, _action_sentence(action, gap, brand, names), assumption)),
+                    reasoning=text,
                     evidence_refs=tuple(gap.evidence_refs),
+                    evidence_count=n_evidence,
+                    reasoning_key=key,
+                    reasoning_params=params,
                 )
             )
 
     return validation_gate(candidates, gaps, observations, max_recommendations)
+
+
+def recommend(
+    gaps: list[Gap],
+    observations: list[Observation],
+    self_entity_id: str,
+    competitor_entity_ids: frozenset[str],
+    *,
+    entity_names: dict[str, str] | None = None,
+    max_recommendations: int = 10,
+) -> list[Recommendation]:
+    """Turn detected gaps into ranked, validated recommendations (sorted by priority desc).
+    `recommend_detailed` also returns how many the cap cut."""
+    return recommend_detailed(
+        gaps, observations, self_entity_id, competitor_entity_ids,
+        entity_names=entity_names, max_recommendations=max_recommendations,
+    ).passed

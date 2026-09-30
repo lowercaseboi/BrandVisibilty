@@ -11,6 +11,20 @@ ENV UV_COMPILE_BYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     DATA_DIR=/data
 
+# libraqm0 (+ its deps: harfbuzz, fribidi, graphite2) is NOT bundled in Pillow's Linux
+# manylinux wheel (only the Windows/macOS wheels vendor it) — Pillow dlopen's it at
+# runtime, so it has to be a system package or `app.distribution.imagegen.compositor`
+# silently falls back to PIL's BASIC text layout, which cannot shape Devanagari
+# (no conjuncts/matra reordering) for the hi/mr campaign images.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libraqm0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Non-root runtime user. The image itself is still built and starts as root (no USER
+# here) so docker-entrypoint.sh can chown /data before dropping to this user — see there.
+RUN groupadd --system --gid 1000 app \
+    && useradd --system --uid 1000 --gid app --no-create-home --shell /usr/sbin/nologin app
+
 WORKDIR /app
 
 # Dependencies first so code edits don't bust the layer cache.
@@ -21,7 +35,12 @@ COPY src ./src
 COPY scripts ./scripts
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 # sed: a Windows checkout may give the script CRLF endings, which breaks the shebang.
-RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && chmod +x /usr/local/bin/docker-entrypoint.sh && mkdir -p /data
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && chmod +x /usr/local/bin/docker-entrypoint.sh \
+    && mkdir -p /data \
+    && chown -R app:app /app /opt/venv /data
+# The /data chown only seeds this image layer's default; a named volume or bind mount at
+# /data at runtime can still be empty-and-root-owned or pre-existing-and-root-owned from
+# an older image, so the entrypoint re-chowns it as root before dropping privileges.
 
 # 8000 is the docker-compose default; hosts like Render/Railway override it by
 # injecting $PORT, which the HEALTHCHECK and CMD below both read at runtime.
