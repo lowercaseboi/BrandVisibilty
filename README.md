@@ -25,7 +25,7 @@ Open a brand and you land on its **hub**, four modules deep:
 |--------|---------|
 | **Details** | Who is this brand — name, category, city, competitors, the questions it's tracked on — and its connected social accounts (Facebook Page, Instagram, X, LinkedIn, Google Business). |
 | **Analysis** | *How visible am I?* Composite score (0–100) with a confidence interval, Coverage / Prominence / Share of Voice, per-provider breakdown, and a live evidence view — one real AI answer with brand and competitor names highlighted. |
-| **Gaps & evidence** | *Why?* Every detected gap (presence, prominence, competitive, source, representation), each linked back to the raw answers that prove it. |
+| **Gaps & evidence** | *Why?* Every detected gap, each linked back to the raw answers that prove it. Three types fire today — presence, prominence and competitive. Source and representation detection is implemented and tested but needs the web/social collection layer, which isn't built (see *Known limitations*). |
 | **Recommendation engine (board)** | *What should I do?* A kanban of prioritised suggestions, each traceable to a `gap_id` — drag a card to track it, or turn it into a campaign. |
 
 From a recommendation, **Campaign Studio** drafts channel-specific copy and a generated image, you review and
@@ -50,9 +50,22 @@ Other things worth knowing:
   effort label, and validated before they ever reach the board (an unknown action, a class mismatch, or a missing
   `gap_id` is rejected — AC-7).
 - **Claim-checked copy.** Before a campaign can be approved, its copy is checked for numbers, prices, dates and
-  superlatives that aren't backed by the brand's own profile.
+  superlatives that aren't backed by the brand's own profile. Unsupported claims are surfaced for review rather
+  than published silently.
+- **Trend statistics, not a wiggle.** A trend verdict is computed only inside a constant comparability key — the
+  same questions, sampling config, model versions *and* tracked alias table. Two or three runs are compared by
+  confidence-interval overlap ("change detected" only when the intervals don't overlap); four or more use a
+  Theil–Sen slope with a bootstrap CI, and a direction is claimed only when that CI excludes zero. Otherwise the
+  honest answer is "no clear trend".
 - **Tracking history.** Every run appends a snapshot; raw provider answers are stored separately from the light
   snapshot line (`docs/CONTRACT.md`). The dashboard shows the score trend and a per-run evidence view.
+- **A guard test, not a convention.** The purity rule the analysis layer depends on — Scorer, GapDetector,
+  MentionDetector, Trend and the validation metrics are pure functions with no I/O and no LLM calls — is enforced
+  by an AST test that walks every module in `app/analysis/` and fails on any non-stdlib import or I/O call. It ships
+  with a deliberately-impure fixture so the checker itself is proven to catch violations.
+- **Detector validation (AC-12 tooling).** Deterministic is not the same as accurate, so the mention detector is
+  measured rather than trusted: `scripts/validate_detector.py` exports a blind labelling sheet for two independent
+  annotators and scores it into precision/recall/F1 plus Cohen's kappa (see [docs/DETECTOR_VALIDATION.md](docs/DETECTOR_VALIDATION.md)).
 - **Robust collection.** Retries with backoff (honouring `Retry-After`) handle 429s, 5xx and timeouts. A provider
   stuck on a rate limit is skipped after 2 minutes without an answer; a failing provider marks the run `partial`
   instead of killing it. While a run is going you can skip one AI, finish early with the answers collected so far,
@@ -73,13 +86,17 @@ backend/src/app/
   brands/           pilot brands + user-created brands (DATA_DIR/brands.json)
   distribution/     Campaign Studio: copywriter (+ claim check), imagegen/ (Pillow/qrcode, offline-first with
                      Gemini/Cloudflare image providers), channels/ (Meta, X, Google Business Profile, local sandbox)
-  interface/        FastAPI app, in-memory job runner, response schemas
+  interface/        FastAPI app, single-worker job runner (state persisted to disk), response schemas
   config/           settings: env vars / .env.local, keys never logged
+  paths.py          leaf module owning DATA_DIR, so no layer has to reach through the store to find it
   db/, orchestration/, models/   PostgreSQL + Celery/Redis scaffolding for a planned v2 (see Known limitations)
 frontend/src/
   pages/brand/       the hub + its four modules (DetailsModule, AnalysisModule, GapsModule, BoardModule) and
                        CampaignStudio
-  components/        board, campaign, dashboard, evidence, hub, brandinfo, questions, module, landing
+  components/        accounts, board, brandinfo, campaign, dashboard, evidence, hub, landing, module, questions
+  styles/            tokens.css (the design system: OKLCH palettes, WCAG-checked, light/dark/system themes),
+                     primitives.css, then one stylesheet per surface
+  settings/          theme + reduced-motion providers
   i18n/              en / hi / mr, checked for missing keys by `npm run lint`
 docs/CONTRACT.md      module / API / snapshot contract the backend and frontend share
 docs/CHANNEL_SETUP.md how to connect Meta, X and Google Business Profile to Campaign Studio
@@ -170,13 +187,13 @@ Read against [PRD_v3.md §16](PRD_v3.md#16-acceptance-criteria).
 | AC-3 | Sampled collection | **Met** — Coverage etc. computed as a rate over the unprompted subset only; the prompted subset (brand-naming questions) is stored and shown as evidence but never scored. |
 | AC-4 | Raw observation storage | **Met** — observations are stored per run, separate from the derived snapshot, and retrievable via `GET /brands/{key}/snapshots/{run_id}/observations`. |
 | AC-5 | Visibility scoring | **Met** — composite per §10.6, pure function, CI and component breakdown always returned, traceable to mention-level evidence. |
-| AC-6 | Gap identification | **Met** — deterministic detector, 5 gap types, each with supporting evidence. |
+| AC-6 | Gap identification | **Met for the types that can fire** — deterministic detector, all five types implemented and tested, each with supporting evidence. Presence, prominence and competitive run in production; source and representation depend on the unbuilt web/social layer (AC-2). |
 | AC-7 | Recommendation reasoning | **Met** — every recommendation carries a non-null `gap_id`; the validation gate rejects an unknown action, a class mismatch or a missing `gap_id`; priority is a counterfactual score-impact simulation. |
 | AC-8 | Visibility tracking | **Partial** — runs on demand (UI/API/CLI) with a cluster-bootstrap/Theil–Sen trend verdict; there is no scheduler, so "runs on schedule" is not implemented. |
 | AC-9 | Failure handling | **Met** — retry with backoff honouring `Retry-After`, per-provider skip after repeated failures or a stalled rate limit, run saved `partial`, failures visible in job status and logs. |
 | AC-10 | Distribution approval gate | **Met (adapted channel set)** — publish/approve is gated by `ADMIN_TOKEN`, every attempt is logged whatever the outcome (published/exported/failed/blocked). The v1 channel is Meta + X + a Google Business Profile export + WhatsApp-share + a local sandbox, in place of the PRD's Dev.to. |
 | AC-11 | Cost/quota visibility | **Pending** — `GET /providers` and `GET /channels` show configured vs. not; there's no admin view of per-provider usage or remaining quota/credit. |
-| AC-12 | Detector reliability | **Partial** — the full tooling exists (`docs/DETECTOR_VALIDATION.md`: blind-labelling export/import, precision/recall, Cohen's kappa) but no real human-labelled round has been run yet, so no numbers are published. |
+| AC-12 | Detector reliability | **Partial** — the full tooling exists and is tested (`docs/DETECTOR_VALIDATION.md`: blind-labelling export/import, precision/recall/F1, Cohen's kappa with Landis–Koch bands, two-annotator consensus with adjudication routing), but no real human-labelled round has been run yet, so no numbers are published. |
 
 ## Known limitations
 
