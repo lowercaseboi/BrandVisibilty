@@ -15,9 +15,8 @@ are noted at the bottom.
      one of `GEMINI_API_KEY`, `OPENAI_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`,
      `ANTHROPIC_API_KEY`, `CUSTOM_LLM_API_KEY` (plus its matching `*_BASE_URL`/`*_MODEL`
      from [`.env.example`](.env.example) if you use `CUSTOM_LLM_*`) to enable real runs.
-   - `CORS_ORIGINS` and `CORS_ORIGIN_REGEX` — come back and set these in step 3, once you
-     have the Vercel URL. The service works without them; browser calls from the deployed
-     frontend just get blocked by CORS until they're set.
+   - `CORS_ORIGINS` and `CORS_ORIGIN_REGEX` — leave blank. The Vercel frontend reaches the API
+     through a same-origin rewrite (step 2), so CORS only matters if you skip that (step 3).
    - `DATA_DIR=/data` and `SEED_DEMO=1` are already set by the Blueprint.
 3. Deploy. Render builds the image and calls `/health` to confirm it's up.
 
@@ -36,37 +35,37 @@ are noted at the bottom.
 
 ## 2. Frontend — Vercel
 
-1. Vercel dashboard -> **Add New** -> **Project** -> import this GitHub repo.
-2. **Root Directory**: `frontend`. Vercel should auto-detect the Vite framework preset
-   from [`frontend/vercel.json`](frontend/vercel.json) (build `npm run build`, output
-   `dist`, SPA fallback so deep links like `/app`, `/brands/:key`,
-   `/brands/:key/questions`, `/providers` all serve `index.html` instead of 404ing).
-3. Set the env var **`VITE_API_BASE`** to your Render service's URL, e.g.
-   `https://brand-visibility-backend.onrender.com` — **no trailing slash**. The frontend
-   builds requests as `` `${VITE_API_BASE}${path}` `` where `path` already starts with
-   `/` (see `frontend/src/api/client.ts`), so a trailing slash would produce `...//brands`.
-4. Deploy.
+The frontend calls the API at the relative path `/api/*` (the default `API_BASE` in
+`frontend/src/api/client.ts`). On Vercel, [`frontend/vercel.json`](frontend/vercel.json) rewrites
+`/api/(.*)` to the Render service, so the browser only ever talks to the Vercel origin:
+**no CORS setup and no `VITE_API_BASE` needed.** The rewrite sits before the SPA fallback, which
+serves `index.html` for deep links like `/app`, `/brands/:key/analysis` or `/providers`.
 
-## 3. Wire up CORS
+1. Put your Render URL in the `/api` rewrite's `destination` in `frontend/vercel.json`
+   (e.g. `https://brand-visibility-backend.onrender.com/$1`, no trailing slash before `$1`).
+2. Deploy, either:
+   - **CLI** (from the repo root): `npx vercel login` once, then
+     `npx vercel link --cwd frontend --yes` and `npx vercel deploy --cwd frontend --prod`; or
+   - **Dashboard**: Add New → Project → import this repo, **Root Directory** `frontend`
+     (the Vite preset, build `npm run build` and output `dist` come from `vercel.json`).
 
-Once you have the Vercel URL (e.g. `https://brand-visibility.vercel.app`), go back to the
-Render service and set:
-- `CORS_ORIGINS=https://brand-visibility.vercel.app` (comma-separate more than one exact
-  origin, e.g. a custom domain too).
-- `CORS_ORIGIN_REGEX=https://.*\.vercel\.app` (optional) so Vercel's per-branch/PR preview
-  deploys, which get their own random subdomain, also work without adding each one by hand.
+## 3. CORS (only if you skip the rewrite)
 
-Redeploy the backend (or it will pick up the env change on its own, depending on Render's
-settings) for the new CORS config to take effect.
+If you'd rather call Render directly from the browser, set **`VITE_API_BASE`** on Vercel to the
+Render URL (no trailing slash: requests are built as `` `${VITE_API_BASE}${path}` ``), then on
+Render set:
+- `CORS_ORIGINS=https://<your-app>.vercel.app` (comma-separate several exact origins).
+- `CORS_ORIGIN_REGEX=https://.*\.vercel\.app` (optional) so preview deploys also work.
 
 ## 4. Verify
 
 - `https://<render-url>/health` returns `{"status": "ok"}`.
 - `https://<render-url>/docs` loads the Swagger UI.
+- `https://<vercel-url>/api/health` returns `{"status": "ok"}` too (the rewrite reaches Render).
 - The Vercel URL's landing page loads and shows the 3 pilot brands (Gajanan Vada Pav, the
   perfume brand, V.A. Mayekar Opticians) with synthetic demo data — confirms the frontend
-  reached the backend and CORS is correctly configured (an open devtools Network tab will
-  show a CORS error if not).
+  reached the backend. The first load after Render has idled can take ~30s; the app shows a
+  "waking the server up" notice meanwhile.
 
 ## 5. Campaign Studio in production
 

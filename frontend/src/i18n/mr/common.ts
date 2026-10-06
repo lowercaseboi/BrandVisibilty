@@ -63,6 +63,7 @@ export const common: Record<keyof typeof enCommon, string> = {
   "required": "आवश्यक",
   "showMore": "अधिक दाखवा",
   "showLess": "कमी दाखवा",
+  "serverWaking": "सर्व्हरला सक्रिय केले जात आहे. फ्री होस्टिंगवर पहिल्यांदा लोड होण्यास सुमारे 30 सेकंद लागू शकतात.",
   "seeAll": "सर्व पाहा",
   "learnMore": "अधिक जाणून घ्या",
   "unknown": "अज्ञात",

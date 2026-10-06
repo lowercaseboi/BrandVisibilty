@@ -72,6 +72,8 @@ export const common = {
   "required": "Required",
   "showMore": "Show more",
   "showLess": "Show less",
+  // Shown once when the hosted backend is waking from sleep (free tier) and the first request is slow.
+  "serverWaking": "Waking the server up. The first load can take about 30 seconds on free hosting.",
   "seeAll": "View all",
   "learnMore": "Learn more",
   "unknown": "Unknown",
