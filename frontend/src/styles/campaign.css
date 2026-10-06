@@ -8,7 +8,9 @@
 
 .cs-back { margin: 0 0 var(--space-2); font-size: var(--fs-sm); }
 .cs-back a { color: var(--muted); text-decoration: none; }
-.cs-back a:hover { color: var(--text-h); text-decoration: underline; }
+@media (hover: hover) and (pointer: fine) {
+  .cs-back a:hover { color: var(--text-h); text-decoration: underline; }
+}
 .cs-studio, .cs-step, .cs-review, .cs-side, .cs-web, .cs-confirm, .cs-results, .cs-issues, .cs-images { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
 .cs-studio { gap: var(--space-4); }
 .cs-studio .alert { margin: 0; }
@@ -45,7 +47,7 @@
 /* Sticky progress header: status, title, save state and the stepper, under the app header. */
 .cs-top {
   position: sticky;
-  top: 78px; /* the app header's height (56px at ≤ 480) */
+  top: var(--header-h); /* sticks right under the app header (base.css) */
   z-index: 20;
   display: flex;
   flex-direction: column;
@@ -255,7 +257,9 @@
   color: inherit;
   cursor: pointer;
 }
-.cs-chip button:hover { background: color-mix(in srgb, var(--accent) 25%, transparent); }
+@media (hover: hover) and (pointer: fine) {
+  .cs-chip button:hover { background: color-mix(in srgb, var(--accent) 25%, transparent); }
+}
 /* image strip */
 .cs-strip {
   display: flex;
@@ -263,9 +267,13 @@
   margin: 0;
   padding: 2px 2px 6px;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: 2px;
   list-style: none;
   scrollbar-width: thin;
 }
+.cs-strip > * { flex: none; scroll-snap-align: start; }
 .cs-thumb {
   display: flex;
   flex-direction: column;
@@ -279,9 +287,13 @@
   font: inherit;
   font-size: var(--fs-2xs);
   cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease);
 }
+.cs-thumb:active { transform: scale(0.97); }
 .cs-thumb img { width: 100%; max-height: 110px; border-radius: var(--radius-xs); object-fit: cover; }
-.cs-thumb:hover { border-color: var(--line-strong); }
+@media (hover: hover) and (pointer: fine) {
+  .cs-thumb:hover { border-color: var(--line-strong); }
+}
 .cs-thumb.is-active {
   border-color: var(--accent);
   box-shadow: inset 0 0 0 1px var(--accent);
@@ -444,24 +456,13 @@
 
 /* ---------- admin token dialog ---------- */
 
-.cs-dialog {
-  width: min(460px, calc(100vw - 32px));
-  max-height: calc(100dvh - 48px);
-  padding: 0;
-  overflow: auto;
-  background: var(--surface-solid);
-  color: var(--text);
-}
-.cs-dialog::backdrop { background: color-mix(in srgb, var(--band-dark) 55%, transparent); }
-.cs-dialog-body { display: flex; flex-direction: column; gap: 12px; padding: 20px; }
-.cs-dialog-body h2, .cs-dialog-body p { margin: 0; }
-.cs-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
 /* ---------- "Your campaigns" strip + "Since your campaign" card ---------- */
 
 .cs-strip-wrap .module-section-head { margin-bottom: var(--space-3); }
 .cs-cards { grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); }
-.cs-mini { gap: 6px; padding: 14px 16px; }
+/* Card-pad tokens, but never roomier than the strip's compact 14/16. */
+.cs-mini { gap: 6px; padding: min(14px, var(--card-pad-y)) min(16px, var(--card-pad-x)); }
 .cs-mini .status-pill, .cs-mini .btn { align-self: flex-start; }
 .cs-mini-title { color: var(--text-h); overflow-wrap: anywhere; }
 .cs-since { margin-top: var(--space-4); }
@@ -602,7 +603,9 @@
 .trend-pub-line.is-active { opacity: 0.9; }
 .trend-pub { cursor: pointer; }
 .trend-pub-flag { fill: var(--accent); stroke: var(--surface-solid); stroke-width: 1.5; }
-.trend-pub:hover .trend-pub-flag { fill: var(--accent-hover); }
+@media (hover: hover) and (pointer: fine) {
+  .trend-pub:hover .trend-pub-flag { fill: var(--accent-hover); }
+}
 .swatch-pub {
   width: 0;
   height: 0;
@@ -618,7 +621,15 @@
 }
 
 @media (max-width: 640px) {
+  /* Under the compact phone header (56px plus the notch inset). */
   .cs-top { padding: 10px 12px; }
+  /* 16px or iOS zooms in on focus (the mono class would otherwise win over base.css). */
+  .cs-markdown { font-size: 16px; }
+  /* Finger-sized targets: the hashtag remove button keeps a small look with a 40px hit area. */
+  .cs-chip button { position: relative; width: 28px; height: 28px; }
+  .cs-chip button::before { content: ""; position: absolute; inset: -6px; }
+  .cs-toggle { min-height: 44px; }
+  .pv-toggle button { min-height: 36px; }
   .cs-step-head h2 { font-size: var(--fs-lg); }
   .cs-gen { grid-template-columns: minmax(0, 1fr); }
   .cs-gen-art { display: none; }
@@ -632,8 +643,9 @@
 }
 
 @media (max-width: 480px) {
-  .cs-top { top: 56px; }
   .cs-pick { padding: 12px; }
+  .pv-wa-wrap { grid-template-columns: minmax(0, 1fr); }
+  .pv-wa-status { max-width: 160px; }
   .cs-pick-main { grid-template-columns: auto auto minmax(0, 1fr); }
   .cs-pick-status { grid-column: 3; justify-content: flex-start; }
   .cs-pick-line, .cs-pick-actions, .cs-pick-prompt { margin-left: 0; }

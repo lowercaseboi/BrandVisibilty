@@ -1,3 +1,4 @@
+/* oxlint-disable react/only-export-components -- the toggles and the hook they share belong together */
 import { useId } from "react";
 import { getT, LANGS, useLang, useT } from "../i18n";
 import { useTheme } from "../settings/theme";
@@ -70,22 +71,31 @@ export function ThemeButton() {
   );
 }
 
-/** One click moves to the next language (EN → हिंदी → मराठी → EN) and confirms it in that language. */
-export function LanguageToggle() {
+/**
+ * The language cycle (EN → हिंदी → मराठी → EN) shared by the header button and the phone settings
+ * sheet: the current language, the button's full label, and `cycle`, which moves on and confirms
+ * it in the new language.
+ */
+export function useLanguageCycle() {
   const { lang, setLang } = useLang();
   const t = useT();
   const i = Math.max(0, LANGS.findIndex((l) => l.code === lang));
   const current = LANGS[i];
   const next = LANGS[(i + 1) % LANGS.length];
   const label = t("common.lang.button", { lang: current.label, next: next.label });
-
-  const onClick = () => {
+  const cycle = () => {
     setLang(next.code);
     toast(getT(next.code)("common.lang.changed", { lang: next.label }));
   };
+  return { lang, current, label, cycle };
+}
+
+/** One click moves to the next language and confirms it in that language. */
+export function LanguageToggle() {
+  const { lang, label, cycle } = useLanguageCycle();
 
   return (
-    <button type="button" className="icon-btn" onClick={onClick} aria-label={label} title={label}>
+    <button type="button" className="icon-btn" onClick={cycle} aria-label={label} title={label}>
       <span className="icon-swap" key={lang}>
         <GlobeIcon />
       </span>

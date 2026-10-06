@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import type { KeyboardEvent } from "react";
+import type { KeyboardEvent, PointerEvent } from "react";
 import type { Snapshot, TrendVerdict } from "../api/types";
 import { T, useFormat, useT } from "../i18n";
 import type { Formatter, MessageKey, Vars } from "../i18n";
@@ -7,12 +7,13 @@ import { useDetails } from "../settings/details";
 import { markerIndex, sinceDelta } from "./campaign/trendMarkers";
 import type { PublishMarker } from "./campaign/trendMarkers";
 import { toScore, useListFormat, useShortDate, useShortTime } from "./dashboard/helpers";
-import { estimateWidth, pickAxisLabels } from "./trendAxis";
+import { estimateWidth, nearestIndex, pickAxisLabels } from "./trendAxis";
 
 const MIN_W = 280;
 const PAD = { top: 18, right: 28, bottom: 34, left: 40 };
 const AXIS_FONT_PX = 11; // .trend-axis font-size
 const ROW_H = 15; // second label row, only when the first and last labels cannot share one
+const FLAG_HIT = 32; // publish flags: a finger-sized invisible hit area around the 10px marker
 
 // Measure axis labels with the real UI font (canvas), falling back to an estimate.
 let measureCtx: CanvasRenderingContext2D | null | undefined;
@@ -182,7 +183,7 @@ export function TrendChart({
   });
   const twoRows = axisLabels.some((l) => l.row === 1);
   const padBottom = PAD.bottom + (twoRows ? ROW_H : 0);
-  const H = (W < 500 ? 200 : W < 900 ? 240 : 260) + (twoRows ? ROW_H : 0);
+  const H = (W < 500 ? 180 : W < 900 ? 240 : 260) + (twoRows ? ROW_H : 0);
   const innerH = H - PAD.top - padBottom;
   // Scores are 0-100 points: fit the axis to the highest CI bound (at least 25) plus headroom,
   // rounded up to the next 10.
@@ -222,9 +223,29 @@ export function TrendChart({
     return [{ ev, x: mx, delta: sinceDelta(snapshots, ev.at) }];
   });
   const am = activeMarker !== null ? (markers[activeMarker] ?? null) : null;
-  const hitHalf = Math.max(10, innerW / (n - 1) / 2);
   const first = snapshots[0];
   const last = snapshots[n - 1];
+
+  // Scrubbing: a pointer (mouse, pen or finger) anywhere over the chart picks the nearest check.
+  // touch-action: pan-y on the svg keeps vertical page scroll; a sideways drag scrubs. A finger's
+  // pick stays after it lifts (like a tap); a mouse leaving the plot clears it, as hover did.
+  const xs = pts.map((p) => p.x);
+  const scrub = (e: PointerEvent<SVGSVGElement>) => {
+    if (e.target instanceof Element && e.target.closest(".trend-pub")) return;
+    const box = e.currentTarget.getBoundingClientRect();
+    if (!box.width || !box.height) return;
+    const sy = ((e.clientY - box.top) / box.height) * H;
+    if (e.pointerType === "mouse" && (sy < PAD.top - 8 || sy > PAD.top + innerH + 8)) {
+      setActive(null);
+      return;
+    }
+    const i = nearestIndex(((e.clientX - box.left) / box.width) * W, xs);
+    setActiveMarker(null);
+    setActive(i < 0 ? null : i);
+  };
+  const onPointerLeave = (e: PointerEvent<SVGSVGElement>) => {
+    if (e.pointerType === "mouse") setActive(null);
+  };
 
   const onKey = (e: KeyboardEvent<SVGSVGElement>) => {
     if (e.key === "ArrowLeft") setActive((i) => Math.max(0, (i ?? n) - 1));
@@ -254,6 +275,9 @@ export function TrendChart({
         })}
         onKeyDown={onKey}
         onBlur={() => setActive(null)}
+        onPointerDown={scrub}
+        onPointerMove={scrub}
+        onPointerLeave={onPointerLeave}
       >
         {ticks.map((v) => (
           <g key={v}>
@@ -312,16 +336,6 @@ export function TrendChart({
                 {toScore(p.s.analysis_result.composite_score)}
               </text>
             )}
-            <rect
-              x={p.x - hitHalf}
-              y={PAD.top}
-              width={hitHalf * 2}
-              height={innerH}
-              fill="transparent"
-              onMouseEnter={() => setActive(i)}
-              onMouseLeave={() => setActive(null)}
-              onClick={() => setActive(i)}
-            />
           </g>
         ))}
 
@@ -344,7 +358,7 @@ export function TrendChart({
               onClick={() => setActiveMarker(i)}
             >
               <title>{label}</title>
-              <rect x={m.x - 8} y={by - 4} width={16} height={16} fill="transparent" />
+              <rect x={m.x - FLAG_HIT / 2} y={by + 5 - FLAG_HIT / 2} width={FLAG_HIT} height={FLAG_HIT} fill="transparent" />
               <path d={`M${m.x},${by + 1} L${m.x + 5},${by + 9} L${m.x - 5},${by + 9} Z`} className="trend-pub-flag" />
             </g>
           );

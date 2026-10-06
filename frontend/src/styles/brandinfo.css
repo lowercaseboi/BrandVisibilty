@@ -143,6 +143,31 @@
 
 /* ---------- coverage matrix ---------- */
 
+/* The frame holds the right-edge fade (the grid itself scrolls, so the fade can't live on it). */
+.bi-coverage-frame {
+  position: relative;
+}
+
+.bi-coverage-frame::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  bottom: 1px;
+  width: 28px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: linear-gradient(to right, transparent, var(--surface-solid));
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease);
+}
+
+.bi-coverage-frame.has-more::after {
+  opacity: 1;
+}
+
+/* Sideways scroll on narrow screens: the intent column stays pinned (scroll-padding keeps snapped
+   city columns clear of it; 9rem is its minimum width, which it has whenever the grid scrolls). */
 .bi-coverage-grid {
   display: grid;
   gap: 1px;
@@ -151,6 +176,14 @@
   border-radius: var(--radius-sm);
   overflow: hidden;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scroll-padding-left: 9rem;
+}
+
+.bi-coverage-grid:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .bi-coverage-row {
@@ -176,10 +209,20 @@
   color: var(--text-h);
 }
 
+/* Pinned first column; a 1px shadow stands in for the grid gap the scrolled cells pass under. */
+.bi-coverage-corner,
+.bi-coverage-rowhead {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  box-shadow: 1px 0 0 var(--border);
+}
+
 .bi-coverage-colhead {
   justify-content: center;
   text-align: center;
   overflow-wrap: anywhere;
+  scroll-snap-align: start;
 }
 
 .bi-coverage-count {
@@ -264,7 +307,7 @@
   flex-direction: column;
   gap: var(--space-2);
   min-width: 0;
-  padding: var(--space-4);
+  padding: var(--card-pad-y) var(--card-pad-x);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
   background: var(--surface-solid);
@@ -359,8 +402,10 @@
   cursor: pointer;
 }
 
-.acc-tech summary:hover {
-  color: var(--text);
+@media (hover: hover) and (pointer: fine) {
+  .acc-tech summary:hover {
+    color: var(--text);
+  }
 }
 
 .acc-tech p {
@@ -416,47 +461,6 @@
 
 /* ---------- dialogs (manual entry, picker, disconnect, admin token) ---------- */
 
-.acc-dialog {
-  /* .card sets position: relative, which would pin the modal to the top of the document rather
-     than the viewport once the page is scrolled. */
-  position: fixed;
-  width: min(460px, calc(100vw - 32px));
-  max-height: calc(100dvh - 48px);
-  padding: 0;
-  overflow: auto;
-  background: var(--surface-solid);
-  color: var(--text);
-}
-
-/* Beats `section > .card` (components.css), which would pin it near the top. */
-.acc-dialog.card {
-  margin: auto;
-}
-
-.acc-dialog-wide {
-  width: min(560px, calc(100vw - 32px));
-}
-
-.acc-dialog::backdrop {
-  background: color-mix(in srgb, var(--band-dark) 55%, transparent);
-  backdrop-filter: blur(2px);
-}
-
-.acc-dialog-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-5);
-}
-
-.acc-dialog-title {
-  margin: 0;
-  font-family: var(--display);
-  word-spacing: normal;
-  font-size: var(--fs-lg);
-  color: var(--text-h);
-}
-
 .acc-form {
   display: flex;
   flex-direction: column;
@@ -469,14 +473,6 @@
 
 .acc-form .field input {
   font-family: var(--mono);
-}
-
-.acc-dialog-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
 }
 
 .acc-howto {
@@ -525,8 +521,10 @@
   cursor: pointer;
 }
 
-.acc-choice:hover {
-  background: var(--surface-2);
+@media (hover: hover) and (pointer: fine) {
+  .acc-choice:hover {
+    background: var(--surface-2);
+  }
 }
 
 .acc-choice.is-picked {
@@ -553,18 +551,15 @@
   }
 }
 
-@media (max-width: 480px) {
-  .acc-dialog-body {
-    padding: var(--space-4);
+/* Phones: finger-sized picker rows, and a little press feedback on them. */
+@media (max-width: 640px) {
+  .acc-choice {
+    min-height: 48px;
   }
+}
 
-  .acc-dialog-actions .btn {
-    flex: 1 1 auto;
-  }
-
-  .acc-card {
-    padding: var(--space-3);
-  }
+.acc-choice:active {
+  background: var(--surface-2);
 }
 
 /* =========================================================
@@ -598,7 +593,8 @@
   gap: var(--space-2);
   width: var(--ob-w);
   margin-inline: calc((100% - var(--ob-w)) / 2);
-  padding: var(--space-3) var(--space-4);
+  /* Never roomier than the card-pad tokens (which shrink on phones). */
+  padding: min(var(--space-3), var(--card-pad-y)) min(var(--space-4), var(--card-pad-x));
 }
 
 .ob-head {
@@ -630,11 +626,14 @@
   background: var(--surface-3);
 }
 
+/* Filled by scaleX (set inline from the done count), so the fill animates on the compositor. */
 .ob-meter span {
   display: block;
+  width: 100%;
   height: 100%;
   background: var(--ok-dot);
-  transition: width var(--dur-slow) var(--ease);
+  transform-origin: left;
+  transition: transform var(--dur-slow) var(--ease);
 }
 
 .ob-hide {
@@ -666,12 +665,19 @@
   text-decoration: none;
   transition:
     border-color var(--dur) var(--ease),
-    background var(--dur) var(--ease);
+    background var(--dur) var(--ease),
+    transform var(--dur-fast) var(--ease);
 }
 
-.ob-link:hover {
-  border-color: var(--border-strong);
-  background: var(--surface-2);
+.ob-link:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ob-link:hover {
+    border-color: var(--border-strong);
+    background: var(--surface-2);
+  }
 }
 
 .ob-mark {

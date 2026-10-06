@@ -114,7 +114,7 @@ export function ChooseAccountDialog({
             {error}
           </p>
         )}
-        <div className="acc-dialog-actions">
+        <div className="sheet-actions">
           <button type="button" className="btn btn-ghost" onClick={onClose}>
             {t("brandinfo.accounts.cancel")}
           </button>

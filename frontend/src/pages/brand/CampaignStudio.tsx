@@ -148,7 +148,9 @@ export function CampaignStudio() {
   return (
     <ModuleShell id="recommendations">
       <p className="cs-back">
-        <TransitionLink to={brandHref(brandKey, "recommendations")}>← {t("board.campaign.back")}</TransitionLink>
+        <TransitionLink to={brandHref(brandKey, "recommendations")} direction="back">
+          ← {t("board.campaign.back")}
+        </TransitionLink>
       </p>
       {body}
     </ModuleShell>

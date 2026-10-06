@@ -15,11 +15,11 @@
      and its module card emerges from behind the centre card and rides out to the wire's end.
      --hub-delay is when the first wire starts: almost at once on a direct load, or as the picked
      card lands from the list (the "pick" morph below). From the click: ~0.2s lift, the morph
-     from ~0.3s, wires from ~0.55s, and the last module card settled by ~1.05s. */
+     from ~0.3s, wires from ~0.55s, and the last module card settled by ~1s. */
   --hub-delay: 40ms;
   --hub-stagger: 30ms;
-  --hub-draw: 0.34s;
-  --hub-emerge: 0.38s;
+  --hub-draw: var(--dur-slow);
+  --hub-emerge: var(--dur-slow);
   --hub-out: cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
@@ -57,13 +57,13 @@
 
 /* Unpaired shared elements in a navigation morph (the other brand cards on the list, the module
    cards when going back to the list) fade out quickly / in a touch later, all inside the morph's
-   0.42s, so the one card that moves is what the eye follows and nothing outlasts it. */
+   0.32s, so the one card that moves is what the eye follows and nothing outlasts it. */
 :root[data-vt]::view-transition-old(*):only-child {
   animation: vt-fade-out 0.18s var(--ease) both;
 }
 
 :root[data-vt]::view-transition-new(*):only-child {
-  animation: vt-fade-in 0.26s var(--ease) 0.12s both;
+  animation: vt-fade-in 0.2s var(--ease) 0.1s both;
 }
 
 /* ---------- list → hub: pick a card from the deck ---------- */
@@ -202,7 +202,7 @@
   mask-image: radial-gradient(ellipse 62% 58% at 50% 50%, black 30%, transparent 78%);
   -webkit-mask-image: radial-gradient(ellipse 62% 58% at 50% 50%, black 30%, transparent 78%);
   opacity: 0.9;
-  animation: fade 0.5s var(--ease) calc(var(--hub-delay) * 0.5) backwards;
+  animation: fade var(--dur-slow) var(--ease) calc(var(--hub-delay) * 0.5) backwards;
 }
 
 .hub-centre {
@@ -280,7 +280,7 @@
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 350px;
+  max-width: 320px;
   /* Where the card emerges from: the offset to the centre card's middle, measured by HubPage
      (these fallbacks just nudge it toward the centre until then). */
   --from-x: 0px;
@@ -392,10 +392,16 @@
   isolation: isolate;
 }
 
-.hub-module:hover .hub-module-glass::before,
 .hub-module:focus-within .hub-module-glass::before {
   opacity: 1;
   scale: 1.25;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hub-module:hover .hub-module-glass::before {
+    opacity: 1;
+    scale: 1.25;
+  }
 }
 
 /* Keyboard focus: ring the glass itself (the link fills it), and lift it like a hover. */
@@ -414,8 +420,8 @@
   flex-direction: column;
   gap: var(--space-3);
   height: 100%;
-  min-height: 236px;
-  padding: 18px 20px 20px;
+  min-height: 210px;
+  padding: var(--card-pad-y) var(--card-pad-x) calc(var(--card-pad-y) + 2px);
   color: inherit;
   text-decoration: none;
 }
@@ -442,10 +448,16 @@
     color var(--dur) var(--ease);
 }
 
-.hub-module:hover .hub-module-icon,
 .hub-module:focus-within .hub-module-icon {
   color: var(--on-accent);
   background: var(--accent);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hub-module:hover .hub-module-icon {
+    color: var(--on-accent);
+    background: var(--accent);
+  }
 }
 
 .hub-module-index {
@@ -463,16 +475,28 @@
   color: var(--muted);
   background: var(--surface-3);
   transition:
-    transform 0.3s var(--ease),
-    background 0.3s var(--ease),
-    color 0.3s var(--ease);
+    transform var(--dur-med) var(--ease),
+    background var(--dur-med) var(--ease),
+    color var(--dur-med) var(--ease);
 }
 
-.hub-module:hover .hub-module-go,
 .hub-module:focus-within .hub-module-go {
   color: var(--on-accent);
   background: var(--accent-grad);
   transform: translateX(3px);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hub-module:hover .hub-module-go {
+    color: var(--on-accent);
+    background: var(--accent-grad);
+    transform: translateX(3px);
+  }
+}
+
+/* Only the phone row layout shows it (below). */
+.hub-module-chevron {
+  display: none;
 }
 
 .hub-module-titles {
@@ -484,7 +508,7 @@
 .hub-module-title {
   font-family: var(--display);
   word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 600;
   letter-spacing: -0.04em;
   line-height: 1.15;
@@ -624,7 +648,7 @@
   stroke-linecap: round;
   stroke-dasharray: 1 2;
   stroke-dashoffset: 1;
-  animation: hub-draw 0.6s var(--ease) calc(var(--hub-delay) + 0.3s) forwards;
+  animation: hub-draw var(--dur-slow) var(--ease) calc(var(--hub-delay) + 0.3s) forwards;
 }
 
 .hub-spark-dot {
@@ -778,7 +802,7 @@
   border-radius: 1px;
   background: var(--accent);
   box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 60%, transparent);
-  animation: hub-chip 0.35s var(--ease-spring) backwards;
+  animation: hub-chip var(--dur-slow) var(--ease-spring) backwards;
   animation-delay: calc(var(--hub-delay) + 0.36s + var(--k, 0) * 40ms);
 }
 
@@ -877,7 +901,7 @@
 /* Current: bright dashes flowing out of the brand card, plus a spark every few seconds. */
 .hub-wire-flow {
   opacity: 0;
-  animation: hub-flow-in 0.5s var(--ease) calc(var(--wire-delay) + var(--hub-draw)) forwards;
+  animation: hub-flow-in var(--dur-slow) var(--ease) calc(var(--wire-delay) + var(--hub-draw)) forwards;
 }
 
 @keyframes hub-flow-in {
@@ -966,7 +990,7 @@
 .hub-port-body {
   transform-box: fill-box;
   transform-origin: center;
-  animation: hub-port-in 0.4s var(--ease-spring) backwards;
+  animation: hub-port-in var(--dur-slow) var(--ease-spring) backwards;
   animation-delay: var(--wire-delay);
 }
 
@@ -1041,7 +1065,7 @@
   font: 600 10px/1 var(--mono);
   font-variant-numeric: tabular-nums;
   pointer-events: none;
-  animation: hub-port-in 0.4s var(--ease-spring) backwards;
+  animation: hub-port-in var(--dur-slow) var(--ease-spring) backwards;
   animation-delay: calc(var(--hub-delay) + var(--i, 0) * var(--hub-stagger) + var(--hub-draw));
 }
 
@@ -1065,7 +1089,7 @@
 /* Stacked layout's rail (LiveWires RailNodes): junction nodes where each row taps off the spine and
    a chevron node midway along each run, pointing away from the brand card. */
 .hub-rail {
-  animation: hub-rail-in 0.4s var(--ease) backwards;
+  animation: hub-rail-in var(--dur-slow) var(--ease) backwards;
   animation-delay: calc(var(--hub-delay) + var(--hub-draw));
 }
 
@@ -1175,25 +1199,80 @@
   }
 }
 
+/* ---------- phones: a compact brand card over a list of module rows ----------
+   No wires (HubPage doesn't mount LiveWires here), no dot-grid board, no looping glow: the four
+   modules are plain list rows — icon, title, a one-line glance at the preview, chevron — that fade
+   up into place instead of flying out of the centre card. */
+
 @media (max-width: 640px) {
   .hub-stage {
-    column-gap: 24px;
-    row-gap: 16px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "centre"
+      "tl"
+      "tr"
+      "bl"
+      "br";
+    row-gap: var(--card-gap);
+    padding-bottom: 0;
+  }
+
+  .hub-stage::before,
+  .hub-module-conn {
+    display: none;
   }
 
   .hub-centre {
     width: 100%;
+    margin-bottom: var(--space-2);
+  }
+
+  .hub-centre-card.is-skeleton {
+    min-height: 150px;
+  }
+
+  /* Still "live", just without the endless ping. */
+  .hub-live-dot::after,
+  .hub-spark-dot {
+    animation: none;
+  }
+
+  .hub-live-dot::after {
+    display: none;
+  }
+
+  .hub-module-tilt {
+    animation: rise 0.2s var(--ease-out) backwards;
+    animation-delay: calc(var(--i, 0) * 40ms);
+    transition: scale var(--dur-fast) var(--ease);
+  }
+
+  .hub-module-tilt:active {
+    scale: 0.98;
   }
 
   .hub-module-link {
-    gap: var(--space-2);
-    min-height: 0;
-    padding: 14px 14px 16px;
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "icon title chev"
+      "icon preview chev";
+    align-items: center;
+    gap: 2px var(--space-3);
+    min-height: 76px;
+    padding: var(--card-pad-y) var(--card-pad-x);
+  }
+
+  /* Flatten the desktop wrappers so their children are the row's grid items. */
+  .hub-module-top,
+  .hub-module-titles {
+    display: contents;
   }
 
   .hub-module-icon {
-    width: 34px;
-    height: 34px;
+    grid-area: icon;
+    width: 40px;
+    height: 40px;
   }
 
   .hub-module-index,
@@ -1203,39 +1282,82 @@
   }
 
   .hub-module-title {
+    grid-area: title;
+    align-self: end;
+    overflow: hidden;
     font-size: 16px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
+  .hub-module-chevron {
+    grid-area: chev;
+    display: block;
+    color: var(--muted);
+  }
+
+  /* The preview, cut to one line: its headline number and the words beside it. */
   .hub-module-preview {
+    grid-area: preview;
+    align-self: start;
     min-height: 0;
-    padding-top: var(--space-2);
+    max-height: 1.6em;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    font-size: var(--fs-sm);
+    white-space: nowrap;
   }
 
-  .hub-pv-num {
-    font-size: 22px;
+  .hub-module-preview > * {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    min-width: 0;
   }
 
+  .hub-module-preview .hub-pv-num,
   .hub-pv-score .hub-pv-num {
-    font-size: 26px;
+    font-size: 15px;
+    letter-spacing: -0.03em;
+    text-shadow: none;
   }
 
-  .hub-pv-analysis-top {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-1);
+  .hub-module-preview .hub-pv-line,
+  .hub-module-preview .hub-pv-stats,
+  .hub-module-preview .hub-pv-meta,
+  .hub-module-preview .hub-pv-analysis-top {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: baseline;
+    gap: var(--space-2);
+    margin: 0;
+    font-size: var(--fs-xs);
   }
 
-  .hub-pv-kanban {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 4px 6px;
+  .hub-module-preview .hub-spark,
+  .hub-module-preview .hub-pv-details > .hub-pv-line:not(.hub-pv-stats),
+  .hub-module-preview .hub-pv-kanban,
+  .hub-module-preview .hub-pv-meta .muted {
+    display: none;
   }
 
-  .hub-pv-col-bar {
-    height: 26px;
+  .hub-module-preview .hub-pv-badges {
+    flex-wrap: nowrap;
+    margin: 0;
   }
 
   .hub-pv-badge {
     letter-spacing: 0.04em;
+  }
+
+  .hub-module-preview .hub-pv-skeleton {
+    flex-direction: row;
+  }
+
+  .hub-module-preview .hub-pv-skeleton > span {
+    height: 12px;
   }
 }
 

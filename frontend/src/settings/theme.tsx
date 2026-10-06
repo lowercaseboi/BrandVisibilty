@@ -54,6 +54,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useLayoutEffect(() => {
     document.documentElement.dataset.theme = resolved;
+    // Phone status bar / browser chrome matches the header: the band colour in both themes.
+    const band = getComputedStyle(document.documentElement).getPropertyValue("--band-dark").trim();
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", band || "#20201f");
   }, [resolved]);
 
   const setPref = useCallback((p: ThemePref) => {

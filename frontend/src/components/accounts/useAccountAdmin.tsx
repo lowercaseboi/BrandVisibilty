@@ -75,7 +75,7 @@ function TokenDialog({ rejected, onClose }: { rejected: boolean; onClose: (token
             autoFocus
           />
         </label>
-        <div className="acc-dialog-actions">
+        <div className="sheet-actions">
           <button type="button" className="btn btn-ghost" onClick={() => onClose(null)}>
             {t("brandinfo.accounts.cancel")}
           </button>

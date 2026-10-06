@@ -326,7 +326,7 @@ export function ConnectedAccounts({ brandKey }: { brandKey: string }) {
                 name: open.status.account_name || platform(open.status.channel),
               })}
             </p>
-            <div className="acc-dialog-actions">
+            <div className="sheet-actions">
               {/* oxlint-disable-next-line jsx-a11y/no-autofocus -- the safe choice gets focus in a destructive confirm */}
               <button type="button" className="btn btn-ghost" onClick={() => setOpen(null)} autoFocus>
                 {t("brandinfo.accounts.cancel")}

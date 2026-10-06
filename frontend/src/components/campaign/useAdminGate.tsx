@@ -1,7 +1,8 @@
 /* oxlint-disable react/only-export-components -- the hook renders its own private dialog */
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useId, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { useT } from "../../i18n";
+import { Sheet } from "../Sheet";
 import { clearAdminToken, isTokenRejected, readAdminToken, saveAdminToken } from "./adminToken";
 
 interface Ask {
@@ -73,15 +74,8 @@ export function useAdminGate(): {
 
 function TokenDialog({ rejected, onClose }: { rejected: boolean; onClose: (token: string | null) => void }) {
   const t = useT();
-  const ref = useRef<HTMLDialogElement>(null);
   const [value, setValue] = useState("");
-  const titleId = useId();
   const hintId = useId();
-
-  useEffect(() => {
-    const d = ref.current;
-    if (d && !d.open) d.showModal?.();
-  }, []);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -89,46 +83,38 @@ function TokenDialog({ rejected, onClose }: { rejected: boolean; onClose: (token
   };
 
   return (
-    <dialog
-      ref={ref}
-      className="cs-dialog card"
-      aria-labelledby={titleId}
-      aria-describedby={hintId}
-      onCancel={(e) => {
-        e.preventDefault();
-        onClose(null);
-      }}
-    >
-      <form method="dialog" onSubmit={submit} className="cs-dialog-body">
-        <h2 id={titleId}>{t("board.campaign.token.title")}</h2>
-        {rejected && (
-          <p className="field-error" role="alert">
-            {t("board.campaign.token.rejected")}
+    <Sheet title={t("board.campaign.token.title")} describedBy={hintId} onClose={() => onClose(null)}>
+      {(dismiss) => (
+        <form onSubmit={submit} className="sheet-form">
+          {rejected && (
+            <p className="field-error" role="alert">
+              {t("board.campaign.token.rejected")}
+            </p>
+          )}
+          <p id={hintId} className="muted small">
+            {t("board.campaign.token.hint")}
           </p>
-        )}
-        <p id={hintId} className="muted small">
-          {t("board.campaign.token.hint")}
-        </p>
-        <label className="field">
-          {t("board.campaign.token.label")}
-          <input
-            type="password"
-            autoComplete="off"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            // oxlint-disable-next-line jsx-a11y/no-autofocus -- the only field of a modal the user just opened
-            autoFocus
-          />
-        </label>
-        <div className="cs-dialog-actions">
-          <button type="button" className="btn btn-ghost" onClick={() => onClose(null)}>
-            {t("board.campaign.cancel")}
-          </button>
-          <button type="submit" className="btn btn-primary">
-            {t("board.campaign.token.submit")}
-          </button>
-        </div>
-      </form>
-    </dialog>
+          <label className="field">
+            {t("board.campaign.token.label")}
+            <input
+              type="password"
+              autoComplete="off"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              // oxlint-disable-next-line jsx-a11y/no-autofocus -- the only field of a modal the user just opened
+              autoFocus
+            />
+          </label>
+          <div className="sheet-actions">
+            <button type="button" className="btn btn-ghost" onClick={dismiss}>
+              {t("board.campaign.cancel")}
+            </button>
+            <button type="submit" className="btn btn-primary">
+              {t("board.campaign.token.submit")}
+            </button>
+          </div>
+        </form>
+      )}
+    </Sheet>
   );
 }

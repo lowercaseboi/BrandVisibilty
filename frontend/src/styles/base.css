@@ -1,5 +1,13 @@
 /* Reset, typography, page layout, focus rings, motion, reduced motion. */
 
+/* The sticky app header's height (components.css `.app-header`): --header-bar is its row (20px
+   padding + 38px buttons on desktop; 10px + 40px on phones, set below), --header-h adds the notch
+   inset above it. Anything that sticks under the header uses `top: var(--header-h)`. */
+:root {
+  --header-bar: 78px;
+  --header-h: calc(var(--header-bar) + env(safe-area-inset-top));
+}
+
 *,
 *::before,
 *::after {
@@ -19,6 +27,8 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
+  overscroll-behavior-y: contain;
   /* Transparent so the glow below shows; <html> paints --bg. */
   background: transparent;
   color: var(--text);
@@ -80,6 +90,20 @@ body::after {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Touch: no grey flash on tap, and no double-tap-zoom delay on anything you can press. */
+a,
+button,
+input,
+select,
+textarea,
+label,
+summary,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 img,
@@ -151,8 +175,10 @@ a {
   transition: color var(--dur);
 }
 
-a:hover {
-  color: var(--accent-hover);
+@media (hover: hover) and (pointer: fine) {
+  a:hover {
+    color: var(--accent-hover);
+  }
 }
 
 strong,
@@ -284,10 +310,12 @@ textarea {
   line-height: 1.5;
 }
 
-input:hover,
-select:hover,
-textarea:hover {
-  border-color: color-mix(in srgb, var(--muted) 60%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  input:hover,
+  select:hover,
+  textarea:hover {
+    border-color: color-mix(in srgb, var(--muted) 60%, transparent);
+  }
 }
 
 input:focus,
@@ -376,6 +404,8 @@ h1[tabindex="-1"]:focus {
   font-size: var(--fs-sm);
   text-align: center;
   padding: var(--space-4) var(--gutter);
+  /* Clear of the home indicator on notched phones (viewport-fit=cover). */
+  padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
 }
 
 section > .card,
@@ -426,13 +456,32 @@ section > .metric-cards {
 
 @media (max-width: 640px) {
   :root {
+    --header-bar: 60px;
     --gutter: 16px;
+    --fs-xl: 18px;
     --fs-2xl: 24px;
     --fs-hero: 52px;
+    --card-pad-y: 12px;
+    --card-pad-x: 14px;
+    --card-gap: 10px;
+  }
+
+  /* 16px or more, or iOS Safari zooms the page in when a field takes focus. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
   }
 
   .app {
     padding-top: var(--space-4);
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --card-pad-y: 10px;
+    --card-pad-x: 12px;
   }
 }
 
@@ -441,7 +490,7 @@ section > .metric-cards {
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(8px);
   }
 }
 
@@ -467,34 +516,34 @@ section > .metric-cards {
 
 /* Each route fades up as it opens (App.tsx keys this wrapper on the path). */
 .page-enter {
-  animation: rise var(--dur-slow) var(--ease) backwards;
+  animation: rise var(--dur-med) var(--ease-out) backwards;
 }
 
 /* Children arrive one after another. */
 .stagger > * {
-  animation: rise 0.55s var(--ease) backwards;
+  animation: rise var(--dur-med) var(--ease-out) backwards;
 }
 
 .stagger > :nth-child(2) {
-  animation-delay: 70ms;
+  animation-delay: 40ms;
 }
 
 .stagger > :nth-child(3) {
-  animation-delay: 140ms;
+  animation-delay: 80ms;
 }
 
 .stagger > :nth-child(4) {
-  animation-delay: 210ms;
+  animation-delay: 120ms;
 }
 
 .stagger > :nth-child(n + 5) {
-  animation-delay: 280ms;
+  animation-delay: 160ms;
 }
 
 /* Theme switch: a quick cross-fade (theme.tsx uses the View Transitions API where available). */
 ::view-transition-old(root),
 ::view-transition-new(root) {
-  animation-duration: 0.35s;
+  animation-duration: var(--dur-slow);
   animation-timing-function: var(--ease);
 }
 
@@ -505,6 +554,7 @@ section > .metric-cards {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;

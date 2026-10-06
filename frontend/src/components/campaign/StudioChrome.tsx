@@ -107,7 +107,7 @@ export function Generating({ job }: { job: Job | null }) {
           })}
         </ol>
         <div className="progress" aria-hidden="true">
-          <div className="progress-bar" style={{ width: `${pct}%` }} />
+          <div className="progress-bar" style={{ transform: `scaleX(${pct / 100})` }} />
         </div>
         <p className="muted small">{t("board.campaign.generating.body")}</p>
       </div>

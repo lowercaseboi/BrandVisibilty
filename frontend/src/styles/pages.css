@@ -106,7 +106,7 @@
   grid-row: span 6;
   grid-template-rows: subgrid;
   row-gap: var(--space-2);
-  padding: 22px;
+  padding: calc(var(--card-pad-y) + 4px) calc(var(--card-pad-x) + 2px);
   border-radius: var(--radius-lg);
 }
 
@@ -130,9 +130,11 @@
     transform var(--dur-slow) var(--ease);
 }
 
-.sample-card:hover::before {
-  opacity: 1;
-  transform: scale(1.2);
+@media (hover: hover) and (pointer: fine) {
+  .sample-card:hover::before {
+    opacity: 1;
+    transform: scale(1.2);
+  }
 }
 
 .sample-card-top {
@@ -169,15 +171,17 @@
   color: var(--muted);
   background: var(--surface-3);
   transition:
-    transform 0.3s var(--ease),
-    background 0.3s var(--ease),
-    color 0.3s var(--ease);
+    transform var(--dur-med) var(--ease),
+    background var(--dur-med) var(--ease),
+    color var(--dur-med) var(--ease);
 }
 
-.sample-card:hover .sample-card-go {
-  color: var(--on-accent);
-  background: var(--accent-grad);
-  transform: translateX(3px);
+@media (hover: hover) and (pointer: fine) {
+  .sample-card:hover .sample-card-go {
+    color: var(--on-accent);
+    background: var(--accent-grad);
+    transform: translateX(3px);
+  }
 }
 
 /* Ring sits right under the name and the footer drops to the bottom, so rings line up across cards. */
@@ -229,10 +233,16 @@
     background 0.2s var(--ease);
 }
 
-.sample-card-delete:hover:not(:disabled),
 .sample-card-delete:focus-visible {
   color: var(--rate-low);
   background: var(--rate-low-bg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sample-card-delete:hover:not(:disabled) {
+    color: var(--rate-low);
+    background: var(--rate-low-bg);
+  }
 }
 
 .sample-card-delete:disabled {
@@ -378,6 +388,105 @@
   align-items: center;
   gap: var(--space-1) var(--space-2);
   margin-top: var(--space-1);
+}
+
+/* Press feedback on a user's own brand card (pilot cards are `a.card`, which has its own). */
+.sample-card-user {
+  transition: scale var(--dur-fast) var(--ease);
+}
+
+.sample-card-user:has(.sample-card-link:active) {
+  scale: 0.98;
+}
+
+/* Phones open a brand with a short press instead of the desktop's 3D pick-up (BrandListPage):
+   the card dips, then the page slides to the hub. */
+.sample-card.is-pressed {
+  scale: 0.97;
+  transition: scale var(--dur-fast) var(--ease);
+}
+
+/* Phones: the brand card turns sideways — ring on the left, name, rating and meta beside it — so a
+   brand is a glanceable ~150px row instead of a 330px poster. The same layout on the list and the
+   hub's centre card. No subgrid here: one card per row has nothing to line up with. */
+@media (max-width: 640px) {
+  .home {
+    padding-top: 0;
+  }
+
+  .home-section + .home-section {
+    margin-top: 40px;
+  }
+
+  .home-head {
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+  }
+
+  .sample-grid {
+    gap: var(--card-gap);
+  }
+
+  .sample-card,
+  .sample-card-user {
+    grid-row: auto;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: none;
+    align-content: start;
+    column-gap: var(--space-4);
+    row-gap: var(--space-1);
+    padding: var(--card-pad-y) var(--card-pad-x);
+  }
+
+  .sample-card-top,
+  .sample-card-footer,
+  .sample-card-slot:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .sample-card-ring {
+    grid-column: 1;
+    grid-row: 2 / span 3;
+    align-self: center;
+    padding: 0;
+  }
+
+  .sample-card-slot {
+    grid-column: 2;
+  }
+
+  .sample-card-slot:empty {
+    display: none;
+  }
+
+  .sample-card .score-ring {
+    width: 84px;
+  }
+
+  .sample-card .score-ring-value {
+    font-size: 24px;
+  }
+
+  .sample-card .score-ring-value small {
+    font-size: 9.5px;
+  }
+
+  .sample-card.is-skeleton {
+    min-height: 150px;
+  }
+
+  .pg-card-meta {
+    margin-top: 0;
+  }
+
+  .pg-thin {
+    margin-top: var(--space-2);
+  }
+
+  /* Score rings elsewhere (score hero) step down a size. */
+  .score-ring {
+    width: 112px;
+  }
 }
 
 .pg-thin {

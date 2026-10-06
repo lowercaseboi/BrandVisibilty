@@ -1,0 +1,233 @@
+/* Sheet (components/Sheet.tsx): the one modal surface. A centred dialog on wide screens, a
+   bottom sheet with a grab handle on phones. Native <dialog> + showModal, so ::backdrop works. */
+
+.sheet {
+  /* .card sets position: relative, which would pin the modal to the top of the document rather
+     than the viewport once the page is scrolled. */
+  position: fixed;
+  width: min(460px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--surface-solid);
+  color: var(--text);
+  animation: sheet-pop var(--dur-med) var(--ease-out);
+}
+
+/* Beats `section > .card` (components.css), which would pin it near the top. */
+.sheet.card {
+  margin: auto;
+}
+
+.sheet-wide {
+  width: min(560px, calc(100vw - 32px));
+}
+
+.sheet::backdrop {
+  background: color-mix(in srgb, var(--band-dark) 55%, transparent);
+  backdrop-filter: blur(2px);
+  animation: fade var(--dur-med) var(--ease-out);
+}
+
+.sheet[data-closing] {
+  animation: sheet-pop-out var(--dur) var(--ease) forwards;
+}
+
+.sheet[data-closing]::backdrop {
+  animation: sheet-fade-out var(--dur) var(--ease) forwards;
+}
+
+.sheet-grab {
+  display: none;
+}
+
+.sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+}
+
+.sheet-title {
+  margin: 0;
+  font-family: var(--display);
+  word-spacing: normal;
+  font-size: var(--fs-lg);
+  color: var(--text-h);
+}
+
+/* A form filling a sheet's body. */
+.sheet-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sheet-form p {
+  margin: 0;
+}
+
+/* Footer row of a sheet's buttons (Cancel / primary). */
+.sheet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* A list of full-width choices inside a sheet (header "More" menu, Board "Move to…"). */
+.sheet-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0 calc(-1 * var(--space-2));
+  padding: 0;
+  list-style: none;
+}
+
+.sheet-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 48px;
+  padding: 10px var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-h);
+  font: inherit;
+  font-size: var(--fs-md);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.sheet-row:active {
+  background: var(--surface-2);
+}
+
+.sheet-row[aria-checked="true"],
+.sheet-row[aria-current="page"] {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.sheet-row-value {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sheet-row:hover {
+    background: var(--surface-2);
+  }
+}
+
+@keyframes sheet-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+@keyframes sheet-pop-out {
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+@keyframes sheet-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* ---------- phones: bottom sheet ---------- */
+
+@media (max-width: 640px) {
+  .sheet,
+  .sheet-wide {
+    width: 100%;
+    max-width: none;
+    max-height: calc(100dvh - 56px - env(safe-area-inset-top));
+    margin: auto 0 0;
+    border-bottom: 0;
+    border-radius: 14px 14px 0 0;
+    animation: sheet-up var(--dur-med) var(--ease-out);
+  }
+
+  .sheet.card {
+    margin: auto 0 0;
+  }
+
+  /* Corner ticks read as clutter on a sheet's rounded top. */
+  .sheet.card::after {
+    display: none;
+  }
+
+  .sheet[data-closing] {
+    animation: sheet-down var(--dur) var(--ease) forwards;
+  }
+
+  .sheet[data-dragging] {
+    transition: none;
+  }
+
+  .sheet:not([data-dragging]) {
+    transition: transform var(--dur-med) var(--ease-out);
+  }
+
+  .sheet-grab {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    justify-content: center;
+    padding: 10px 0 6px;
+    background: var(--surface-solid);
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .sheet-handle {
+    width: 40px;
+    height: 5px;
+    border-radius: var(--radius-pill);
+    background: var(--border-strong);
+  }
+
+  .sheet-body {
+    padding: var(--space-2) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
+  }
+
+  .sheet-actions .btn {
+    flex: 1 1 auto;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes sheet-down {
+  from {
+    transform: translateY(var(--sheet-from, 0px));
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet,
+  .sheet::backdrop {
+    animation: none;
+  }
+}

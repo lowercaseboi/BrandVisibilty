@@ -9,6 +9,9 @@
   position: sticky;
   top: 0;
   z-index: 40;
+  /* Clear of the notch / status bar when installed to the home screen (viewport-fit=cover). The
+     header's full height, inset included, is --header-h (base.css), for things that stick under it. */
+  padding-top: env(safe-area-inset-top);
   /* No rule underneath. Transparent at the top of the page; frosts only once content scrolls under it. */
   background: transparent;
   transition:
@@ -30,7 +33,7 @@
 .analyst-tag {
   margin-right: 4px;
   color: var(--accent-text);
-  animation: fade 0.3s var(--ease);
+  animation: fade var(--dur-med) var(--ease);
 }
 
 @media (max-width: 640px) {
@@ -48,6 +51,7 @@
 
 .app-header-inner {
   max-width: var(--maxw);
+  min-height: var(--header-bar);
   margin: 0 auto;
   padding: 20px var(--gutter);
   display: flex;
@@ -66,8 +70,10 @@
   line-height: 1.2;
 }
 
-.brand-mark:hover {
-  color: var(--text-h);
+@media (hover: hover) and (pointer: fine) {
+  .brand-mark:hover {
+    color: var(--text-h);
+  }
 }
 
 .brand-mark svg {
@@ -75,8 +81,10 @@
   transition: transform var(--dur-slow) var(--ease-spring);
 }
 
-.brand-mark:hover svg {
-  transform: rotate(-8deg) scale(1.06);
+@media (hover: hover) and (pointer: fine) {
+  .brand-mark:hover svg {
+    transform: rotate(-8deg) scale(1.06);
+  }
 }
 
 .brand-mark-text {
@@ -152,9 +160,11 @@
     background var(--dur) var(--ease);
 }
 
-.header-links a:hover {
-  color: var(--text-h);
-  background: color-mix(in srgb, var(--text-h) 10%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .header-links a:hover {
+    color: var(--text-h);
+    background: color-mix(in srgb, var(--text-h) 10%, transparent);
+  }
 }
 
 .header-cta {
@@ -197,14 +207,16 @@
     color var(--dur) var(--ease);
 }
 
-.icon-btn:hover {
-  color: var(--text-h);
-  border-color: var(--line-strong);
-  box-shadow:
-    var(--frame-ring-sm),
-    var(--shadow-2),
-    inset 0 1px 0 var(--glass-highlight);
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) {
+  .icon-btn:hover {
+    color: var(--text-h);
+    border-color: var(--line-strong);
+    box-shadow:
+      var(--frame-ring-sm),
+      var(--shadow-2),
+      inset 0 1px 0 var(--glass-highlight);
+    transform: translateY(-1px);
+  }
 }
 
 .icon-btn:active {
@@ -227,7 +239,7 @@
 /* Icon that swaps (sun/moon) spins in; keyed on the theme so it replays. */
 .icon-swap {
   display: inline-flex;
-  animation: spin-in 0.4s var(--ease-spring);
+  animation: spin-in var(--dur-slow) var(--ease-spring);
 }
 
 /* The Connections toggle: square, like the other icon buttons, just set apart from them. */
@@ -237,18 +249,42 @@
 }
 
 .icon-btn-round svg {
-  transition: transform 0.6s var(--ease);
+  transition: transform var(--dur-slow) var(--ease);
 }
 
-.icon-btn-round:hover svg {
-  transform: rotate(90deg);
+@media (hover: hover) and (pointer: fine) {
+  .icon-btn-round:hover svg {
+    transform: rotate(90deg);
+  }
 }
 
-@media (max-width: 480px) {
+/* The phone header's "⋯" (AppHeader): replaces the tool buttons below 641px. */
+.icon-btn.header-more {
+  display: none;
+}
+
+.header-tools-full {
+  display: contents;
+}
+
+@media (max-width: 640px) {
   .app-header-inner {
     padding: 10px var(--gutter);
   }
 
+  /* App header: the logo mark alone on the left, one "⋯" button on the right. The landing header
+     keeps its wordmark and buttons (landing.css). */
+  .app-header-app .brand-mark-text,
+  .app-header-app .header-tools-full {
+    display: none;
+  }
+
+  .app-header-app .icon-btn.header-more {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 480px) {
   .brand-mark-name {
     font-size: 16px;
   }
@@ -351,8 +387,10 @@
   background: var(--surface-2);
 }
 
-.details-toggle-inline:hover {
-  border-color: var(--border-strong);
+@media (hover: hover) and (pointer: fine) {
+  .details-toggle-inline:hover {
+    border-color: var(--border-strong);
+  }
 }
 
 /* =========================================================
@@ -397,9 +435,60 @@
   color: var(--muted);
 }
 
-.crumbs a:hover {
-  color: var(--text-h);
-  text-decoration: underline;
+@media (hover: hover) and (pointer: fine) {
+  .crumbs a:hover {
+    color: var(--text-h);
+    text-decoration: underline;
+  }
+}
+
+/* BackLink (ModuleShell.tsx): the chevron only shows on phones, where the crumb is a back button. */
+.crumbs-chevron {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  /* A 44px tap target, nudged left so the chevron / text still lines up with the page edge. */
+  .crumbs a {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    min-height: 44px;
+    margin-left: -8px;
+    padding: 0 10px 0 4px;
+    border-radius: var(--radius-sm);
+    transition: background var(--dur-fast) var(--ease);
+  }
+
+  .crumbs a:active {
+    background: var(--surface-2);
+  }
+
+  .crumbs-back .crumbs-arrow {
+    display: none;
+  }
+
+  .crumbs-chevron {
+    display: block;
+    flex: none;
+  }
+
+  .crumbs-icon-only a {
+    justify-content: center;
+    width: 44px;
+    padding: 0;
+    margin-left: -12px;
+  }
+
+  /* The label stays the link's accessible name. */
+  .crumbs-icon-only .crumbs-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
 }
 
 .section-note {
@@ -551,7 +640,7 @@
     var(--frame-ring),
     var(--shadow-1),
     inset 0 1px 0 var(--glass-highlight);
-  padding: 18px 20px;
+  padding: var(--card-pad-y) var(--card-pad-x);
 }
 
 /* Registration-mark corner ticks — a drafting-table detail on every card, kept subtle (::after is
@@ -586,19 +675,28 @@ a.card {
   color: inherit;
   text-decoration: none;
   transition:
-    transform 0.3s var(--ease),
-    box-shadow 0.3s var(--ease),
+    transform var(--dur-med) var(--ease),
+    box-shadow var(--dur-med) var(--ease),
     border-color var(--dur) var(--ease);
 }
 
-a.card:hover {
-  border-color: var(--line-strong);
-  color: inherit;
-  transform: translateY(-3px);
-  box-shadow:
-    var(--frame-ring),
-    var(--shadow-2),
-    inset 0 1px 0 var(--glass-highlight);
+/* Touch press feedback (the hover lift above only applies to a fine pointer). */
+a.card:active,
+.icon-btn:active {
+  transform: scale(0.98);
+  transition-duration: var(--dur-fast);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  a.card:hover {
+    border-color: var(--line-strong);
+    color: inherit;
+    transform: translateY(-3px);
+    box-shadow:
+      var(--frame-ring),
+      var(--shadow-2),
+      inset 0 1px 0 var(--glass-highlight);
+  }
 }
 
 a.card:active {
@@ -796,12 +894,14 @@ a.card:active {
 
 /* Fill <-> outline invert: on hover the accent fill drops out to the page background and the
    border/text pick up the accent colour, so the button reads as its own crisp outline. */
-.btn-primary:hover,
-.btn-primary:not(:disabled):hover {
-  background: var(--bg);
-  color: var(--accent-text);
-  transform: translateY(-1px);
-  box-shadow: var(--frame-ring-accent), var(--shadow-accent-hover);
+@media (hover: hover) and (pointer: fine) {
+  .btn-primary:hover,
+  .btn-primary:not(:disabled):hover {
+    background: var(--bg);
+    color: var(--accent-text);
+    transform: translateY(-1px);
+    box-shadow: var(--frame-ring-accent), var(--shadow-accent-hover);
+  }
 }
 
 .btn-secondary {
@@ -814,15 +914,17 @@ a.card:active {
     inset 0 1px 0 var(--glass-highlight);
 }
 
-.btn-secondary:not(:disabled):hover {
-  background: var(--surface-solid);
-  color: var(--text-h);
-  border-color: var(--line-strong);
-  transform: translateY(-1px);
-  box-shadow:
-    var(--frame-ring-sm),
-    var(--shadow-2),
-    inset 0 1px 0 var(--glass-highlight);
+@media (hover: hover) and (pointer: fine) {
+  .btn-secondary:not(:disabled):hover {
+    background: var(--surface-solid);
+    color: var(--text-h);
+    border-color: var(--line-strong);
+    transform: translateY(-1px);
+    box-shadow:
+      var(--frame-ring-sm),
+      var(--shadow-2),
+      inset 0 1px 0 var(--glass-highlight);
+  }
 }
 
 .btn-ghost {
@@ -830,8 +932,10 @@ a.card:active {
   color: var(--text-h);
 }
 
-.btn-ghost:not(:disabled):hover {
-  background: var(--surface-3);
+@media (hover: hover) and (pointer: fine) {
+  .btn-ghost:not(:disabled):hover {
+    background: var(--surface-3);
+  }
 }
 
 .btn-danger {
@@ -840,8 +944,10 @@ a.card:active {
   color: var(--err);
 }
 
-.btn-danger:not(:disabled):hover {
-  background: var(--err-bg);
+@media (hover: hover) and (pointer: fine) {
+  .btn-danger:not(:disabled):hover {
+    background: var(--err-bg);
+  }
 }
 
 .btn-link {
@@ -853,9 +959,11 @@ a.card:active {
   font-weight: 600;
 }
 
-.btn-link:not(:disabled):hover {
-  color: var(--accent-hover);
-  text-decoration: underline;
+@media (hover: hover) and (pointer: fine) {
+  .btn-link:not(:disabled):hover {
+    color: var(--accent-hover);
+    text-decoration: underline;
+  }
 }
 
 /* Compact buttons (table rows, inline actions): keep the crisp border, drop the offset frame and
@@ -985,8 +1093,10 @@ a.card:active {
   border-bottom: none;
 }
 
-.table tbody tr:hover {
-  background: var(--surface-2);
+@media (hover: hover) and (pointer: fine) {
+  .table tbody tr:hover {
+    background: var(--surface-2);
+  }
 }
 
 .table .num {
@@ -1144,11 +1254,15 @@ a.card:active {
   overflow: hidden;
 }
 
+/* Full width, scaled down to the fraction done (inline `transform: scaleX(…)`): a compositor-only
+   animation, unlike width. The track's own rounding and overflow clip the ends. */
 .progress-bar {
+  width: 100%;
   height: 100%;
   background: var(--accent);
-  border-radius: 4px;
-  transition: width 0.4s ease;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--dur-slow) var(--ease);
 }
 
 .progress-mini {
@@ -1264,11 +1378,14 @@ a.card:active {
   cursor: pointer;
   transition:
     background var(--dur),
-    color var(--dur);
+    color var(--dur),
+    transform var(--dur-fast) var(--ease);
 }
 
-.segmented button:not(:disabled):hover {
-  color: var(--text-h);
+@media (hover: hover) and (pointer: fine) {
+  .segmented button:not(:disabled):hover {
+    color: var(--text-h);
+  }
 }
 
 .segmented button.is-active,
@@ -1277,6 +1394,10 @@ a.card:active {
   background: var(--bg);
   border-color: var(--border-strong);
   color: var(--text-h);
+}
+
+.segmented button:not(:disabled):active {
+  transform: scale(0.97);
 }
 
 .segmented button:disabled {
@@ -1315,14 +1436,14 @@ a.card:active {
 .metric-cards {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-4);
+  gap: var(--card-gap);
 }
 
 .metric-card {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: var(--space-4) 18px;
+  padding: var(--card-pad-y) var(--card-pad-x);
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
@@ -1482,6 +1603,14 @@ a.card:active {
   display: block;
 }
 
+/* Scrubbable history chart: a sideways drag picks checks, a vertical swipe still scrolls the page,
+   and a long press doesn't select the axis labels. */
+.trend > .trend-svg {
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 .trend-grid {
   stroke: var(--chart-grid);
   stroke-width: 1;
@@ -1615,7 +1744,8 @@ a.card:active {
   scroll-margin-top: 110px;
   transition:
     border-color var(--dur),
-    background var(--dur);
+    background var(--dur),
+    transform var(--dur-fast) var(--ease);
 }
 
 .gap-item.is-highlighted {
@@ -1692,8 +1822,10 @@ a.card:active {
   text-decoration: none;
 }
 
-.link-evidence:hover {
-  text-decoration: underline;
+@media (hover: hover) and (pointer: fine) {
+  .link-evidence:hover {
+    text-decoration: underline;
+  }
 }
 
 /* =========================================================
@@ -1836,6 +1968,34 @@ a.card:active {
   overflow-y: auto;
 }
 
+.obs-more {
+  margin-top: var(--space-2);
+  font-size: var(--fs-sm);
+}
+
+/* Phones: the whole response flows in the page, clamped to six lines until "Show more"
+   (ObservationCard adds .is-clamped and only offers the toggle when the text overflows). */
+@media (max-width: 640px) {
+  .obs-response {
+    max-height: none;
+    overflow: visible;
+    padding: 10px 12px;
+    font-size: var(--fs-md);
+  }
+
+  .obs-response.is-clamped {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 6;
+    line-clamp: 6;
+    overflow: hidden;
+  }
+
+  .obs-ranks {
+    margin-top: var(--space-2);
+  }
+}
+
 .hl {
   color: var(--text-h);
   border-radius: 3px;
@@ -1932,8 +2092,24 @@ a.card:active {
   font-size: var(--fs-sm);
 }
 
-.q-delete:not(:disabled):hover {
-  color: var(--err);
+/* Phones: the question switch gets a 44px-tall hit area around its 34×20 track, and Delete some
+   width to go with the 44px .btn height. */
+@media (max-width: 640px) {
+  .switch::before {
+    content: "";
+    position: absolute;
+    inset: -12px -6px;
+  }
+
+  .q-delete {
+    padding-inline: var(--space-2);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .q-delete:not(:disabled):hover {
+    color: var(--err);
+  }
 }
 
 .q-actions {
@@ -1968,7 +2144,7 @@ a.card:active {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-3) var(--space-4);
   margin: 0;
-  animation: rise 0.35s var(--ease) backwards;
+  animation: rise var(--dur-med) var(--ease-out) backwards;
 }
 
 .metric-strip dt {
@@ -2005,7 +2181,10 @@ a.card:active {
   }
 }
 
-/* Info tip: a small circled "i" after a label; hover or focus shows the explanation. */
+/* Info tip: a small circled "i" after a label. Hover or keyboard focus shows the explanation; a tap
+   or click toggles it (InfoTip.tsx adds .is-open). The horizontal anchor lives in `transform` (board.css
+   re-anchors it to a row); the on-screen clamp (--tip-shift, measured in InfoTip.tsx) and the small
+   rise live in the separate `translate` property, so the two compose. */
 .info-tip {
   position: relative;
   display: inline-flex;
@@ -2016,6 +2195,7 @@ a.card:active {
 }
 
 .info-tip-btn {
+  position: relative;
   display: inline-grid;
   place-items: center;
   width: 14px;
@@ -2035,8 +2215,16 @@ a.card:active {
     border-color var(--dur) var(--ease);
 }
 
-.info-tip-btn:hover,
-.info-tip-btn:focus-visible {
+/* A 32px tap target around the 14px marker. */
+.info-tip-btn::before {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border-radius: 50%;
+}
+
+.info-tip-btn:focus-visible,
+.info-tip.is-open .info-tip-btn {
   color: var(--accent-text);
   border-color: var(--accent);
 }
@@ -2047,7 +2235,7 @@ a.card:active {
   bottom: calc(100% + 8px);
   z-index: 30;
   width: max-content;
-  max-width: 240px;
+  max-width: min(240px, 100vw - 32px);
   padding: 8px 10px;
   border-radius: var(--radius-xs);
   background: var(--popover);
@@ -2060,9 +2248,11 @@ a.card:active {
   white-space: normal;
   pointer-events: none;
   opacity: 0;
-  transform: translate(-50%, 4px);
+  transform: translate(-50%, 0);
+  translate: var(--tip-shift, 0px) 4px;
   transition:
     opacity var(--dur) var(--ease),
+    translate var(--dur) var(--ease),
     transform var(--dur) var(--ease);
 }
 
@@ -2078,29 +2268,56 @@ a.card:active {
   color: var(--muted);
 }
 
-.info-tip:hover .info-tip-text,
-.info-tip-btn:focus-visible + .info-tip-text {
+.info-tip-btn:focus-visible + .info-tip-text,
+.info-tip.is-open .info-tip-text {
   opacity: 1;
-  transform: translate(-50%, 0);
+  translate: var(--tip-shift, 0px) 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .info-tip-btn:hover {
+    color: var(--accent-text);
+    border-color: var(--accent);
+  }
+
+  .info-tip:hover .info-tip-text {
+    opacity: 1;
+    translate: var(--tip-shift, 0px) 0;
+  }
 }
 
 /* =========================================================
    Toast: a short confirmation after a header control changes something
    ========================================================= */
 
+/* Full-width strip (minus a 16px gutter) so a long message wraps instead of running off a phone. */
 .toast-region {
   position: fixed;
-  left: 50%;
-  bottom: 28px;
+  left: 16px;
+  right: 16px;
+  bottom: calc(28px + env(safe-area-inset-bottom, 0px));
   z-index: 90;
-  transform: translateX(-50%);
+  display: flex;
+  justify-content: center;
   pointer-events: none;
+}
+
+/* Phones: clear the bottom tab bar (brand pages) or Campaign Studio's sticky action bar. */
+@media (max-width: 640px) {
+  body:has(.tabbar) .toast-region {
+    bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom, 0px));
+  }
+
+  body:has(.action-bar) .toast-region {
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .toast {
   display: flex;
   align-items: center;
   gap: 10px;
+  max-width: 100%;
   padding: 10px 16px;
   border-radius: var(--radius-sm);
   background: var(--popover);
@@ -2108,12 +2325,15 @@ a.card:active {
   box-shadow: var(--shadow-pop);
   color: var(--text-h);
   font-size: var(--fs-sm);
-  white-space: nowrap;
-  animation: toast-in 0.32s var(--ease-spring);
+  line-height: 1.4;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  animation: toast-in 0.2s var(--ease-out);
 }
 
 .toast::before {
   content: "";
+  flex: none;
   width: 6px;
   height: 6px;
   border-radius: 1.5px;
@@ -2123,7 +2343,7 @@ a.card:active {
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateY(10px) scale(0.96);
+    transform: translateY(12px);
   }
 }
 
@@ -2141,4 +2361,26 @@ a.card:active {
 
 .trend-verdict-down strong {
   color: var(--warn);
+}
+
+/* =========================================================
+   Touch targets on phones: 44px for primary controls, 40px for compact ones
+   ========================================================= */
+
+@media (max-width: 640px) {
+  .btn {
+    min-height: 44px;
+  }
+
+  .btn-small,
+  .btn-small:hover,
+  .btn-small:not(:disabled):hover {
+    min-height: 40px;
+    padding: 6px 12px;
+  }
+
+  .icon-btn {
+    width: 40px;
+    height: 40px;
+  }
 }

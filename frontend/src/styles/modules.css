@@ -15,10 +15,10 @@
 }
 
 /* Shared elements (brand card ↔ hub centre card, module card ↔ module header) glide into place:
-   quick off the mark, long soft landing. Nothing else in the transition outlasts this 0.42s, so
+   quick off the mark, long soft landing. Nothing else in the transition outlasts this 0.32s, so
    the live page takes over the moment the card lands (the hub's wires start just before). */
 ::view-transition-group(*) {
-  animation-duration: 0.42s;
+  animation-duration: 0.32s;
   animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -28,7 +28,7 @@
 }
 
 :root[data-vt]::view-transition-new(root) {
-  animation: vt-fade-in 0.3s var(--ease) 0.06s both;
+  animation: vt-fade-in 0.26s var(--ease) 0.06s both;
 }
 
 /* Keep morphing elements' old/new images crisp instead of double-exposed. */
@@ -48,6 +48,81 @@
 @keyframes vt-fade-in {
   from {
     opacity: 0;
+  }
+}
+
+/* ---------- phones: pages push and pop like an app's ----------
+   transition.tsx sets <html data-vt-dir> for every navigation morph: "forward" (drilling in: the
+   new page slides in from the right over the old one, which drifts left and dims), "back" (the
+   reverse: the page you leave slides out to the right) or "tab" (a quick cross-fade between
+   siblings). The header and the tab bar have their own view-transition-names, so they hold still
+   while the page moves under them. The shared-card morphs are dropped here: a card flying across
+   a sliding page reads as two motions fighting, so on a phone the whole page moves as one. */
+
+@media (max-width: 640px) {
+  :root[data-vt-dir] .sample-card,
+  :root[data-vt-dir] .hub-module,
+  :root[data-vt-dir] .module-head {
+    view-transition-name: none !important;
+  }
+
+  ::view-transition-group(*) {
+    animation-duration: 0.26s;
+    animation-timing-function: var(--ease-out);
+  }
+
+  :root[data-vt][data-vt-dir="forward"]::view-transition-old(root) {
+    animation: vt-push-out 0.26s var(--ease-out) both;
+  }
+
+  :root[data-vt][data-vt-dir="forward"]::view-transition-new(root) {
+    animation: vt-push-in 0.26s var(--ease-out) both;
+  }
+
+  /* Back: the page being left is the one on top, sliding away to uncover the one underneath. */
+  :root[data-vt][data-vt-dir="back"]::view-transition-old(root) {
+    z-index: 1;
+    animation: vt-pop-out 0.26s var(--ease-out) both;
+  }
+
+  :root[data-vt][data-vt-dir="back"]::view-transition-new(root) {
+    animation: vt-pop-in 0.26s var(--ease-out) both;
+  }
+
+  :root[data-vt][data-vt-dir="tab"]::view-transition-old(root) {
+    animation: vt-fade-out 0.16s var(--ease) both;
+  }
+
+  :root[data-vt][data-vt-dir="tab"]::view-transition-new(root) {
+    animation: vt-fade-in 0.16s var(--ease) both;
+  }
+}
+
+@keyframes vt-push-in {
+  from {
+    opacity: 0;
+    transform: translateX(30%);
+  }
+}
+
+@keyframes vt-push-out {
+  to {
+    opacity: 0.5;
+    transform: translateX(-15%);
+  }
+}
+
+@keyframes vt-pop-in {
+  from {
+    opacity: 0.5;
+    transform: translateX(-15%);
+  }
+}
+
+@keyframes vt-pop-out {
+  to {
+    opacity: 0;
+    transform: translateX(30%);
   }
 }
 
@@ -124,10 +199,12 @@
     transform var(--dur) var(--ease);
 }
 
-.module-chip:hover {
-  color: var(--text-h);
-  border-color: var(--line-strong);
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) {
+  .module-chip:hover {
+    color: var(--text-h);
+    border-color: var(--line-strong);
+    transform: translateY(-1px);
+  }
 }
 
 .module-chip.is-active {
@@ -165,25 +242,68 @@
   font-size: var(--fs-sm);
 }
 
+.module-chip:active {
+  transform: scale(0.97);
+  transition-duration: var(--dur-fast);
+}
+
+/* Phones: one compact row — back button, icon, brand + title. The bottom tab bar (MobileTabBar)
+   replaces the switcher chips, and the blurb gives the screen back to the content. */
 @media (max-width: 640px) {
+  .module-band {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+
+  .module-band > .crumbs {
+    flex: none;
+    margin: 0;
+  }
+
   .module-head {
+    flex: 1;
     flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+    min-width: 0;
+    margin-bottom: 0;
   }
 
   .module-icon {
-    width: 42px;
-    height: 42px;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
   }
 
-  /* Four chips in a tidy 2 x 2 grid instead of a ragged 2 + 1 + 1 wrap on phones. */
+  .module-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .module-titles h1 {
+    margin: 0;
+    overflow: hidden;
+    font-size: var(--fs-xl);
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .module-eyebrow {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .module-blurb,
   .module-switcher {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: none;
   }
 
-  .module-chip {
-    min-width: 0;
-    overflow-wrap: anywhere;
+  .module,
+  .module-body {
+    gap: var(--space-4);
   }
 }
 
@@ -205,7 +325,7 @@
   transform-style: preserve-3d;
   transform: translate3d(var(--tx), var(--ty), 0) rotateX(var(--rx)) rotateY(var(--ry));
   transition:
-    transform 0.6s var(--ease-spring),
+    transform var(--dur-slow) var(--ease-spring),
     box-shadow var(--dur-slow) var(--ease),
     border-color var(--dur) var(--ease);
   border: 1px solid var(--line);

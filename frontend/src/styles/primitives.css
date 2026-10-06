@@ -115,8 +115,10 @@
     color var(--dur) var(--ease),
     border-color var(--dur) var(--ease);
 }
-.tab:hover {
-  color: var(--text-h);
+@media (hover: hover) and (pointer: fine) {
+  .tab:hover {
+    color: var(--text-h);
+  }
 }
 .tab[aria-selected="true"] {
   border-bottom-color: var(--accent);
@@ -182,9 +184,15 @@
   font-weight: 600;
   text-align: left;
   cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease);
 }
-.stepper-btn:not(:disabled):hover {
-  color: var(--text-h);
+@media (hover: hover) and (pointer: fine) {
+  .stepper-btn:not(:disabled):hover {
+    color: var(--text-h);
+  }
+}
+.stepper-btn:not(:disabled):active {
+  transform: scale(0.97);
 }
 .stepper-btn:disabled {
   cursor: default;
@@ -258,8 +266,7 @@
    The global hover inverts the accent fill to the page background. On a disabled button (and on a
    busy one the pointer is still over after the click) that left an almost blank box with faded
    text, so: disabled reads as a clear dashed "not yet" button, busy keeps the full fill. */
-.btn-primary:disabled,
-.btn-primary:disabled:hover {
+.btn-primary:disabled {
   border: 1px dashed var(--border-strong);
   background: var(--surface-3);
   color: var(--text);
@@ -267,16 +274,22 @@
   transform: none;
   opacity: 1;
 }
-.btn-primary[aria-busy="true"],
-.btn-primary[aria-busy="true"]:hover {
+.btn-primary[aria-busy="true"] {
   background: var(--accent-grad);
   color: var(--on-accent);
   transform: none;
   cursor: progress;
 }
-/* Touch screens keep :hover after a tap: don't leave the button inverted. */
-@media (hover: none) {
-  .btn-primary:not(:disabled):hover {
+@media (hover: hover) and (pointer: fine) {
+  .btn-primary:disabled:hover {
+    border: 1px dashed var(--border-strong);
+    background: var(--surface-3);
+    color: var(--text);
+    box-shadow: none;
+    transform: none;
+    opacity: 1;
+  }
+  .btn-primary[aria-busy="true"]:hover {
     background: var(--accent-grad);
     color: var(--on-accent);
     transform: none;
@@ -284,9 +297,11 @@
 }
 /* The step's primary action stays filled on hover (the global outline-invert made it look empty
    right after "Next" put the pointer on it); the focus ring stays visible around the fill. */
-.action-bar .btn-primary:not(:disabled):hover {
-  background: var(--accent-grad-hover);
-  color: var(--on-accent);
+@media (hover: hover) and (pointer: fine) {
+  .action-bar .btn-primary:not(:disabled):hover {
+    background: var(--accent-grad-hover);
+    color: var(--on-accent);
+  }
 }
 .btn-publish {
   min-width: 13em;
@@ -299,6 +314,11 @@
 @media (max-width: 640px) {
   .field-pair {
     grid-template-columns: minmax(0, 1fr);
+  }
+  /* Finger-sized targets for the step buttons and tabs. */
+  .stepper-btn,
+  .tab {
+    min-height: 44px;
   }
   /* Only the current step keeps its label; the others show their number. */
   .stepper-btn:not([aria-current="step"]) .stepper-label {

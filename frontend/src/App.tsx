@@ -3,6 +3,7 @@ import { Link, Route, Routes, useLocation } from "react-router-dom";
 import { AppHeader } from "./components/AppHeader";
 import { EmptyState } from "./components/EmptyState";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { usePopTransitions } from "./components/module/transition";
 import { RouteFocus } from "./components/RouteFocus";
 import { Toaster } from "./components/Toaster";
 import { useT } from "./i18n";
@@ -47,6 +48,8 @@ function NotFound() {
 export default function App() {
   const t = useT();
   const { pathname } = useLocation();
+  // Browser back / forward slides on phones like an in-app back (transition.tsx).
+  usePopTransitions();
 
   // The landing page brings its own nav and footer. RouteFocus stays the first child in both
   // branches, so React keeps the same instance (and its "previous page") across landing ↔ app.

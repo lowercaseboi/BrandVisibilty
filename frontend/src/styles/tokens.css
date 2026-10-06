@@ -174,11 +174,22 @@
   --radius-xs: 2px;
   --radius-pill: 999px;
 
-  /* motion */
+  /* card size: every card-like surface pads with these, so phones can tighten them in one place */
+  --card-pad-y: 16px;
+  --card-pad-x: 18px;
+  --card-gap: 14px;
+
+  /* motion: short, transform/opacity-only. --ease-out is the iOS-like sheet/push curve. */
+  --dur-fast: 0.12s; /* press feedback */
   --dur: 0.18s;
-  --dur-slow: 0.45s;
+  --dur-med: 0.24s; /* entrances, sheets */
+  --dur-slow: 0.32s;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1); /* quick out, soft landing */
+  --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+
+  /* mobile chrome: the bottom tab bar's height, without the safe-area inset */
+  --tabbar-h: 60px;
 
   /* layout */
   --maxw: 1080px;

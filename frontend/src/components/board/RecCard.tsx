@@ -1,9 +1,12 @@
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { BOARD_COLUMNS } from "../../api/types";
 import type { BoardColumn, Observation } from "../../api/types";
 import { T, useFormat, useT } from "../../i18n";
 import { Details } from "../../settings/details";
+import { useIsPhone } from "../../settings/useMediaQuery";
 import { InfoTip } from "../InfoTip";
+import { Sheet } from "../Sheet";
+import { toast } from "../Toaster";
 import { actionCopy } from "../dashboard/actions";
 import { campaignHref, useCampaignIndex } from "../campaign/CampaignIndex";
 import { statusView } from "../campaign/campaignModel";
@@ -45,11 +48,14 @@ export interface RecCardProps {
  * full reasoning fold away; IDs, the priority formula and the class sit behind "Show the numbers
  * behind this". Every card links to the responses and gap it traces to (PRD AC-7). A ghost card
  * (no current recommendation) is shown faded as "resolved in latest run" and can be removed.
+ * The status is a compact select; on phones, a chip that opens a "Move to…" sheet.
  */
 export function RecCard(props: RecCardProps) {
   const { card, title, brandKey, runId, entities, labelOf, observations, campaignsReady, onStatus, onRemove } = props;
   const t = useT();
   const titleId = useId();
+  const phone = useIsPhone();
+  const [moving, setMoving] = useState(false);
 
   const s = card.suggestion;
   const rec = s?.lead ?? null;
@@ -62,21 +68,46 @@ export function RecCard(props: RecCardProps) {
         ) : (
           <span className="badge badge-ok">{t("board.card.resolved")}</span>
         )}
-        <span className="rec-status">
-          <span className="rec-status-dot" aria-hidden="true" />
-          <select
-            value={card.column}
-            aria-label={t("board.card.status", { title })}
-            onChange={(e) => onStatus(e.target.value as BoardColumn)}
+        {phone ? (
+          <button
+            type="button"
+            className="rec-status rec-move"
+            aria-haspopup="dialog"
+            aria-label={t("board.move.cta", { status: t(STATUS_LABEL[card.column]), title })}
+            onClick={() => setMoving(true)}
           >
-            {BOARD_COLUMNS.map((c) => (
-              <option key={c} value={c}>
-                {t(STATUS_LABEL[c])}
-              </option>
-            ))}
-          </select>
-        </span>
+            <span className="rec-status-dot" aria-hidden="true" />
+            <span className="rec-move-text">{t(STATUS_LABEL[card.column])}</span>
+            <span className="rec-move-caret" aria-hidden="true" />
+          </button>
+        ) : (
+          <span className="rec-status">
+            <span className="rec-status-dot" aria-hidden="true" />
+            <select
+              value={card.column}
+              aria-label={t("board.card.status", { title })}
+              onChange={(e) => onStatus(e.target.value as BoardColumn)}
+            >
+              {BOARD_COLUMNS.map((c) => (
+                <option key={c} value={c}>
+                  {t(STATUS_LABEL[c])}
+                </option>
+              ))}
+            </select>
+          </span>
+        )}
       </div>
+      {moving && (
+        <MoveSheet
+          title={title}
+          current={card.column}
+          onClose={() => setMoving(false)}
+          onMove={(to) => {
+            onStatus(to);
+            toast(t("board.move.done", { status: t(STATUS_LABEL[to]) }));
+          }}
+        />
+      )}
 
       <h3 id={titleId} className="rec-card-title">
         {title}
@@ -104,6 +135,65 @@ export function RecCard(props: RecCardProps) {
         </>
       )}
     </li>
+  );
+}
+
+/**
+ * Phones: the statuses as full-width rows in a bottom sheet, the current one marked. The move
+ * happens once the sheet has slid away, so a card leaving its lane doesn't take the sheet with it.
+ */
+function MoveSheet({
+  title,
+  current,
+  onClose,
+  onMove,
+}: {
+  title: string;
+  current: BoardColumn;
+  onClose: () => void;
+  onMove: (to: BoardColumn) => void;
+}) {
+  const t = useT();
+  const forId = useId();
+  const chosen = useRef<BoardColumn | null>(null);
+
+  const finish = () => {
+    const to = chosen.current;
+    chosen.current = null;
+    onClose();
+    if (to && to !== current) onMove(to);
+  };
+
+  return (
+    <Sheet title={t("board.move.title")} describedBy={forId} className="rec-move-sheet" onClose={finish}>
+      {(close) => (
+        <>
+          <p id={forId} className="rec-move-for">
+            {title}
+          </p>
+          <ul className="sheet-list">
+            {BOARD_COLUMNS.map((c) => (
+              <li key={c}>
+                <button
+                  type="button"
+                  className="sheet-row rec-move-row"
+                  data-status={c}
+                  aria-pressed={c === current}
+                  onClick={() => {
+                    chosen.current = c;
+                    close();
+                  }}
+                >
+                  <span className="rec-move-dot" aria-hidden="true" />
+                  {t(STATUS_LABEL[c])}
+                  {c === current && <span className="sheet-row-value">{t("board.move.current")}</span>}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </Sheet>
   );
 }
 

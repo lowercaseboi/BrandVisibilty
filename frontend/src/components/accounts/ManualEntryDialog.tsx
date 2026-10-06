@@ -94,7 +94,7 @@ export function ManualEntryDialog({
           <p className="alert alert-ok" role="status">
             {t("brandinfo.accounts.manual.savedOk")}
           </p>
-          <div className="acc-dialog-actions">
+          <div className="sheet-actions">
             {/* oxlint-disable-next-line jsx-a11y/no-autofocus -- moves focus to the only action after the form is replaced */}
             <button type="button" className="btn btn-primary" onClick={onClose} autoFocus>
               {t("brandinfo.accounts.done")}
@@ -160,7 +160,7 @@ export function ManualEntryDialog({
             {phase.kind === "saving" ? t("brandinfo.accounts.manual.saving") : phase.kind === "testing" ? t("brandinfo.accounts.manual.testing") : ""}
           </p>
 
-          <div className="acc-dialog-actions">
+          <div className="sheet-actions">
             <button type="button" className="btn btn-ghost" onClick={onClose}>
               {phase.kind === "testFailed" ? t("brandinfo.accounts.close") : t("brandinfo.accounts.cancel")}
             </button>

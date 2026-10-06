@@ -80,7 +80,7 @@ export function OnboardingChecklist() {
           {t("hub.checklist.progress", { done: fmt.number(list.doneCount), total: fmt.number(total) })}
         </span>
         <span className="ob-meter" aria-hidden="true">
-          <span style={{ width: `${(list.doneCount / total) * 100}%` }} />
+          <span style={{ transform: `scaleX(${list.doneCount / total})` }} />
         </span>
         <button type="button" className="btn btn-link ob-hide" onClick={hide} aria-label={t("hub.checklist.dismissAria")}>
           {t("hub.checklist.dismiss")}

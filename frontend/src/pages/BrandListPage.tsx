@@ -9,12 +9,13 @@ import { AddBrandForm } from "../components/AddBrandForm";
 import { EmptyState } from "../components/EmptyState";
 import { BrandCardBody } from "../components/hub/BrandCardBody";
 import { forgetBrand, peekBrands, rememberBrands } from "../components/hub/brandCache";
-import { pickCard } from "../components/hub/pickCard";
+import { pickCard, pressCard } from "../components/hub/pickCard";
 import { brandHref, brandVtName } from "../components/module/modules";
 import { canMorph, useTransitionNavigate } from "../components/module/transition";
 import { toast } from "../components/Toaster";
 import { useT } from "../i18n";
 import { Details } from "../settings/details";
+import { isPhone } from "../settings/useMediaQuery";
 
 const errMessage = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
@@ -31,7 +32,8 @@ function TrashIcon() {
  * Opening a brand is picking a card from a deck: the card lifts toward you in place while the rest
  * of the deck is set aside (components/hub/pickCard.ts, hub.css), then the View Transition carries
  * it into the centre of the brand hub, where the wires and module cards grow out of it. Returns the
- * cards' click handler. Keyboard Enter on the link is a click too, so it plays the same; a modified
+ * cards' click handler. On phones it's a short press instead (pressCard) and the hub slides in.
+ * Keyboard Enter on the link is a click too, so it plays the same; a modified
  * or middle click is left to the browser (new tab), and without View Transitions or under reduced
  * motion the link simply navigates.
  */
@@ -45,6 +47,10 @@ function usePickCard() {
       if (card?.closest(".is-picking")) return; // a card is already in the air
       if (!card || !canMorph()) {
         go(to);
+        return;
+      }
+      if (isPhone()) {
+        void pressCard(card).then((first) => first && go(to));
         return;
       }
       void pickCard(card).then(() => go(to, "pick"));

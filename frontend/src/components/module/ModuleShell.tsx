@@ -6,9 +6,42 @@ import type { ModuleId } from "./modules";
 import { TransitionLink } from "./transition";
 
 /**
+ * The "← Brand hub" / "← All brands" crumb above a page. On phones (components.css `.crumbs`) it
+ * becomes a 44px back button with a chevron: `iconOnly` shows just the chevron (the label stays
+ * the accessible name), otherwise chevron + label. Navigates with the "back" slide.
+ */
+export function BackLink({
+  to,
+  label,
+  iconOnly = false,
+  className = "",
+}: {
+  to: string;
+  label: string;
+  iconOnly?: boolean;
+  className?: string;
+}) {
+  return (
+    <p className={`crumbs${iconOnly ? " crumbs-icon-only" : ""}${className ? ` ${className}` : ""}`}>
+      <TransitionLink to={to} direction="back" className="crumbs-back">
+        <svg className="crumbs-chevron" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M15 5l-7 7 7 7" />
+        </svg>
+        <span className="crumbs-arrow" aria-hidden="true">
+          ←
+        </span>{" "}
+        <span className="crumbs-label">{label}</span>
+      </TransitionLink>
+    </p>
+  );
+}
+
+/**
  * The frame every brand module renders in, so all four look and behave the same: a band header
  * (back to the hub, brand eyebrow, module icon + title + blurb, optional actions), a module
  * switcher to hop between modules without going back through the hub, then the module body.
+ * On phones (modules.css) the header packs into one row behind a back button, and the switcher
+ * and blurb give way to the bottom tab bar (MobileTabBar).
  *
  * The header carries `view-transition-name: module-<id>`, matching the hub's module card, so
  * opening a module grows the card into this header.
@@ -21,9 +54,7 @@ export function ModuleShell({ id, actions, children }: { id: ModuleId; actions?:
   return (
     <div className="module" data-module={id}>
       <div className="on-band-light dash-band module-band">
-        <p className="crumbs">
-          <TransitionLink to={brandHref(brandKey)}>← {t("hub.back.hub")}</TransitionLink>
-        </p>
+        <BackLink to={brandHref(brandKey)} label={t("hub.back.hub")} iconOnly />
         <div className="page-head module-head" style={{ viewTransitionName: moduleVtName(id) }}>
           <span className="module-icon">
             <ModuleIcon id={id} size={26} />
@@ -40,6 +71,7 @@ export function ModuleShell({ id, actions, children }: { id: ModuleId; actions?:
             <TransitionLink
               key={m.id}
               to={brandHref(brandKey, m.id)}
+              direction="tab"
               className={`module-chip${m.id === id ? " is-active" : ""}`}
               aria-current={m.id === id ? "page" : undefined}
             >

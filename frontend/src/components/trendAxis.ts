@@ -137,3 +137,21 @@ export function pickAxisLabels(input: AxisInput): AxisLabel[] {
   }
   return done(chosen);
 }
+
+/**
+ * Index of the x position closest to `x` (pointer scrubbing over the chart). `xs` must be ascending;
+ * ties go to the earlier point. -1 when there are no points.
+ */
+export function nearestIndex(x: number, xs: number[]): number {
+  if (xs.length === 0) return -1;
+  // Binary search for the first position >= x, then compare it with its left neighbour.
+  let lo = 0;
+  let hi = xs.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (xs[mid] < x) lo = mid + 1;
+    else hi = mid;
+  }
+  if (lo > 0 && x - xs[lo - 1] <= xs[lo] - x) return lo - 1;
+  return lo;
+}

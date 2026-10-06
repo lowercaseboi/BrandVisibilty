@@ -13,6 +13,7 @@
   color: var(--band-dark-fg);
   overflow-x: clip; /* not hidden: hidden would make .lp the sticky container and unstick the header */
   min-height: 100vh;
+  min-height: 100dvh;
   /* Numbers each section eyebrow in document order: "§ 01 Live check", "§ 02 Why this matters" … */
   counter-reset: lp-sec;
 }
@@ -86,7 +87,7 @@
    visible) style, so the heading reads fine even if the animation never runs. */
 .lp-h1-line {
   display: block;
-  animation: rise 0.7s var(--ease) backwards;
+  animation: rise var(--dur-slow) var(--ease) backwards;
 }
 
 .lp-h1-line-1 {
@@ -157,10 +158,10 @@
 
 .lp-reveal {
   opacity: 0;
-  transform: translateY(16px);
+  transform: translateY(12px);
   transition:
-    opacity 0.6s var(--ease),
-    transform 0.6s var(--ease);
+    opacity var(--dur-slow) var(--ease),
+    transform var(--dur-slow) var(--ease);
 }
 
 .lp-reveal.is-visible {
@@ -182,15 +183,17 @@
 }
 
 /* Fill <-> outline invert on hover, same language as .btn-primary. */
-.lp-btn-signal:hover:not(:disabled) {
-  background: var(--band-dark);
-  color: var(--signal);
-  transform: translateY(-1px);
-  box-shadow:
-    0 0 0 calc(1px + var(--frame-gap-sm)) var(--band-dark),
-    0 0 0 calc(2px + var(--frame-gap-sm)) var(--signal),
-    6px 6px 0 -1px var(--band-dark),
-    6px 6px 0 0 var(--signal);
+@media (hover: hover) and (pointer: fine) {
+  .lp-btn-signal:hover:not(:disabled) {
+    background: var(--band-dark);
+    color: var(--signal);
+    transform: translateY(-1px);
+    box-shadow:
+      0 0 0 calc(1px + var(--frame-gap-sm)) var(--band-dark),
+      0 0 0 calc(2px + var(--frame-gap-sm)) var(--signal),
+      6px 6px 0 -1px var(--band-dark),
+      6px 6px 0 0 var(--signal);
+  }
 }
 
 .lp-btn-ghost {
@@ -202,14 +205,16 @@
     4px 4px 0 0 var(--band-dark-line);
 }
 
-.lp-btn-ghost:hover:not(:disabled) {
-  border-color: var(--signal);
-  background: color-mix(in srgb, var(--band-dark-fg) 6%, transparent);
-  color: var(--band-dark-fg);
-  transform: translateY(-1px);
-  box-shadow:
-    6px 6px 0 -1px var(--band-dark),
-    6px 6px 0 0 var(--signal);
+@media (hover: hover) and (pointer: fine) {
+  .lp-btn-ghost:hover:not(:disabled) {
+    border-color: var(--signal);
+    background: color-mix(in srgb, var(--band-dark-fg) 6%, transparent);
+    color: var(--band-dark-fg);
+    transform: translateY(-1px);
+    box-shadow:
+      6px 6px 0 -1px var(--band-dark),
+      6px 6px 0 0 var(--signal);
+  }
 }
 
 /* =========================================================
@@ -305,9 +310,11 @@
     0 0 0 calc(2px + var(--frame-gap-sm)) var(--signal);
 }
 
-.app-header-landing.is-scrolled .header-cta:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--signal) 34%, transparent);
-  color: var(--band-dark-fg);
+@media (hover: hover) and (pointer: fine) {
+  .app-header-landing.is-scrolled .header-cta:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--signal) 34%, transparent);
+    color: var(--band-dark-fg);
+  }
 }
 
 /* =========================================================
@@ -397,7 +404,8 @@
 .lp-scroll-fab {
   position: fixed;
   right: var(--gutter);
-  bottom: 24px;
+  /* Above the home indicator on notched phones. */
+  bottom: calc(24px + env(safe-area-inset-bottom));
   z-index: 35;
   display: inline-flex;
   align-items: center;
@@ -419,16 +427,19 @@
     box-shadow var(--dur) var(--ease);
 }
 
-.lp-scroll-fab:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    var(--frame-ring-accent),
-    var(--shadow-accent-hover),
-    inset 0 1px 0 var(--glass-highlight);
+@media (hover: hover) and (pointer: fine) {
+  .lp-scroll-fab:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      var(--frame-ring-accent),
+      var(--shadow-accent-hover),
+      inset 0 1px 0 var(--glass-highlight);
+  }
 }
 
 .lp-scroll-fab:active {
   transform: translateY(0) scale(0.95);
+  transition-duration: var(--dur-fast);
 }
 
 .lp-scroll-fab svg {
@@ -450,7 +461,7 @@
 @media (max-width: 480px) {
   .lp-scroll-fab {
     right: 14px;
-    bottom: 14px;
+    bottom: calc(14px + env(safe-area-inset-bottom));
     width: 42px;
     height: 42px;
   }
@@ -464,6 +475,12 @@
   position: relative;
   overflow: hidden;
   padding: 56px 0 96px;
+}
+
+@media (max-width: 640px) {
+  .lp-hero {
+    padding: 24px 0 56px;
+  }
 }
 
 .lp-hero-glow {
@@ -614,11 +631,12 @@
   overflow-wrap: anywhere;
 }
 
-/* Types out on load: the wrapper's own width is the resting (fully visible) state, so the prompt
-   reads fine even without the animation — the keyframe only clips it back during the delay. */
+/* Types out on load: the unclipped wrapper is the resting (fully visible) state, so the prompt
+   reads fine even without the animation — the keyframe only clips it back during the delay. A
+   clip-path reveal rather than a width one: no layout per step, and the text never reflows. */
 @keyframes lp-type {
   from {
-    width: 0;
+    clip-path: inset(0 100% 0 0);
   }
 }
 
@@ -636,7 +654,7 @@
   margin: 0 0 var(--space-5);
   color: color-mix(in srgb, var(--band-dark-fg) 85%, transparent);
   font-size: 1rem;
-  animation: fade 0.5s var(--ease) 1.7s backwards;
+  animation: fade var(--dur-slow) var(--ease) 1.7s backwards;
 }
 
 .lp-hero-checks {
@@ -654,7 +672,7 @@
   gap: 10px;
   font-size: 0.95rem;
   color: color-mix(in srgb, var(--band-dark-fg) 85%, transparent);
-  animation: pop 0.4s var(--ease) backwards;
+  animation: pop var(--dur-med) var(--ease) backwards;
 }
 
 .lp-hero-checks li:nth-child(1) {
@@ -778,9 +796,11 @@
 /* Draws in as the section scrolls past — JS writes --lp-rail-progress (0–1) on this element. */
 .lp-workflow-rail-fill {
   position: absolute;
-  inset: 0 0 auto 0;
-  height: calc(var(--lp-rail-progress, 0) * 100%);
+  inset: 0;
   background: var(--signal);
+  /* Scaled rather than resized: no layout on every scroll frame. */
+  transform: scaleY(var(--lp-rail-progress, 0));
+  transform-origin: top;
 }
 
 /* Also carries .lp-reveal (see Workflow.tsx): both classes set the `transition` shorthand on the
@@ -797,12 +817,14 @@
   border-radius: var(--radius);
   transition:
     background var(--dur) var(--ease),
-    opacity 0.6s var(--ease),
-    transform 0.6s var(--ease);
+    opacity var(--dur-slow) var(--ease),
+    transform var(--dur-slow) var(--ease);
 }
 
-.lp-workflow-item:hover {
-  background: color-mix(in srgb, var(--band-dark-fg) 4%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .lp-workflow-item:hover {
+    background: color-mix(in srgb, var(--band-dark-fg) 4%, transparent);
+  }
 }
 
 .lp-workflow-num {
@@ -902,8 +924,10 @@
     color var(--dur) var(--ease);
 }
 
-.lp-chip:hover {
-  border-color: var(--accent);
+@media (hover: hover) and (pointer: fine) {
+  .lp-chip:hover {
+    border-color: var(--accent);
+  }
 }
 
 .lp-chip.is-active {
@@ -975,7 +999,7 @@
 
 /* Remounted (keyed by brand) each time the picked brand changes, so it cross-fades in. */
 .lp-sample-fade {
-  animation: fade 0.4s var(--ease);
+  animation: fade var(--dur-med) var(--ease);
 }
 
 .lp-sample-status {
@@ -1059,7 +1083,7 @@
 .lp-feature-card {
   position: relative;
   height: 100%;
-  padding: 26px;
+  padding: calc(var(--card-pad-y) + 8px) calc(var(--card-pad-x) + 6px);
   border: 1px solid var(--band-dark-line);
   background: var(--band-dark-raised);
   border-radius: var(--radius-lg);
@@ -1092,14 +1116,16 @@
 
 /* JS (pointermove) sets a per-card tilt as an inline transform; :hover is the fallback for touch,
    where no pointermove fires. The pencil shadow's offset grows on lift, same as .card. */
-.lp-feature-card:hover {
-  transform: translateY(-3px);
-  border-color: color-mix(in srgb, var(--signal) 40%, transparent);
-  box-shadow:
-    0 0 0 calc(1px + var(--frame-gap)) var(--band-dark),
-    0 0 0 calc(2px + var(--frame-gap)) color-mix(in srgb, var(--signal) 45%, var(--band-dark-line)),
-    6px 6px 0 -1px var(--band-dark),
-    6px 6px 0 0 color-mix(in srgb, var(--signal) 45%, var(--band-dark-line));
+@media (hover: hover) and (pointer: fine) {
+  .lp-feature-card:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--signal) 40%, transparent);
+    box-shadow:
+      0 0 0 calc(1px + var(--frame-gap)) var(--band-dark),
+      0 0 0 calc(2px + var(--frame-gap)) color-mix(in srgb, var(--signal) 45%, var(--band-dark-line)),
+      6px 6px 0 -1px var(--band-dark),
+      6px 6px 0 0 color-mix(in srgb, var(--signal) 45%, var(--band-dark-line));
+  }
 }
 
 .lp-feature-icon {
@@ -1185,8 +1211,10 @@
   transition: color var(--dur) var(--ease);
 }
 
-.lp-footer-links a:hover {
-  color: var(--band-dark-fg);
+@media (hover: hover) and (pointer: fine) {
+  .lp-footer-links a:hover {
+    color: var(--band-dark-fg);
+  }
 }
 
 .lp-footer-cta {
@@ -1195,9 +1223,11 @@
   text-decoration: none;
 }
 
-.lp-footer-cta:hover {
-  color: var(--signal);
-  text-decoration: underline;
+@media (hover: hover) and (pointer: fine) {
+  .lp-footer-cta:hover {
+    color: var(--signal);
+    text-decoration: underline;
+  }
 }
 
 @media (max-width: 640px) {

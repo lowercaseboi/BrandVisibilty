@@ -46,8 +46,9 @@
   justify-content: center;
 }
 
+/* Lead card: a little more room than a plain card, shrinking with the card-pad tokens on phones. */
 .analysis-trend {
-  padding: var(--space-5);
+  padding: calc(var(--card-pad-y) + 4px) calc(var(--card-pad-x) + 2px);
 }
 
 .analysis-trend .module-section-head {
@@ -99,8 +100,15 @@
   cursor: pointer;
 }
 
-.gap-item.is-selectable:not(.is-selected):hover {
-  border-color: var(--line-strong);
+/* Press feedback (a whole card, so only a hint of a squeeze). */
+.gap-item.is-selectable:active {
+  transform: scale(0.99);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .gap-item.is-selectable:not(.is-selected):hover {
+    border-color: var(--line-strong);
+  }
 }
 
 /* Selected: the existing highlight plus a notch pointing at the evidence pane, and a short pulse. */
@@ -163,7 +171,7 @@
   border-left: 3px solid var(--accent);
   border-radius: var(--radius);
   background: var(--accent-soft);
-  animation: rise var(--dur-slow) var(--ease) backwards;
+  animation: rise var(--dur-med) var(--ease-out) backwards;
 }
 
 .evidence-selection-gap {
@@ -220,6 +228,26 @@
 
 .evidence-search {
   flex: 1 1 100%;
+}
+
+/* A long intent name would otherwise size its select (and the page) past a phone's width. */
+.evidence-filters label {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 640px) {
+  .evidence-filters label:not(.toggle) {
+    flex: 1 1 100%;
+  }
+
+  .evidence-filters select {
+    width: 100%;
+  }
+
+  .evidence-filters .filters-count {
+    margin-left: 0;
+  }
 }
 
 .evidence-legend {

@@ -2,7 +2,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { CSSProperties, ReactNode } from "react";
 import type { ModuleId } from "../../components/module/modules";
 import { MODULES, brandVtName } from "../../components/module/modules";
-import { TransitionLink, viewTransitionFinished } from "../../components/module/transition";
+import { BackLink } from "../../components/module/ModuleShell";
+import { viewTransitionFinished } from "../../components/module/transition";
 import { getBoard } from "../../api/client";
 import type { BoardState } from "../../api/types";
 import { buildBoard, summarizeBoard } from "../../components/board/boardModel";
@@ -14,6 +15,7 @@ import { ModuleCard } from "../../components/hub/ModuleCard";
 import { OnboardingChecklist } from "../../components/hub/OnboardingChecklist";
 import { AnalysisPreview, DetailsPreview, GapsPreview, PreviewSkeleton } from "../../components/hub/previews";
 import { useT } from "../../i18n";
+import { useIsPhone } from "../../settings/useMediaQuery";
 import { useBrandData } from "./BrandContext";
 
 /**
@@ -30,10 +32,14 @@ function arrival(): "direct" | "morph" | "module" {
  * `/brands/:key` — the brand hub. The brand's card from the list sits in the centre (the list card
  * morphs into it through a View Transition), with the four module cards around it in 3D glass,
  * joined to it by live wires. Each module card previews what's inside and opens the module.
+ * On phones (hub.css) it's a compact brand card over a plain list of module rows — no wires, no
+ * looping glow — with the tab bar below for hopping between modules.
  */
 export function HubPage() {
   const t = useT();
   const data = useBrandData();
+  // Phones get no wires at all: not just hidden, unmounted, so their animation loops never run.
+  const phone = useIsPhone();
   const { brandKey, brandName, latest, history, questions, profile, status } = data;
 
   // Decided once at mount, so the entrance choreography (hub.css: wires and modules grow out of the
@@ -132,9 +138,7 @@ export function HubPage() {
   return (
     <div className={`hub${from === "morph" ? " is-vt" : from === "module" ? " is-back" : ""}`}>
       <h1 className="sr-only">{brandName}</h1>
-      <p className="crumbs hub-crumbs">
-        <TransitionLink to="/app">← {t("hub.back.brands")}</TransitionLink>
-      </p>
+      <BackLink to="/app" label={t("hub.back.brands")} className="hub-crumbs" />
 
       {status === "error" && (
         <div className="alert alert-error" role="alert">
@@ -188,7 +192,7 @@ export function HubPage() {
 
         {/* Last, so the cards' refs are attached by the time its layout effect measures them
             (it paints underneath them anyway: z-index in hub.css). */}
-        <LiveWires stageRef={stageRef} centreRef={centreRef} moduleRefs={moduleRefs} active={active} />
+        {!phone && <LiveWires stageRef={stageRef} centreRef={centreRef} moduleRefs={moduleRefs} active={active} />}
       </div>
     </div>
   );

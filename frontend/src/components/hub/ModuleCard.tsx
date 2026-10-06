@@ -22,6 +22,9 @@ import { CORNER_OF } from "./wireGeometry";
  * `named` drops the view-transition-name while the list → hub morph is still running: as a named
  * element the card would be a separate snapshot clipped to its own box, so it couldn't emerge from
  * the centre card (it sits in the page layer, under the morphing card, instead).
+ *
+ * On phones (hub.css) the same markup lays out as a compact list row: icon, title, a one-line
+ * glance at the preview, and a chevron.
  */
 export function ModuleCard({
   def,
@@ -88,6 +91,10 @@ export function ModuleCard({
           <span className="hub-module-preview" id={descId}>
             {children}
           </span>
+          {/* Phones (hub.css): the card is a list row, and a row ends in a chevron. */}
+          <svg className="hub-module-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M9 5l7 7-7 7" />
+          </svg>
         </TransitionLink>
       </TiltCard>
       <span className="hub-module-conn" aria-hidden="true">

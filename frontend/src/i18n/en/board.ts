@@ -26,6 +26,14 @@ export const board = {
   "filter.empty": "Nothing here yet.",
   "filter.showAll": "Show all",
 
+  // Phones: the filters become swipeable lanes, and a card's status a "Move to…" sheet
+  "lanes.label": "Recommendations by status",
+  "move.title": "Move to…",
+  // The card's status chip on phones; starts with the visible {status} (label in name).
+  "move.cta": "{status} — move “{title}” to…",
+  "move.current": "Now",
+  "move.done": "Moved to {status}",
+
   // "How this works" strip at the top of the module (collapsible; remembered per browser)
   "how.title": "How this works",
   "how.show": "Show how this works",

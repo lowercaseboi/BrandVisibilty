@@ -81,13 +81,16 @@ const CARDS: { icon: ReactNode; title: MessageKey; body: MessageKey }[] = [
   { icon: <TrendIcon />, title: "pages.landing.features.f6.title", body: "pages.landing.features.f6.body" },
 ];
 
-/** Tilts the card slightly towards the pointer on hover; a no-op under reduced motion (checked per
- * move, so switching the OS setting mid-session takes effect at once). */
+/** A touch screen's emulated mouse events would leave a card tilted after a tap. */
+const coarsePointer = () => typeof window !== "undefined" && !!window.matchMedia?.("(pointer: coarse)").matches;
+
+/** Tilts the card slightly towards the pointer on hover; a no-op under reduced motion and on touch
+ * screens (checked per move, so switching the OS setting mid-session takes effect at once). */
 function tiltHandlers() {
   return {
     onMouseMove: (e: MouseEvent<HTMLDivElement>) => {
       const el = e.currentTarget;
-      if (prefersReducedMotion()) {
+      if (prefersReducedMotion() || coarsePointer()) {
         el.style.transform = "";
         return;
       }

@@ -1,6 +1,8 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import type { Observation } from "../../api/types";
 import { useT } from "../../i18n";
 import { Details } from "../../settings/details";
+import { useIsPhone } from "../../settings/useMediaQuery";
 import { mentionsBrand } from "./filter";
 import { highlightMentions, mentionLabel, rankedEntities } from "./mentions";
 
@@ -17,6 +19,23 @@ export function ObservationCard({
   const t = useT();
   const ranked = rankedEntities(obs);
   const named = mentionsBrand(obs);
+  // Phones: no scroll box inside the scrolling page (nested scroll is awkward on touch). The text is
+  // clamped to a few lines instead, with Show more when it actually overflows.
+  const phone = useIsPhone();
+  const [expanded, setExpanded] = useState(false);
+  const [overflows, setOverflows] = useState(false);
+  const responseRef = useRef<HTMLDivElement>(null);
+  const clamped = phone && !expanded;
+  useLayoutEffect(() => {
+    const el = responseRef.current;
+    if (!el || !clamped) return;
+    const measure = () => setOverflows(el.scrollHeight > el.clientHeight + 1);
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [clamped, obs.response_text]);
   return (
     <article className="card obs-card">
       <header className="obs-head">
@@ -59,7 +78,20 @@ export function ObservationCard({
           })}
         </div>
       )}
-      <div className="obs-response">{highlightMentions(obs.response_text ?? "", obs.mentions ?? [], entities, t)}</div>
+      <div ref={responseRef} id={`obs-text-${obs.observation_id}`} className={`obs-response${clamped ? " is-clamped" : ""}`}>
+        {highlightMentions(obs.response_text ?? "", obs.mentions ?? [], entities, t)}
+      </div>
+      {phone && (expanded || overflows) && (
+        <button
+          type="button"
+          className="btn btn-link obs-more"
+          aria-expanded={expanded}
+          aria-controls={`obs-text-${obs.observation_id}`}
+          onClick={() => setExpanded((x) => !x)}
+        >
+          {expanded ? t("common.showLess") : t("common.showMore")}
+        </button>
+      )}
     </article>
   );
 }

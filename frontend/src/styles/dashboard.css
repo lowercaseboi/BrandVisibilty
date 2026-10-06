@@ -66,9 +66,11 @@
    Score hero
    ========================================================= */
 
+/* The lead cards (score, run panel, trend) pad a little more than a plain card; both follow the
+   card-pad tokens down on phones. */
 .score-hero {
   margin-top: var(--space-4);
-  padding: var(--space-5);
+  padding: calc(var(--card-pad-y) + 4px) calc(var(--card-pad-x) + 2px);
 }
 
 .score-hero-title {
@@ -292,10 +294,6 @@
 }
 
 @media (max-width: 640px) {
-  .score-hero {
-    padding: var(--space-4);
-  }
-
   .score-hero-grid {
     grid-template-columns: 1fr;
     gap: var(--space-3);
@@ -479,7 +477,7 @@
 
 .dash-run {
   margin-top: var(--space-6);
-  padding: var(--space-5);
+  padding: calc(var(--card-pad-y) + 4px) calc(var(--card-pad-x) + 2px);
   scroll-margin-top: 90px;
 }
 
@@ -695,10 +693,6 @@
 }
 
 @media (max-width: 640px) {
-  .dash-run {
-    padding: var(--space-4);
-  }
-
   .run-go {
     width: 100%;
   }
@@ -750,6 +744,93 @@
   background: none;
   color: var(--text-h);
   font-size: 14.5px;
+}
+
+/* Per-AI table on phones: each row becomes a small block (AI name + coverage %, the bar across the
+   full width, then the two counts with their labels) instead of a table that scrolls sideways. The
+   header row stays in the DOM for screen readers. */
+@media (max-width: 640px) {
+  .provider-table,
+  .provider-table tbody {
+    display: block;
+  }
+
+  .provider-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .provider-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name pct"
+      "bar bar"
+      "answers mentions";
+    align-items: center;
+    gap: 6px var(--space-3);
+    padding: var(--card-pad-y) var(--card-pad-x);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .provider-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  .provider-table th,
+  .provider-table td {
+    padding: 0;
+    border: 0;
+  }
+
+  .provider-table .pt-name {
+    grid-area: name;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .provider-table .provider-id {
+    white-space: normal;
+  }
+
+  .provider-table .pt-coverage,
+  .provider-table .bar-cell {
+    display: contents;
+  }
+
+  .provider-table .bar-track {
+    grid-area: bar;
+    width: 100%;
+    max-width: none;
+  }
+
+  .provider-table .bar-cell > .num {
+    grid-area: pct;
+    font-family: var(--mono);
+    font-size: 13.5px;
+    color: var(--text-h);
+  }
+
+  .provider-table td.pt-count {
+    grid-area: answers;
+    font-size: var(--fs-xs);
+    color: var(--muted);
+    text-align: left;
+  }
+
+  .provider-table td.pt-count:last-child {
+    grid-area: mentions;
+    text-align: right;
+  }
+
+  .provider-table .pt-count::before {
+    content: attr(data-label) " ";
+    font-family: var(--sans);
+  }
 }
 
 .trend-one .trend-svg {
@@ -895,9 +976,11 @@
     transform var(--dur) var(--ease);
 }
 
-.collapsible-toggle:hover {
-  color: var(--text-h);
-  border-color: var(--line-strong);
+@media (hover: hover) and (pointer: fine) {
+  .collapsible-toggle:hover {
+    color: var(--text-h);
+    border-color: var(--line-strong);
+  }
 }
 
 .collapsible-toggle:active {
@@ -905,7 +988,7 @@
 }
 
 .collapsible-toggle svg {
-  transition: transform var(--dur-slow) var(--ease);
+  transition: transform var(--dur-med) var(--ease);
 }
 
 .collapsible-toggle[aria-expanded="true"] svg {
@@ -917,7 +1000,7 @@
 .collapsible-body-outer {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows var(--dur-slow) var(--ease);
+  transition: grid-template-rows var(--dur-med) var(--ease);
 }
 
 .collapsible-body-outer.is-open {
@@ -937,57 +1020,42 @@
    base.css, which forces every animation/transition duration to ~0). */
 .collapsible:not(.is-revealed) {
   opacity: 0;
-  transform: translateY(12px);
+  transform: translateY(8px);
 }
 
 .collapsible.is-revealed {
-  animation: rise var(--dur-slow) var(--ease) backwards;
+  animation: rise var(--dur-med) var(--ease-out) backwards;
 }
 
 /* Staggered reveal of a section's own content when it opens: each direct child (and, one level
-   deeper, each row/card of its lists) rises and fades in with a short 35ms stagger between them,
-   ~250ms each — quick, but reads as the content being generated on the fly. Pure CSS: these
+   deeper, each row/card of its lists) rises and fades in with a short 40ms stagger between them
+   (capped at 160ms), 240ms each — quick, but reads as the content being generated on the fly. Pure CSS: these
    elements only gain the `animation` property once `.is-open` is present on the ancestor, so a
    section that mounts already open (persisted from localStorage) plays it once on load, and every
    toggle open replays it (closing removes the property, and with it any in-flight animation). */
 .collapsible-body-outer.is-open .collapsible-body-inner > *,
 .collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .who-list, .metric-cards) > * {
-  animation: rise 0.25s var(--ease) backwards;
+  animation: rise var(--dur-med) var(--ease-out) backwards;
 }
 
 .collapsible-body-outer.is-open .collapsible-body-inner > *:nth-child(2),
 .collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .who-list, .metric-cards) > *:nth-child(2) {
-  animation-delay: 35ms;
+  animation-delay: 40ms;
 }
 
 .collapsible-body-outer.is-open .collapsible-body-inner > *:nth-child(3),
 .collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .who-list, .metric-cards) > *:nth-child(3) {
-  animation-delay: 70ms;
+  animation-delay: 80ms;
 }
 
 .collapsible-body-outer.is-open .collapsible-body-inner > *:nth-child(4),
 .collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .who-list, .metric-cards) > *:nth-child(4) {
-  animation-delay: 105ms;
+  animation-delay: 120ms;
 }
 
-.collapsible-body-outer.is-open .collapsible-body-inner > *:nth-child(5),
-.collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .who-list, .metric-cards) > *:nth-child(5) {
-  animation-delay: 140ms;
-}
-
-.collapsible-body-outer.is-open .collapsible-body-inner > *:nth-child(6),
-.collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .who-list, .metric-cards) > *:nth-child(6) {
-  animation-delay: 175ms;
-}
-
-.collapsible-body-outer.is-open .collapsible-body-inner > *:nth-child(7),
-.collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .who-list, .metric-cards) > *:nth-child(7) {
-  animation-delay: 210ms;
-}
-
-.collapsible-body-outer.is-open .collapsible-body-inner > *:nth-child(n + 8),
-.collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .who-list, .metric-cards) > *:nth-child(n + 8) {
-  animation-delay: 245ms;
+.collapsible-body-outer.is-open .collapsible-body-inner > *:nth-child(n + 5),
+.collapsible-body-outer.is-open .collapsible-body-inner :is(.gap-list, .who-list, .metric-cards) > *:nth-child(n + 5) {
+  animation-delay: 160ms;
 }
 
 /* prefers-reduced-motion forces animation-duration to ~0 globally (base.css) but not

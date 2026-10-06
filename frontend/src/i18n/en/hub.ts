@@ -4,6 +4,17 @@ export const hub = {
   "back.brands": "All brands",
   "back.hub": "Brand hub",
   "switcher.label": "Modules",
+  // Phone tab bar along the bottom of a brand's pages (MobileTabBar). Keep the labels to one short
+  // word: five share a 360px-wide bar. Details and Analysis reuse the module titles below.
+  "tabs.label": "Brand sections",
+  "tab.hub": "Hub",
+  "tab.gaps": "Gaps",
+  "tab.board": "Board",
+  // Phone app header: the "⋯" button and the sheet it opens (theme, language, numbers view,
+  // connections). Here rather than in common.* until a translation round covers them.
+  "menu.more": "More options",
+  "menu.title": "Settings",
+  "menu.theme": "Theme",
   "module.details.title": "Details",
   "module.details.blurb": "Profile, connected accounts and the questions we ask",
   "module.analysis.title": "Analysis",

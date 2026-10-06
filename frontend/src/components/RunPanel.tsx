@@ -307,7 +307,7 @@ export function RunPanel({
             aria-valuemax={100}
             aria-valuetext={job.total > 0 ? t("dashboard.run.progress", { done: job.done, total: job.total }) : undefined}
           >
-            <div className="progress-bar" style={{ width: `${progress * 100}%` }} />
+            <div className="progress-bar" style={{ transform: `scaleX(${progress})` }} />
           </div>
 
           {jobProviders.length > 0 && (
@@ -337,7 +337,7 @@ export function RunPanel({
                       )}
                     </div>
                     <div className="progress progress-mini" aria-hidden="true">
-                      <div className="progress-bar" style={{ width: `${frac * 100}%` }} />
+                      <div className="progress-bar" style={{ transform: `scaleX(${frac})` }} />
                     </div>
                     <p className={`run-ai-state state-${p.state}`}>
                       {t(st.key, st.vars)}
