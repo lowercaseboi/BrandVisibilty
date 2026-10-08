@@ -274,8 +274,16 @@
     gap: 8px;
   }
 
+  /* Smaller and at most two lines: wrapped to three it crowded the buttons on a phone. */
   .app-header-landing .brand-mark-sub {
     max-width: 60vw;
+    font-size: var(--fs-2xs);
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
   }
 
   /* Full CTA text no longer fits without crowding the wordmark and icon buttons. Keep the button

@@ -110,6 +110,7 @@ docs/DETECTOR_VALIDATION.md   AC-12 tooling: export a blind labelling sheet, com
 | [docs/CONTRACT.md](docs/CONTRACT.md) | Current module signatures, snapshot schema and HTTP API |
 | [docs/CHANNEL_SETUP.md](docs/CHANNEL_SETUP.md) | Connecting Campaign Studio to Meta, X and Google Business Profile |
 | [docs/DETECTOR_VALIDATION.md](docs/DETECTOR_VALIDATION.md) | AC-12: labelling the mention detector against human judgement |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | What's next: hosting, database setup, multi-platform posting, post-impact history |
 | [RUNNING.md](RUNNING.md) | Full run guide: provider keys, `make` shortcuts, terminal reports, local dev, storage migration |
 | [DEPLOY.md](DEPLOY.md) | Hosting a live demo (Render + Vercel) |
 | [frontend/README.md](frontend/README.md) | Frontend dev, checks and routes |

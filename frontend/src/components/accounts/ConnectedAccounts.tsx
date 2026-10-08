@@ -90,7 +90,9 @@ export function ConnectedAccounts({ brandKey }: { brandKey: string }) {
       return fromUrl;
     }
   });
-  const [lastConnected, setLastConnected] = useState<ChannelId | null>(null);
+  // The channel connected most recently, for the "back to …" link: from the OAuth return (ret is read
+  // once on mount), then from in-page connects below.
+  const [lastConnected, setLastConnected] = useState<ChannelId | null>(() => (ret?.kind === "connected" ? ret.channel : null));
   const leaveForReturn = () => {
     try {
       sessionStorage.removeItem(returnKey);
@@ -105,7 +107,6 @@ export function ConnectedAccounts({ brandKey }: { brandKey: string }) {
     const name = platform(ret.channel);
     if (ret.kind === "connected") {
       toast(t("brandinfo.accounts.toast.connected", { platform: name }));
-      setLastConnected(ret.channel);
     }
     if (ret.kind === "error") toast(t("brandinfo.accounts.toast.error", { platform: name }));
     if (ret.kind !== "choose") void reload();
