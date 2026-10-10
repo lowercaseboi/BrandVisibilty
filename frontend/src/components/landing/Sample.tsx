@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Link } from "react-router-dom";
 import { getLatestSnapshot, getObservations, listBrands } from "../../api/client";
 import type { Mention } from "../../api/types";
@@ -12,7 +12,8 @@ import { Reveal } from "./Reveal";
 /**
  * "Sample analysis": pick a pilot brand, show one real answer from its latest run (highlighted)
  * next to its score. All simulated/sample data — a link points at the live workspace for real runs.
- * The answer card cross-fades (keyed by brand) whenever a different brand is picked.
+ * The answer card cross-fades (keyed by brand) whenever a different brand is picked; a long answer
+ * is cut short with an expand toggle.
  */
 export function Sample() {
   const t = useT();
@@ -34,8 +35,11 @@ export function Sample() {
 
   // Replayed by the event that changes the brand (a click), not by an effect.
   const [play, setPlay] = useState(0);
+  const [expanded, setExpanded] = useState(false);
+  const answerId = useId();
   const selectBrand = (key: string) => {
     setSelectedKey(key);
+    setExpanded(false);
     setPlay((n) => n + 1);
   };
 
@@ -50,13 +54,15 @@ export function Sample() {
   const text = obs?.response_text ?? "";
   const mentions = obs?.mentions ?? [];
   const kinds = new Set(mentions.map((m) => m.entity_kind));
+  const cut = cutPoint(text, mentions);
+  const truncated = cut < text.length;
 
   return (
-    <section id="demo" className="lp-band-light lp-section">
+    <section id="demo" className="lp-section">
       <div className="lp-container">
         <Reveal>
           <p className="lp-eyebrow">{t("pages.landing.sample.eyebrow")}</p>
-          <h2 className="lp-h2 lp-sample-title">{t("pages.landing.sample.title")}</h2>
+          <h2 className="lp-h2">{t("pages.landing.sample.title")}</h2>
           <p className="lp-sample-note">
             {t("pages.landing.sample.note")} <Link to="/app">{t("pages.landing.sample.liveCta")}</Link>
           </p>
@@ -85,7 +91,7 @@ export function Sample() {
               {rating && <span className={`pg-rating pg-rating-${rating.band}`}>{t(RATING_KEY[rating.band])}</span>}
               <p className="lp-sample-simulated">{t("pages.landing.sample.simulatedTag")}</p>
             </div>
-            <div className="card lp-sample-card">
+            <div className="lp-sample-card">
               <div key={activeKey ?? "none"} className="lp-sample-fade">
                 {noPilots || failed ? (
                   <p className="muted lp-sample-status">{t("pages.landing.sample.unavailable")}</p>
@@ -96,7 +102,15 @@ export function Sample() {
                     <p className="lp-sample-label">{t("pages.landing.sample.question")}</p>
                     <blockquote className="lp-sample-question">{obs.query_text}</blockquote>
                     <p className="lp-sample-label">{t("pages.landing.sample.answer")}</p>
-                    <div className="lp-sample-answer">{highlight(text, mentions, cutPoint(text, mentions), kindLabel)}</div>
+                    <div className="lp-sample-answer" id={answerId}>
+                      {highlight(text, mentions, expanded ? text.length : cut, kindLabel)}
+                      {truncated && !expanded && <span aria-hidden="true">…</span>}
+                    </div>
+                    {truncated && (
+                      <button type="button" className="lp-link-quiet lp-sample-more" aria-expanded={expanded} aria-controls={answerId} onClick={() => setExpanded((v) => !v)}>
+                        {expanded ? t("dashboard.sample.readLess") : t("dashboard.sample.readMore")}
+                      </button>
+                    )}
                     {kinds.size > 0 && (
                       <p className="lp-sample-legend">
                         <span className="muted">{t("pages.landing.sample.legend")}</span>

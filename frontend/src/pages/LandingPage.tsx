@@ -10,16 +10,16 @@ import { WhyItMatters } from "../components/landing/WhyItMatters";
 import { Workflow } from "../components/landing/Workflow";
 
 /**
- * Public marketing page at "/". Recreates the team's live demo site for BrandVisibility:
- * measuring how often AI assistants recommend a brand for real customer questions.
+ * Public marketing page at "/". Measures how often AI assistants recommend a brand for real
+ * customer questions.
  *
- * `on-band-dark`: in dark theme this pins every shared control (chips, cards, buttons, the score
- * glass) to the warm-grey band palette + amber, instead of the app's own dark surfaces — see
- * tokens.css's `.on-band*` scope classes. It's a no-op in light theme.
+ * One continuous surface that follows the light/dark toggle: sections are separated by space and a
+ * hairline, not alternating bands. landing.css flattens the shared chrome (frames, offset shadows,
+ * crop marks, page grid) under `.lp` only, so the app pages keep their own look.
  */
 export function LandingPage() {
   return (
-    <div className="lp on-band-dark">
+    <div className="lp">
       <ScrollProgress />
       <AppHeader variant="landing" />
       <main>

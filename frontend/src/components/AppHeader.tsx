@@ -113,8 +113,8 @@ function SettingsRows({ onNavigate }: { onNavigate: () => void }) {
 
 /**
  * The one header for the whole product. `app`: logo → landing, then all tools. `landing`: the same
- * logo and slogan, the section anchors, theme + language only, and a "Try it out" CTA. On the landing it always
- * sits on the dark band; in the app it turns into a navy bar in light theme.
+ * logo and slogan, the section anchors, theme + language only, and a "Try it out" CTA. On the landing it follows
+ * the page theme; in the app it turns into a navy bar in light theme.
  *
  * On phones (components.css) the app header is just the logo mark and one "⋯" button: the four
  * tools move into a bottom sheet as labelled rows, each showing its current value.
@@ -127,7 +127,7 @@ export function AppHeader({ variant = "app" }: { variant?: "app" | "landing" }) 
   const landing = variant === "landing";
   const cls = [
     "app-header",
-    landing ? "app-header-landing on-band" : "app-header-app on-band-light",
+    landing ? "app-header-landing" : "app-header-app on-band-light",
     scrolled ? "is-scrolled" : "",
     !landing && showDetails ? "is-analyst" : "",
   ]
