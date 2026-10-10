@@ -3,15 +3,15 @@ import { useT } from "../../i18n";
 import { Reveal } from "./Reveal";
 
 /**
- * Hero: the pitch and two CTAs get the whole first screen to themselves; the illustrative "AI
- * assistant" answer sits below, offset to the right, and plays its typing sequence once it scrolls
- * into view (landing.css starts the animations from `.is-visible`).
+ * Hero: the pitch and two CTAs on the left, the illustrative "AI assistant" answer beside them (under
+ * them on narrow screens). The answer plays its typing sequence once it scrolls into view
+ * (landing.css starts the animations from `.is-visible`).
  */
 export function Hero() {
   const t = useT();
   return (
-    <section id="top" className="lp-hero">
-      <div className="lp-container">
+    <section id="top" className="lp-section lp-hero">
+      <div className="lp-container lp-hero-grid">
         <Reveal className="lp-hero-copy">
           <p className="lp-eyebrow">{t("pages.landing.hero.eyebrow")}</p>
           <h1 className="lp-h1">

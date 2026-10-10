@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from "react";
 import "../styles/landing.css";
 import { AppHeader } from "../components/AppHeader";
 import { Features } from "../components/landing/Features";
@@ -13,13 +14,30 @@ import { Workflow } from "../components/landing/Workflow";
  * Public marketing page at "/". Measures how often AI assistants recommend a brand for real
  * customer questions.
  *
- * One continuous surface that follows the light/dark toggle: sections are separated by space and a
- * hairline, not alternating bands. landing.css flattens the shared chrome (frames, offset shadows,
- * crop marks, page grid) under `.lp` only, so the app pages keep their own look.
+ * One continuous surface that follows the light/dark toggle, with a faint dot grid behind it: each
+ * module fills one window, separated by a visible hairline rather than alternating bands. landing.css
+ * flattens the shared chrome (frames, offset shadows, crop marks) and scales type/spacing to 1.2x on
+ * desktop under `.lp` only, so the app pages keep their own look.
  */
 export function LandingPage() {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  // The CSS --header-h (base.css) assumes a one-line header, but on phones the slogan wraps and the
+  // landing header grows. Publish the measured height so everything that sticks or snaps under the
+  // header (the pinned workflow, one-window sections, anchor offsets) uses the real one.
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    const header = root?.querySelector(".app-header");
+    if (!root || !(header instanceof HTMLElement)) return;
+    const sync = () => root.style.setProperty("--header-h", `${header.getBoundingClientRect().height}px`);
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(header);
+    return () => ro.disconnect();
+  }, []);
+
   return (
-    <div className="lp">
+    <div className="lp" ref={rootRef}>
       <ScrollProgress />
       <AppHeader variant="landing" />
       <main>

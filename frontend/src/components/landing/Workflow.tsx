@@ -25,8 +25,9 @@ function headerHeight(): number {
 
 /**
  * "Workflow": six steps, one on screen at a time. The section is tall; inside it a frame sticks
- * under the header while you scroll, and scroll progress picks the step — an index of 01–06 on the
- * left (with a rail that fills amber as it advances) and the step's title and text on the right.
+ * under the header while you scroll — the section's eyebrow and heading ride along in it — and
+ * scroll progress picks the step: an index of 01–06 on the left (with a rail that fills as it
+ * advances) and the step's title and text on the right.
  * Index entries are buttons that scroll to their step. All six steps stay in the DOM (inactive
  * ones are only faded), so nothing is hidden from assistive tech.
  *
@@ -87,14 +88,14 @@ export function Workflow() {
 
   return (
     <section id="how-it-works" className="lp-section lp-workflow">
-      <div className="lp-container">
-        <Reveal>
-          <p className="lp-eyebrow">{t("pages.landing.workflow.eyebrow")}</p>
-          <h2 className="lp-h2">{t("pages.landing.workflow.title")}</h2>
-        </Reveal>
-      </div>
       <div className={`lp-workflow-track${plain ? " is-plain" : ""}`} ref={trackRef}>
         <div className="lp-workflow-frame">
+          <div className="lp-container lp-workflow-head">
+            <Reveal>
+              <p className="lp-eyebrow">{t("pages.landing.workflow.eyebrow")}</p>
+              <h2 className="lp-h2">{t("pages.landing.workflow.title")}</h2>
+            </Reveal>
+          </div>
           <div className="lp-container lp-workflow-stage">
             <div className="lp-workflow-index">
               <div className="lp-workflow-rail" ref={railRef} aria-hidden="true">
