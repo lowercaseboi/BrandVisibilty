@@ -77,6 +77,11 @@ html:has(.lp) {
   --border: color-mix(in srgb, var(--text-h) 24%, transparent);
   --border-strong: color-mix(in srgb, var(--text-h) 38%, transparent);
 
+  /* Dividers are drawn as a background line, 80% of the element's width (a border can't be
+     shortened). Use: background: var(--lp-rule) <position> / var(--lp-rule-w) 1px no-repeat. */
+  --lp-rule: linear-gradient(var(--border), var(--border));
+  --lp-rule-w: 80%;
+
   /* Flatten the shared chrome: hairlines instead of double frames and pencil shadows. */
   --line: var(--border-strong);
   --line-strong: color-mix(in srgb, var(--text-h) 52%, transparent);
@@ -111,7 +116,7 @@ html:has(.lp) {
   pointer-events: none;
   background-image: radial-gradient(
     circle,
-    color-mix(in srgb, var(--text-h) 22%, transparent) 1px,
+    color-mix(in srgb, var(--text-h) 18.7%, transparent) 1px,
     transparent 1.4px
   );
   background-size: calc(30px * var(--z)) calc(30px * var(--z));
@@ -119,8 +124,34 @@ html:has(.lp) {
   mask-image: radial-gradient(ellipse 85% 75% at 50% 35%, #000 25%, transparent 100%);
 }
 
+/* Near the cursor the same dots (same grid, drawn again on top) brighten and grow, fading back out
+   with distance. JS (LandingPage.tsx) only sets --mx/--my and toggles .is-pointing, and only for a
+   real mouse. */
+.lp::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-slow) var(--ease);
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--text-h) 55%, transparent) 1.3px,
+    transparent 1.9px
+  );
+  background-size: calc(30px * var(--z)) calc(30px * var(--z));
+  -webkit-mask-image: radial-gradient(circle calc(190px * var(--z)) at var(--mx, 50%) var(--my, 50%), #000, transparent);
+  mask-image: radial-gradient(circle calc(190px * var(--z)) at var(--mx, 50%) var(--my, 50%), #000, transparent);
+}
+
+.lp.is-pointing::after {
+  opacity: 1;
+}
+
 @media print {
-  .lp::before {
+  .lp::before,
+  .lp::after {
     display: none;
   }
 }
@@ -151,7 +182,7 @@ body:has(.lp)::after {
   min-height: calc(100vh - var(--header-h));
   min-height: calc(100svh - var(--header-h));
   padding: clamp(40px, 7vh, 96px) 0;
-  border-top: 1px solid var(--border);
+  background: var(--lp-rule) top center / var(--lp-rule-w) 1px no-repeat;
   scroll-margin-top: var(--header-h);
 }
 
@@ -293,8 +324,10 @@ body:has(.lp)::after {
 }
 
 .lp .app-header-landing.is-scrolled {
-  background: color-mix(in srgb, var(--bg) 86%, transparent);
-  box-shadow: 0 1px 0 var(--border);
+  background:
+    var(--lp-rule) bottom center / var(--lp-rule-w) 1px no-repeat,
+    color-mix(in srgb, var(--bg) 86%, transparent);
+  box-shadow: none;
 }
 
 .app-header-landing .header-links {
@@ -518,7 +551,7 @@ body:has(.lp)::after {
    ========================================================= */
 
 .lp-hero {
-  border-top: 0; /* first thing under the header */
+  background: none; /* first thing under the header: no divider */
 }
 
 .lp-hero-grid {
@@ -696,11 +729,13 @@ body:has(.lp)::after {
   gap: 16px 48px;
   align-items: baseline;
   padding: clamp(14px, 2.8vh, 36px) 0;
-  border-top: 1px solid var(--border);
+  background: var(--lp-rule) top center / var(--lp-rule-w) 1px no-repeat;
 }
 
 .lp-context-row:last-child {
-  border-bottom: 1px solid var(--border);
+  background:
+    var(--lp-rule) top center / var(--lp-rule-w) 1px no-repeat,
+    var(--lp-rule) bottom center / var(--lp-rule-w) 1px no-repeat;
 }
 
 .lp-context-tag {
@@ -993,7 +1028,7 @@ body:has(.lp)::after {
   display: flex;
   flex-wrap: wrap;
   gap: 8px clamp(20px, 3vw, 40px);
-  border-bottom: 1px solid var(--border);
+  background: var(--lp-rule) bottom left / var(--lp-rule-w) 1px no-repeat;
 }
 
 .lp-chip {
@@ -1099,7 +1134,7 @@ body:has(.lp)::after {
 .lp-sample-legend {
   margin: var(--space-4) 0 0;
   padding-top: var(--space-3);
-  border-top: 1px solid var(--border);
+  background: var(--lp-rule) top center / var(--lp-rule-w) 1px no-repeat;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1115,7 +1150,7 @@ body:has(.lp)::after {
   .lp-sample-card {
     padding: var(--space-6) 0 0;
     border-left: 0;
-    border-top: 1px solid var(--border);
+    background: var(--lp-rule) top center / var(--lp-rule-w) 1px no-repeat;
   }
 }
 
@@ -1142,11 +1177,13 @@ body:has(.lp)::after {
 .lp-acc-title {
   grid-column: 1;
   margin: 0;
-  border-top: 1px solid var(--border);
+  background: var(--lp-rule) top center / var(--lp-rule-w) 1px no-repeat;
 }
 
 .lp-acc-item:last-child .lp-acc-title {
-  border-bottom: 1px solid var(--border);
+  background:
+    var(--lp-rule) top center / var(--lp-rule-w) 1px no-repeat,
+    var(--lp-rule) bottom center / var(--lp-rule-w) 1px no-repeat;
 }
 
 .lp-acc-head {
@@ -1268,11 +1305,11 @@ body:has(.lp)::after {
   }
 
   .lp-acc-item:last-child .lp-acc-title {
-    border-bottom: 0;
+    background: var(--lp-rule) top center / var(--lp-rule-w) 1px no-repeat;
   }
 
   .lp-acc-item:last-child {
-    border-bottom: 1px solid var(--border);
+    background: var(--lp-rule) bottom center / var(--lp-rule-w) 1px no-repeat;
   }
 
   .lp-acc-head {
@@ -1311,7 +1348,10 @@ body:has(.lp)::after {
 
 .lp-footer {
   padding: clamp(64px, 8vw, 112px) 0 clamp(56px, 6vw, 88px);
-  border-top: 1px solid var(--border);
+  /* A shade darker than the page (in both themes), opaque so the dot grid stops above it. */
+  background:
+    var(--lp-rule) top center / var(--lp-rule-w) 1px no-repeat,
+    color-mix(in srgb, black 9%, var(--bg));
 }
 
 .lp-footer-inner {
