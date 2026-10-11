@@ -230,7 +230,7 @@
   margin: -4px 0 0;
   font-family: var(--display);
   word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
-  font-size: 15.5px;
+  font-size: calc(15.5px * var(--z));
   font-weight: 600;
   line-height: 1.35;
   letter-spacing: -0.01em;

@@ -1,24 +1,9 @@
 import { useId, useState } from "react";
 import { useT } from "../../i18n";
+import { readFlag, writeFlag } from "../../settings/persisted";
 import type { MessageKey } from "../../i18n";
 
 const STORAGE_KEY = "bv.board.how";
-
-function readOpen(): boolean {
-  try {
-    return localStorage.getItem(STORAGE_KEY) !== "0";
-  } catch {
-    return true;
-  }
-}
-
-function saveOpen(open: boolean): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, open ? "1" : "0");
-  } catch {
-    /* storage unavailable */
-  }
-}
 
 const STEPS: [MessageKey, MessageKey][] = [
   ["board.how.step1", "board.how.step1Body"],
@@ -32,13 +17,13 @@ const STEPS: [MessageKey, MessageKey][] = [
  */
 export function HowItWorks() {
   const t = useT();
-  const [open, setOpen] = useState(readOpen);
+  const [open, setOpen] = useState(() => readFlag(STORAGE_KEY, true));
   const headingId = useId();
   const bodyId = useId();
 
   const toggle = () => {
     setOpen((o) => {
-      saveOpen(!o);
+      writeFlag(STORAGE_KEY, !o);
       return !o;
     });
   };

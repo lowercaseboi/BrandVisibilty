@@ -26,6 +26,38 @@
   gap: var(--space-3);
 }
 
+/* The Hub keeps its original glassy, double-framed, crop-marked look. The rest of the app went flat
+   (tokens.css), so the old chrome tokens are restored here, on the Hub's root only. Custom
+   properties resolve where they are declared, so declare the lines first and the shadows after. */
+.hub {
+  --surface: oklch(99% 0.006 90 / 0.72);
+  --glass-highlight: rgb(255 255 255 / 0.85);
+  --border: oklch(22.3% 0.049 274.6 / 0.1);
+  --border-strong: oklch(22.3% 0.049 274.6 / 0.2);
+  --line: oklch(22.3% 0.049 274.6 / 0.46);
+  --line-strong: oklch(22.3% 0.049 274.6 / 0.74);
+  --radius-lg: 4px;
+  --radius: 3px;
+  --radius-sm: 3px;
+  --mark-size: 9px;
+  --shadow-1: 4px 4px 0 -1px var(--bg), 4px 4px 0 0 var(--line);
+  --shadow-2: 6px 6px 0 -1px var(--bg), 6px 6px 0 0 var(--line-strong);
+  --shadow-accent: 4px 4px 0 -1px var(--bg), 4px 4px 0 0 var(--accent);
+  --shadow-accent-hover: 6px 6px 0 -1px var(--bg), 6px 6px 0 0 var(--accent);
+  --frame-ring: 0 0 0 calc(1px + var(--frame-gap)) var(--bg), 0 0 0 calc(2px + var(--frame-gap)) var(--line);
+  --frame-ring-sm: 0 0 0 calc(1px + var(--frame-gap-sm)) var(--bg), 0 0 0 calc(2px + var(--frame-gap-sm)) var(--line);
+  --frame-ring-accent: 0 0 0 calc(1px + var(--frame-gap-sm)) var(--bg), 0 0 0 calc(2px + var(--frame-gap-sm)) var(--accent);
+}
+
+:root[data-theme="dark"] .hub {
+  --surface: rgb(26 26 24 / 0.72);
+  --glass-highlight: rgb(255 250 240 / 0.05);
+  --border: rgb(236 230 215 / 0.1);
+  --border-strong: rgb(236 230 215 / 0.18);
+  --line: rgb(236 230 215 / 0.26);
+  --line-strong: rgb(236 230 215 / 0.48);
+}
+
 /* Reached through the list → hub morph: start as the card touches down (its fast-start easing
    has it on its spot about halfway through the 0.46s morph; the settle plays under the wires). */
 .hub.is-vt {

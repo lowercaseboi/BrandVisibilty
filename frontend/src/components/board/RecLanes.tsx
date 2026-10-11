@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef } from "react";
 import type { KeyboardEvent, ReactNode, RefObject } from "react";
 import { useT } from "../../i18n";
-import { prefersReducedMotion } from "../../settings/motion";
+import { scrollBehavior } from "../../settings/motion";
 import { BOARD_FILTERS } from "./boardModel";
 import type { BoardFilter } from "./boardModel";
 import { laneIndexFromScroll, lanesInView } from "./lanes";
@@ -63,7 +63,7 @@ export function RecLanes({ filter, onFilter, buttons, chip, lane }: RecLanesProp
     const top = el.getBoundingClientRect().top;
     if (top >= below) return;
     const gap = parseFloat(getComputedStyle(el.parentElement ?? el).rowGap) || 0;
-    window.scrollBy({ top: top - below - gap, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+    window.scrollBy({ top: top - below - gap, behavior: scrollBehavior() });
   };
 
   const onScroll = () => {
@@ -105,7 +105,7 @@ export function RecLanes({ filter, onFilter, buttons, chip, lane }: RecLanesProp
     const first = !mounted.current;
     mounted.current = true;
     current.current = index;
-    const behavior: ScrollBehavior = first || prefersReducedMotion() ? "auto" : "smooth";
+    const behavior: ScrollBehavior = first ? "auto" : scrollBehavior();
 
     const tab = buttons.current.get(filter);
     const s = strip.current;

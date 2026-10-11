@@ -15,7 +15,7 @@ import { brandHref } from "../../components/module/modules";
 import { TransitionLink } from "../../components/module/transition";
 import { T, useFormat, useT } from "../../i18n";
 import { Details } from "../../settings/details";
-import { prefersReducedMotion } from "../../settings/motion";
+import { scrollBehavior } from "../../settings/motion";
 import { useBrandData } from "./BrandContext";
 
 /**
@@ -115,7 +115,7 @@ export function GapsModule() {
     }
     if (handled.current === selectedId) return;
     handled.current = selectedId;
-    const behavior: ScrollBehavior = prefersReducedMotion() ? "auto" : "smooth";
+    const behavior: ScrollBehavior = scrollBehavior();
     if (pickedByUser.current) {
       pickedByUser.current = false;
       const el = evidenceRef.current;

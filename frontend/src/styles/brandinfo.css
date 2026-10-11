@@ -6,7 +6,7 @@
    #questions): leave room for the sticky module band. The heading takes focus on arrival; a
    script-moved focus ring is only drawn for keyboard users. */
 .bi-anchor {
-  scroll-margin-top: 92px;
+  scroll-margin-top: calc(var(--header-h) + 14px);
 }
 
 /* Headings only take focus from script (arrival on a deep link, after a dialog closes) so screen

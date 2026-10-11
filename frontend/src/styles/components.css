@@ -96,7 +96,7 @@
 .brand-mark-name {
   font-family: var(--display);
   word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
-  font-size: 18px;
+  font-size: calc(18px * var(--z));
   font-weight: 700;
   letter-spacing: -0.05em;
   white-space: nowrap;
@@ -286,7 +286,7 @@
 
 @media (max-width: 480px) {
   .brand-mark-name {
-    font-size: 16px;
+    font-size: calc(16px * var(--z));
   }
 
   .brand-mark-sub {
@@ -374,7 +374,7 @@
   border: 0;
   background: none;
   color: var(--text-h);
-  font-size: 15px;
+  font-size: calc(15px * var(--z));
   font-weight: 600;
   text-align: left;
   cursor: pointer;
@@ -422,7 +422,7 @@
   margin: 0;
   color: var(--muted);
   max-width: 68ch;
-  font-size: 16px;
+  font-size: calc(16px * var(--z));
 }
 
 .crumbs {
@@ -806,7 +806,7 @@ a.card:active {
   background: var(--surface-2);
   padding: var(--space-3) var(--space-4);
   margin: var(--space-3) 0;
-  font-size: 14.5px;
+  font-size: calc(14.5px * var(--z));
   color: var(--text);
 }
 
@@ -858,7 +858,7 @@ a.card:active {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-size: 14.5px;
+  font-size: calc(14.5px * var(--z));
   font-weight: 600;
   line-height: 1.2;
   padding: 9px 18px;
@@ -971,7 +971,7 @@ a.card:active {
 .btn-small,
 .btn-small:hover,
 .btn-small:not(:disabled):hover {
-  font-size: 13px;
+  font-size: calc(13px * var(--z));
   padding: 4px 10px;
   min-height: 28px;
   box-shadow: none;
@@ -979,7 +979,7 @@ a.card:active {
 }
 
 .btn-large {
-  font-size: 16px;
+  font-size: calc(16px * var(--z));
   padding: 11px 22px;
   min-height: 44px;
 }
@@ -1002,7 +1002,7 @@ a.card:active {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  font-size: 14px;
+  font-size: calc(14px * var(--z));
   font-weight: 600;
   color: var(--text-h);
 }
@@ -1010,13 +1010,13 @@ a.card:active {
 .form small,
 .field-hint {
   font-weight: 400;
-  font-size: 13px;
+  font-size: calc(13px * var(--z));
   color: var(--muted);
 }
 
 .field-error {
   font-weight: 400;
-  font-size: 13px;
+  font-size: calc(13px * var(--z));
   color: var(--err);
 }
 
@@ -1071,12 +1071,12 @@ a.card:active {
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14.5px;
+  font-size: calc(14.5px * var(--z));
 }
 
 .table th {
   text-align: left;
-  font-size: 13px;
+  font-size: calc(13px * var(--z));
   font-weight: 600;
   color: var(--muted);
   background: var(--surface-2);
@@ -1105,12 +1105,12 @@ a.card:active {
 
 .table td.num {
   font-family: var(--mono);
-  font-size: 13.5px;
+  font-size: calc(13.5px * var(--z));
 }
 
 .check {
   font-weight: 600;
-  font-size: 13.5px;
+  font-size: calc(13.5px * var(--z));
 }
 
 .check-yes {
@@ -1126,7 +1126,7 @@ a.card:active {
   align-items: center;
   gap: 10px;
   font-family: var(--mono);
-  font-size: 13.5px;
+  font-size: calc(13.5px * var(--z));
   font-variant-numeric: tabular-nums;
 }
 
@@ -1214,7 +1214,7 @@ a.card:active {
 }
 
 .run-meta {
-  font-size: 14px;
+  font-size: calc(14px * var(--z));
   color: var(--muted);
   margin: 0;
 }
@@ -1234,7 +1234,7 @@ a.card:active {
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  font-size: 14.5px;
+  font-size: calc(14.5px * var(--z));
 }
 
 .job-message {
@@ -1284,7 +1284,7 @@ a.card:active {
   grid-template-columns: minmax(90px, 140px) minmax(60px, 1fr) auto auto minmax(0, 1.4fr) auto;
   align-items: center;
   gap: 10px;
-  font-size: 14.5px;
+  font-size: calc(14.5px * var(--z));
 }
 
 .provider-row-label {
@@ -1347,7 +1347,7 @@ a.card:active {
 }
 
 .run-depth-label {
-  font-size: 14px;
+  font-size: calc(14px * var(--z));
   font-weight: 600;
   color: var(--text-h);
 }
@@ -1364,7 +1364,7 @@ a.card:active {
 }
 
 .segmented button {
-  font-size: 14.5px;
+  font-size: calc(14.5px * var(--z));
   font-weight: 600;
   display: flex;
   flex-direction: column;
@@ -1469,7 +1469,7 @@ a.card:active {
 }
 
 .metric-label {
-  font-size: 14px;
+  font-size: calc(14px * var(--z));
   font-weight: 600;
   color: var(--muted);
 }
@@ -1492,18 +1492,18 @@ a.card:active {
 
 .metric-undefined {
   font-family: var(--sans);
-  font-size: 20px;
+  font-size: calc(20px * var(--z));
   font-weight: 600;
   color: var(--muted);
 }
 
 .metric-ci {
-  font-size: 14px;
+  font-size: calc(14px * var(--z));
   color: var(--text);
 }
 
 .metric-explainer {
-  font-size: 13px;
+  font-size: calc(13px * var(--z));
   color: var(--muted);
   margin-top: var(--space-1);
 }
@@ -1522,13 +1522,13 @@ a.card:active {
 }
 
 .kv-label {
-  font-size: 13px;
+  font-size: calc(13px * var(--z));
   color: var(--muted);
 }
 
 .kv-value {
   font-weight: 500;
-  font-size: 15px;
+  font-size: calc(15px * var(--z));
   color: var(--text-h);
 }
 
@@ -1581,7 +1581,7 @@ a.card:active {
   position: absolute;
   top: 22px;
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: calc(11px * var(--z));
   color: var(--muted);
 }
 
@@ -1618,7 +1618,7 @@ a.card:active {
 
 .trend-axis {
   fill: var(--muted);
-  font-size: 11px;
+  font-size: calc(11px * var(--z));
   font-family: var(--sans);
 }
 
@@ -1657,7 +1657,7 @@ a.card:active {
 .trend-value {
   fill: var(--text-h);
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: calc(12px * var(--z));
   font-weight: 500;
   /* A halo in the card colour keeps the number readable where it crosses the line or band. */
   paint-order: stroke;
@@ -1674,7 +1674,7 @@ a.card:active {
 
 .trend-break-label {
   fill: var(--warn);
-  font-size: 11px;
+  font-size: calc(11px * var(--z));
   font-weight: 600;
 }
 
@@ -1741,7 +1741,7 @@ a.card:active {
 }
 
 .gap-item {
-  scroll-margin-top: 110px;
+  scroll-margin-top: calc(var(--header-h) + 32px);
   transition:
     border-color var(--dur),
     background var(--dur),
@@ -1817,7 +1817,7 @@ a.card:active {
 }
 
 .link-evidence {
-  font-size: 14px;
+  font-size: calc(14px * var(--z));
   font-weight: 600;
   text-decoration: none;
 }
@@ -1960,7 +1960,7 @@ a.card:active {
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  font-size: 14.5px;
+  font-size: calc(14.5px * var(--z));
   line-height: 1.6;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -2205,7 +2205,7 @@ a.card:active {
   border-radius: 50%;
   background: none;
   color: var(--muted);
-  font-size: 9.5px;
+  font-size: calc(9.5px * var(--z));
   font-weight: 700;
   font-style: italic;
   line-height: 1;

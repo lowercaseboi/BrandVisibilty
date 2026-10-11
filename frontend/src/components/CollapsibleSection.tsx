@@ -1,27 +1,9 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useT } from "../i18n";
+import { readFlag, writeFlag } from "../settings/persisted";
 
 const STORAGE_PREFIX = "bv.open.";
-
-function readOpen(id: string, fallback: boolean): boolean {
-  try {
-    const raw = localStorage.getItem(`${STORAGE_PREFIX}${id}`);
-    if (raw === "1") return true;
-    if (raw === "0") return false;
-  } catch {
-    /* storage unavailable */
-  }
-  return fallback;
-}
-
-function writeOpen(id: string, open: boolean) {
-  try {
-    localStorage.setItem(`${STORAGE_PREFIX}${id}`, open ? "1" : "0");
-  } catch {
-    /* storage unavailable */
-  }
-}
 
 function ChevronIcon() {
   return (
@@ -52,7 +34,7 @@ export function CollapsibleSection({
   forceOpen?: boolean;
 }) {
   const t = useT();
-  const [open, setOpen] = useState<boolean>(() => readOpen(id, defaultOpen));
+  const [open, setOpen] = useState<boolean>(() => readFlag(`${STORAGE_PREFIX}${id}`, defaultOpen));
   // No IntersectionObserver (very old browsers): treat as already revealed, no animation to wait for.
   const [revealed, setRevealed] = useState<boolean>(() => typeof IntersectionObserver === "undefined");
   const headingId = useId();
@@ -67,7 +49,7 @@ export function CollapsibleSection({
     setPrevForceOpen(!!forceOpen);
     if (forceOpen) {
       setOpen(true);
-      writeOpen(id, true);
+      writeFlag(`${STORAGE_PREFIX}${id}`, true);
     }
   }
 
@@ -93,7 +75,7 @@ export function CollapsibleSection({
   const toggle = () => {
     setOpen((prev) => {
       const next = !prev;
-      writeOpen(id, next);
+      writeFlag(`${STORAGE_PREFIX}${id}`, next);
       return next;
     });
   };

@@ -152,7 +152,7 @@
   border: 1.5px solid var(--border-strong);
   border-radius: 50%;
   color: var(--accent-text);
-  font-size: 11px;
+  font-size: calc(11px * var(--z));
 }
 [data-state="done"] .cs-gen-dot { border-color: var(--rate-high); color: var(--rate-high); }
 [data-state="now"] .cs-gen-dot { border: 0; }
@@ -162,7 +162,7 @@
 .cs-focus { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: var(--space-4); align-items: start; }
 .cs-preview {
   position: sticky;
-  top: 186px; /* below the app header + progress header */
+  top: calc(var(--header-h) + 108px * var(--z)); /* below the app header + progress header */
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -624,7 +624,7 @@
   /* Under the compact phone header (56px plus the notch inset). */
   .cs-top { padding: 10px 12px; }
   /* 16px or iOS zooms in on focus (the mono class would otherwise win over base.css). */
-  .cs-markdown { font-size: 16px; }
+  .cs-markdown { font-size: calc(16px * var(--z)); }
   /* Finger-sized targets: the hashtag remove button keeps a small look with a 40px hit area. */
   .cs-chip button { position: relative; width: 28px; height: 28px; }
   .cs-chip button::before { content: ""; position: absolute; inset: -6px; }

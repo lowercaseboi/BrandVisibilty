@@ -270,7 +270,9 @@ function Studio({
     shownStep.current = step;
     headingRef.current?.focus({ preventScroll: true });
     const top = rootRef.current?.getBoundingClientRect().top ?? 0;
-    if (top < 0) window.scrollTo({ top: window.scrollY + top - 88, behavior: reduced ? "auto" : "smooth" });
+    // Land just under the sticky header (its measured height — it varies with scale and wrapping).
+    const below = (document.querySelector(".app-header")?.getBoundingClientRect().height ?? 78) + 10;
+    if (top < 0) window.scrollTo({ top: window.scrollY + top - below, behavior: reduced ? "auto" : "smooth" });
   }, [step, reduced]);
 
   // ---- where to post (step 2) ----

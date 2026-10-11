@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useT } from "../i18n";
 import { DetailsToggle, useDetails } from "../settings/details";
 import { useTheme } from "../settings/theme";
+import { useHeaderHeight } from "../settings/useHeaderHeight";
 import { useScrolled } from "../settings/useScrolled";
 import { LanguageToggle, Logo, ThemeButton, useLanguageCycle } from "./headerControls";
 import { Sheet } from "./Sheet";
@@ -124,6 +125,8 @@ export function AppHeader({ variant = "app" }: { variant?: "app" | "landing" }) 
   const scrolled = useScrolled();
   const { showDetails } = useDetails();
   const [menuOpen, setMenuOpen] = useState(false);
+  const headerRef = useRef<HTMLElement | null>(null);
+  useHeaderHeight(headerRef);
   const landing = variant === "landing";
   const cls = [
     "app-header",
@@ -136,7 +139,7 @@ export function AppHeader({ variant = "app" }: { variant?: "app" | "landing" }) 
   return (
     // Its own view-transition-name keeps the header still while brand pages morph beneath it
     // (otherwise it cross-fades with the rest of the page).
-    <header className={cls} style={landing ? undefined : { viewTransitionName: "app-header" }}>
+    <header ref={headerRef} className={cls} style={landing ? undefined : { viewTransitionName: "app-header" }}>
       <div className="app-header-inner">
         <Link to={landing ? "/app" : "/"} className="brand-mark" aria-label={landing ? t("common.nav.app") : t("common.app.home")}>
           <Logo />

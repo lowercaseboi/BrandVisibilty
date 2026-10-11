@@ -233,7 +233,7 @@
 
 .score-range-text {
   margin: 0 0 var(--space-2);
-  font-size: 14.5px;
+  font-size: calc(14.5px * var(--z));
 }
 
 .score-range-hint {
@@ -281,7 +281,7 @@
   position: absolute;
   top: 21px;
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: calc(11px * var(--z));
   color: var(--muted);
 }
 
@@ -300,11 +300,11 @@
   }
 
   .score-big {
-    font-size: 54px;
+    font-size: calc(54px * var(--z));
   }
 
   .score-sentence {
-    font-size: 16.5px;
+    font-size: calc(16.5px * var(--z));
   }
 }
 
@@ -314,7 +314,7 @@
 
 .who-lead {
   margin: 0 0 var(--space-4);
-  font-size: 16px;
+  font-size: calc(16px * var(--z));
   color: var(--text-h);
 }
 
@@ -408,7 +408,7 @@
   margin: 0 0 var(--space-4);
   padding: 2px 0 2px var(--space-3);
   border-left: 3px solid var(--border-strong);
-  font-size: 16px;
+  font-size: calc(16px * var(--z));
   font-weight: 600;
   color: var(--text-h);
 }
@@ -418,7 +418,7 @@
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  font-size: 15px;
+  font-size: calc(15px * var(--z));
   line-height: 1.65;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -427,7 +427,7 @@
 .sample-more {
   margin-top: var(--space-2);
   cursor: pointer;
-  font-size: 14.5px;
+  font-size: calc(14.5px * var(--z));
 }
 
 .sample-foot {
@@ -478,7 +478,7 @@
 .dash-run {
   margin-top: var(--space-6);
   padding: calc(var(--card-pad-y) + 4px) calc(var(--card-pad-x) + 2px);
-  scroll-margin-top: 90px;
+  scroll-margin-top: calc(var(--header-h) + 12px);
 }
 
 .run-title {
@@ -651,7 +651,7 @@
 
 .run-ai-state {
   margin: 6px 0 0;
-  font-size: 14px;
+  font-size: calc(14px * var(--z));
 }
 
 .run-ai-state.state-waiting {
@@ -723,7 +723,7 @@
 }
 
 .dash-facts code {
-  font-size: 12px;
+  font-size: calc(12px * var(--z));
 }
 
 .metric-outof {
@@ -735,7 +735,7 @@
 .provider-id {
   display: table;
   margin-top: 2px;
-  font-size: 11px;
+  font-size: calc(11px * var(--z));
   font-weight: 400;
   white-space: nowrap;
 }
@@ -743,7 +743,7 @@
 .table th[scope="row"] {
   background: none;
   color: var(--text-h);
-  font-size: 14.5px;
+  font-size: calc(14.5px * var(--z));
 }
 
 /* Per-AI table on phones: each row becomes a small block (AI name + coverage %, the bar across the
@@ -811,7 +811,7 @@
   .provider-table .bar-cell > .num {
     grid-area: pct;
     font-family: var(--mono);
-    font-size: 13.5px;
+    font-size: calc(13.5px * var(--z));
     color: var(--text-h);
   }
 

@@ -8,158 +8,24 @@
    looks like 120%. Only the landing is touched — everything under `.lp` — so the app pages keep
    their own look. */
 
-/* "Browser 120%" at 100% zoom, on desktop/tablet only: --z scales the shared type, spacing and
-   header tokens and every px value below that has to grow with them (see the plan: `zoom` would
-   also scale vh, which breaks the one-window sections and the pinned workflow). Phones keep 1. The
-   `:has(.lp)` scope ends when the landing unmounts, so the app is untouched. */
-html:has(.lp) {
-  --z: 1;
-}
-
-@media (min-width: 901px) {
-  html:has(.lp) {
-    --z: 1.2;
-    --fs-2xs: calc(10.5px * var(--z));
-    --fs-xs: calc(11.5px * var(--z));
-    --fs-sm: calc(12.5px * var(--z));
-    --fs-md: calc(14px * var(--z));
-    --fs-lg: calc(16.5px * var(--z));
-    --fs-xl: calc(21px * var(--z));
-    --fs-2xl: calc(30px * var(--z));
-    --fs-hero: calc(64px * var(--z));
-    --space-1: calc(4px * var(--z));
-    --space-2: calc(8px * var(--z));
-    --space-3: calc(12px * var(--z));
-    --space-4: calc(16px * var(--z));
-    --space-5: calc(24px * var(--z));
-    --space-6: calc(32px * var(--z));
-    --space-7: calc(48px * var(--z));
-    --header-bar: calc(78px * var(--z));
-  }
-
-  /* Devanagari reads small next to mono, so base.css nudges it to 15px; keep that, scaled. */
-  html:lang(hi):has(.lp),
-  html:lang(mr):has(.lp) {
-    font-size: calc(15px * var(--z));
-  }
-}
-
 .lp {
-  background: var(--bg);
   color: var(--text);
   overflow-x: clip; /* not hidden: hidden would make .lp the sticky container and unstick the header */
   min-height: 100vh;
   min-height: 100dvh;
-  isolation: isolate; /* the dot grid below sits at z-index -1, behind the content but above --bg */
 
   /* Roomier than the app: the header shares these, so it stays aligned with the content. */
   --maxw: calc(1200px * var(--z));
   --gutter: clamp(20px, 4vw, 48px);
 
-  /* Deep teal in light mode (dark mode swaps back to amber below). --signal is the fill (CTA,
-     progress, rail), --lp-accent-text the ink on the page background, --lp-accent-display the
-     hero's highlighted line. */
-  --signal: oklch(50% 0.09 195);
-  --signal-fg: oklch(99% 0.005 195);
-  --lp-accent-text: oklch(42% 0.09 195);
+  /* The accent itself (teal / amber), the flat chrome, the dividers and the dot-grid backdrop are
+     global now (tokens.css, base.css). Landing-only: the hero heading's highlight colour. */
+  --lp-accent-text: var(--accent-text);
   --lp-accent-display: oklch(50% 0.1 195);
-  --accent: var(--signal);
-  --accent-hover: color-mix(in srgb, var(--signal) 82%, black);
-  --accent-grad: var(--signal);
-  --accent-grad-hover: var(--accent-hover);
-  --accent-soft: color-mix(in srgb, var(--signal) 18%, transparent);
-  --on-accent: var(--signal-fg);
-  --accent-text: var(--lp-accent-text);
-  --focus: var(--lp-accent-text);
-
-  /* Rules you can actually see: the app's 10%/20% hairlines vanish on this plain surface. Built
-     from --text-h so they flip with the theme. */
-  --border: color-mix(in srgb, var(--text-h) 24%, transparent);
-  --border-strong: color-mix(in srgb, var(--text-h) 38%, transparent);
-
-  /* Dividers are drawn as a background line, 80% of the element's width (a border can't be
-     shortened). Use: background: var(--lp-rule) <position> / var(--lp-rule-w) 1px no-repeat. */
-  --lp-rule: linear-gradient(var(--border), var(--border));
-  --lp-rule-w: 80%;
-
-  /* Flatten the shared chrome: hairlines instead of double frames and pencil shadows. */
-  --line: var(--border-strong);
-  --line-strong: color-mix(in srgb, var(--text-h) 52%, transparent);
-  --frame-ring: 0 0 0 0 transparent;
-  --frame-ring-sm: 0 0 0 0 transparent;
-  --frame-ring-accent: 0 0 0 0 transparent;
-  --shadow-1: 0 0 0 0 transparent;
-  --shadow-2: 0 0 0 0 transparent;
-  --shadow-accent: 0 0 0 0 transparent;
-  --shadow-accent-hover: 0 0 0 0 transparent;
-  --radius: 2px;
-  --radius-sm: 2px;
-  --radius-lg: 2px;
 }
 
-/* Dark mode keeps the amber. (theme.tsx only ever sets data-theme to "light" or "dark".) */
 :root[data-theme="dark"] .lp {
-  --signal: oklch(75% 0.155 60);
-  --signal-fg: oklch(21% 0.045 60);
-  --lp-accent-text: var(--signal);
   --lp-accent-display: var(--signal);
-  --accent-hover: color-mix(in srgb, var(--signal) 82%, white);
-}
-
-/* A faint dot grid behind everything: fixed and static (no scroll cost, no animation), fading out
-   toward the edges. */
-.lp::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-image: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--text-h) 18.7%, transparent) 1px,
-    transparent 1.4px
-  );
-  background-size: calc(30px * var(--z)) calc(30px * var(--z));
-  -webkit-mask-image: radial-gradient(ellipse 85% 75% at 50% 35%, #000 25%, transparent 100%);
-  mask-image: radial-gradient(ellipse 85% 75% at 50% 35%, #000 25%, transparent 100%);
-}
-
-/* Near the cursor the same dots (same grid, drawn again on top) brighten and grow, fading back out
-   with distance. JS (LandingPage.tsx) only sets --mx/--my and toggles .is-pointing, and only for a
-   real mouse. */
-.lp::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity var(--dur-slow) var(--ease);
-  background-image: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--text-h) 55%, transparent) 1.3px,
-    transparent 1.9px
-  );
-  background-size: calc(30px * var(--z)) calc(30px * var(--z));
-  -webkit-mask-image: radial-gradient(circle calc(190px * var(--z)) at var(--mx, 50%) var(--my, 50%), #000, transparent);
-  mask-image: radial-gradient(circle calc(190px * var(--z)) at var(--mx, 50%) var(--my, 50%), #000, transparent);
-}
-
-.lp.is-pointing::after {
-  opacity: 1;
-}
-
-@media print {
-  .lp::before,
-  .lp::after {
-    display: none;
-  }
-}
-
-/* The app's glow and blueprint grid sit on <body>; the landing has its own backdrop. */
-body:has(.lp)::before,
-body:has(.lp)::after {
-  display: none;
 }
 
 .lp .card::after {
@@ -182,7 +48,7 @@ body:has(.lp)::after {
   min-height: calc(100vh - var(--header-h));
   min-height: calc(100svh - var(--header-h));
   padding: clamp(40px, 7vh, 96px) 0;
-  background: var(--lp-rule) top center / var(--lp-rule-w) 1px no-repeat;
+  background: var(--rule) top center / var(--rule-w) 1px no-repeat;
   scroll-margin-top: var(--header-h);
 }
 
@@ -325,7 +191,7 @@ body:has(.lp)::after {
 
 .lp .app-header-landing.is-scrolled {
   background:
-    var(--lp-rule) bottom center / var(--lp-rule-w) 1px no-repeat,
+    var(--rule) bottom center / var(--rule-w) 1px no-repeat,
     color-mix(in srgb, var(--bg) 86%, transparent);
   box-shadow: none;
 }
@@ -380,25 +246,6 @@ body:has(.lp)::after {
 .lp .icon-btn {
   background: transparent;
   border-color: var(--border-strong);
-}
-
-/* The header's own px sizes (components.css) grow with the page's scale. */
-.lp .app-header-inner {
-  padding-top: calc(20px * var(--z));
-  padding-bottom: calc(20px * var(--z));
-}
-
-.lp .brand-mark-name {
-  font-size: calc(18px * var(--z));
-}
-
-.lp .icon-btn {
-  width: calc(38px * var(--z));
-  height: calc(38px * var(--z));
-}
-
-.lp .header-cta {
-  min-height: calc(38px * var(--z));
 }
 
 /* The slogan must always read in full on the landing header — never ellipsised, never hidden
@@ -729,13 +576,13 @@ body:has(.lp)::after {
   gap: 16px 48px;
   align-items: baseline;
   padding: clamp(14px, 2.8vh, 36px) 0;
-  background: var(--lp-rule) top center / var(--lp-rule-w) 1px no-repeat;
+  background: var(--rule) top center / var(--rule-w) 1px no-repeat;
 }
 
 .lp-context-row:last-child {
   background:
-    var(--lp-rule) top center / var(--lp-rule-w) 1px no-repeat,
-    var(--lp-rule) bottom center / var(--lp-rule-w) 1px no-repeat;
+    var(--rule) top center / var(--rule-w) 1px no-repeat,
+    var(--rule) bottom center / var(--rule-w) 1px no-repeat;
 }
 
 .lp-context-tag {
@@ -1028,7 +875,7 @@ body:has(.lp)::after {
   display: flex;
   flex-wrap: wrap;
   gap: 8px clamp(20px, 3vw, 40px);
-  background: var(--lp-rule) bottom left / var(--lp-rule-w) 1px no-repeat;
+  background: var(--rule) bottom left / var(--rule-w) 1px no-repeat;
 }
 
 .lp-chip {
@@ -1134,7 +981,7 @@ body:has(.lp)::after {
 .lp-sample-legend {
   margin: var(--space-4) 0 0;
   padding-top: var(--space-3);
-  background: var(--lp-rule) top center / var(--lp-rule-w) 1px no-repeat;
+  background: var(--rule) top center / var(--rule-w) 1px no-repeat;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1150,7 +997,7 @@ body:has(.lp)::after {
   .lp-sample-card {
     padding: var(--space-6) 0 0;
     border-left: 0;
-    background: var(--lp-rule) top center / var(--lp-rule-w) 1px no-repeat;
+    background: var(--rule) top center / var(--rule-w) 1px no-repeat;
   }
 }
 
@@ -1177,13 +1024,13 @@ body:has(.lp)::after {
 .lp-acc-title {
   grid-column: 1;
   margin: 0;
-  background: var(--lp-rule) top center / var(--lp-rule-w) 1px no-repeat;
+  background: var(--rule) top center / var(--rule-w) 1px no-repeat;
 }
 
 .lp-acc-item:last-child .lp-acc-title {
   background:
-    var(--lp-rule) top center / var(--lp-rule-w) 1px no-repeat,
-    var(--lp-rule) bottom center / var(--lp-rule-w) 1px no-repeat;
+    var(--rule) top center / var(--rule-w) 1px no-repeat,
+    var(--rule) bottom center / var(--rule-w) 1px no-repeat;
 }
 
 .lp-acc-head {
@@ -1305,11 +1152,11 @@ body:has(.lp)::after {
   }
 
   .lp-acc-item:last-child .lp-acc-title {
-    background: var(--lp-rule) top center / var(--lp-rule-w) 1px no-repeat;
+    background: var(--rule) top center / var(--rule-w) 1px no-repeat;
   }
 
   .lp-acc-item:last-child {
-    background: var(--lp-rule) bottom center / var(--lp-rule-w) 1px no-repeat;
+    background: var(--rule) bottom center / var(--rule-w) 1px no-repeat;
   }
 
   .lp-acc-head {
@@ -1350,7 +1197,7 @@ body:has(.lp)::after {
   padding: clamp(64px, 8vw, 112px) 0 clamp(56px, 6vw, 88px);
   /* A shade darker than the page (in both themes), opaque so the dot grid stops above it. */
   background:
-    var(--lp-rule) top center / var(--lp-rule-w) 1px no-repeat,
+    var(--rule) top center / var(--rule-w) 1px no-repeat,
     color-mix(in srgb, black 9%, var(--bg));
 }
 

@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { useLocation } from "react-router-dom";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n";
-import { prefersReducedMotion } from "../settings/motion";
+import { scrollBehavior } from "../settings/motion";
 import { tabForPath } from "./mobileTabs";
 import type { TabId } from "./mobileTabs";
 import { MODULES, ModuleIcon, brandHref } from "./module/modules";
@@ -63,7 +63,7 @@ export function MobileTabBar({ brandKey }: { brandKey: string }) {
 
   const toTop = (e: MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
-    window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "instant" : "smooth" });
+    window.scrollTo({ top: 0, behavior: scrollBehavior() });
   };
 
   return createPortal(

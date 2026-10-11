@@ -149,7 +149,7 @@
 }
 
 .sample-card h3 {
-  font-size: 16px;
+  font-size: calc(16px * var(--z));
   font-weight: 600;
   letter-spacing: -0.04em;
   overflow-wrap: anywhere;
@@ -327,7 +327,7 @@
   font-family: var(--display);
   word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
   font-variant-numeric: tabular-nums;
-  font-size: 34px;
+  font-size: calc(34px * var(--z));
   font-weight: 600;
   letter-spacing: -0.07em;
   line-height: 1;
@@ -335,7 +335,7 @@
 }
 
 .score-ring-value small {
-  font-size: 11px;
+  font-size: calc(11px * var(--z));
   letter-spacing: 0.04em;
 }
 
@@ -464,11 +464,11 @@
   }
 
   .sample-card .score-ring-value {
-    font-size: 24px;
+    font-size: calc(24px * var(--z));
   }
 
   .sample-card .score-ring-value small {
-    font-size: 9.5px;
+    font-size: calc(9.5px * var(--z));
   }
 
   .sample-card.is-skeleton {
@@ -498,7 +498,7 @@
 }
 
 .pg-add-section {
-  scroll-margin-top: 80px;
+  scroll-margin-top: calc(var(--header-h) + 2px);
 }
 
 /* ---------- Add a brand ("Try your own") ---------- */
@@ -641,7 +641,7 @@
 }
 
 .pg-field-label {
-  font-size: 14px;
+  font-size: calc(14px * var(--z));
   font-weight: 600;
   color: var(--text-h);
 }

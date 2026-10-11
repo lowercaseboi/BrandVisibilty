@@ -84,8 +84,8 @@
    Right padding leaves room for the selected card's connector notch (below). */
 .gaps-list-pane {
   position: sticky;
-  top: 92px;
-  max-height: calc(100dvh - 108px);
+  top: calc(var(--header-h) + 14px);
+  max-height: calc(100dvh - var(--header-h) - 30px);
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 2px 12px 12px 2px;
@@ -146,7 +146,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  scroll-margin-top: 92px;
+  scroll-margin-top: calc(var(--header-h) + 14px);
 }
 
 .gaps-evidence-pane > .module-section-head {
