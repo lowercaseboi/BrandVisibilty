@@ -2,6 +2,8 @@ import { useId, useState } from "react";
 import type { Deliverable, DeliverableKind, DeliverablePatch } from "../../api/types";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n";
+import { Collapse } from "../ui/Collapse";
+import { DisclosureMark } from "../ui/DisclosureMark";
 import { IssueList } from "./IssueList";
 import { containsPhrase, parseIssue, removePhrase } from "./studioFlow";
 import { SaveIndicator } from "./VariantEditor";
@@ -70,6 +72,8 @@ function Piece({
 }) {
   const t = useT();
   const bodyId = useId();
+  const codeId = useId();
+  const [codeOpen, setCodeOpen] = useState(false);
   // The backend's claim check lists unsupported numbers / superlatives in this text under
   // extra.claim_issues (newline-joined), checked when drafted: one whose words are gone is fixed.
   const claims = (d.extra?.claim_issues ?? "")
@@ -109,14 +113,19 @@ function Piece({
       <IssueList issues={claims} text={d.body} disabled={disabled} onRemovePhrase={(phrase) => onChange(index, { body: removePhrase(d.body, phrase) })} />
       {d.extra?.jsonld && (
         <div className="cs-code">
-          <span className="field-head">
-            <span className="eyebrow">{t("board.campaign.web.jsonld")}</span>
-            <CopyButton text={d.extra.jsonld} label={t("board.campaign.web.copyJsonld")} />
-          </span>
-          <pre>
-            <code>{d.extra.jsonld}</code>
-          </pre>
-          <p className="field-hint">{t("board.campaign.web.jsonldHint")}</p>
+          <button type="button" className="link-quiet cs-code-toggle" aria-expanded={codeOpen} aria-controls={codeId} onClick={() => setCodeOpen((o) => !o)}>
+            <DisclosureMark open={codeOpen} />
+            {t("board.campaign.web.jsonld")}
+          </button>
+          <Collapse open={codeOpen} id={codeId}>
+            <span className="field-head">
+              <span className="field-hint">{t("board.campaign.web.jsonldHint")}</span>
+              <CopyButton text={d.extra.jsonld} label={t("board.campaign.web.copyJsonld")} />
+            </span>
+            <pre>
+              <code>{d.extra.jsonld}</code>
+            </pre>
+          </Collapse>
         </div>
       )}
       {extras.length > 0 && (

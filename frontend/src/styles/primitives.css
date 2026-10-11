@@ -33,7 +33,7 @@
   max-width: 100%;
   padding: 2px 10px;
   border: 1px solid color-mix(in srgb, var(--tone, var(--muted)) 50%, transparent);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-xs);
   background: color-mix(in srgb, var(--tone, var(--muted)) 12%, transparent);
   color: var(--tone, var(--muted));
   font-size: var(--fs-xs);

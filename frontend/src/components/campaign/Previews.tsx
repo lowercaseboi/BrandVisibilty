@@ -1,8 +1,9 @@
-import { Fragment, useState } from "react";
+import { Fragment } from "react";
 import type { ReactNode } from "react";
 import { mediaUrl } from "../../api/client";
 import type { Asset, ImageFormat, Variant } from "../../api/types";
 import { useT } from "../../i18n";
+import { ReadMore } from "../ui/ReadMore";
 import { composePost, latestAssetByFormat } from "./campaignModel";
 
 // Lightweight look-alike mockups of each app, drawn from tokens (they follow the dark/light theme)
@@ -122,20 +123,15 @@ export interface PreviewProps {
   onPickAsset?: (assetId: string) => void;
 }
 
+/** The post text, clamped to `lines` lines with the app's "more" toggle (measured, so short text has none). */
 function Truncated({ text, lines }: { text: string; lines: number }) {
-  const t = useT();
-  const [open, setOpen] = useState(false);
-  const long = text.split("\n").length > lines || text.length > lines * 60;
   return (
     <div className="pv-text">
-      <p className={open || !long ? "" : "pv-clamp"} style={{ WebkitLineClamp: lines }}>
-        <RichText text={text} />
-      </p>
-      {long && (
-        <button type="button" className="pv-more" onClick={() => setOpen((o) => !o)}>
-          {open ? t("board.campaign.preview.less") : t("board.campaign.preview.more")}
-        </button>
-      )}
+      <ReadMore lines={lines}>
+        <p>
+          <RichText text={text} />
+        </p>
+      </ReadMore>
     </div>
   );
 }

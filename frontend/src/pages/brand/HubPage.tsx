@@ -15,6 +15,7 @@ import { ModuleCard } from "../../components/hub/ModuleCard";
 import { OnboardingChecklist } from "../../components/hub/OnboardingChecklist";
 import { AnalysisPreview, DetailsPreview, GapsPreview, PreviewSkeleton } from "../../components/hub/previews";
 import { useT } from "../../i18n";
+import { Details } from "../../settings/details";
 import { useIsPhone } from "../../settings/useMediaQuery";
 import { useBrandData } from "./BrandContext";
 
@@ -142,7 +143,11 @@ export function HubPage() {
 
       {status === "error" && (
         <div className="alert alert-error" role="alert">
-          {t("hub.error.load")} <span className="small">{data.error}</span>
+          {t("hub.error.load")} {t("hub.error.retry")}
+          <Details>
+            {" "}
+            <span className="small">{data.error}</span>
+          </Details>
         </div>
       )}
 

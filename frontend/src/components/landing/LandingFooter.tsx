@@ -6,7 +6,7 @@ import { useT } from "../../i18n";
 export function LandingFooter() {
   const t = useT();
   return (
-    <footer className="lp-band-dark lp-footer">
+    <footer className="lp-footer">
       <div className="lp-container lp-footer-inner">
         <div className="lp-footer-brand">
           <div className="lp-footer-word">

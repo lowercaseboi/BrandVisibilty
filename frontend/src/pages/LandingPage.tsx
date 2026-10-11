@@ -5,21 +5,22 @@ import { Hero } from "../components/landing/Hero";
 import { LandingFooter } from "../components/landing/LandingFooter";
 import { Sample } from "../components/landing/Sample";
 import { ScrollFab } from "../components/landing/ScrollFab";
-import { ScrollProgress } from "../components/landing/ScrollProgress";
+import { ScrollProgress } from "../components/ui/ScrollProgress";
 import { WhyItMatters } from "../components/landing/WhyItMatters";
 import { Workflow } from "../components/landing/Workflow";
 
 /**
- * Public marketing page at "/". Recreates the team's live demo site for BrandVisibility:
- * measuring how often AI assistants recommend a brand for real customer questions.
+ * Public marketing page at "/". Measures how often AI assistants recommend a brand for real
+ * customer questions.
  *
- * `on-band-dark`: in dark theme this pins every shared control (chips, cards, buttons, the score
- * glass) to the warm-grey band palette + amber, instead of the app's own dark surfaces — see
- * tokens.css's `.on-band*` scope classes. It's a no-op in light theme.
+ * One continuous surface that follows the light/dark toggle: each module fills one window,
+ * separated by a visible hairline rather than alternating bands. The look itself (flat chrome, teal /
+ * amber accent, dot grid, 1.2x scale) is global — tokens.css, base.css, scale.css — and shared with
+ * the app; landing.css only holds the page's own layout.
  */
 export function LandingPage() {
   return (
-    <div className="lp on-band-dark">
+    <div className="lp">
       <ScrollProgress />
       <AppHeader variant="landing" />
       <main>

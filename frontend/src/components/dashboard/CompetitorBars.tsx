@@ -1,10 +1,10 @@
 import type { MentionSummary } from "../../api/types";
 import { T, useT } from "../../i18n";
+import { Details } from "../../settings/details";
 import { mentionRows } from "./helpers";
 
-/** "Who AI recommends": how many answers named you and each competitor you listed. Body only — the
- * caller (the Analysis module's "Deeper numbers") supplies the heading. `competitiveLeaderName` in
- * ./helpers gives a one-line summary from the same props. */
+/** "Who AI recommends instead": how many answers named you and each competitor you listed. Body only —
+ * the caller supplies the heading. The "ranked first" counts are for the Analytical view. */
 export function CompetitorBars({
   summary,
   entities,
@@ -26,7 +26,7 @@ export function CompetitorBars({
   return (
     <>
       <p className="section-note">{t.n("dashboard.who.intro", total)}</p>
-      <div className="card who-card">
+      <div>
         {clearLeader && (
           <p className="who-lead">
             {leader.isSelf ? (
@@ -50,7 +50,11 @@ export function CompetitorBars({
                 <div className="who-track" aria-hidden="true">
                   <div className="who-fill" style={{ width: `${frac * 100}%` }} />
                 </div>
-                {r.first > 0 && <span className="who-first">{t.n("dashboard.who.first", r.first)}</span>}
+                {r.first > 0 && (
+                  <Details>
+                    <span className="who-first">{t.n("dashboard.who.first", r.first)}</span>
+                  </Details>
+                )}
               </li>
             );
           })}

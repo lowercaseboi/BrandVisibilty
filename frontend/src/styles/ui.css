@@ -1,0 +1,191 @@
+/* Shared UI primitives (components/ui/*): the pieces the landing page introduced and the whole
+   product now reuses — reveal-on-scroll, collapse, read-more, quiet links, eyebrows and display
+   headings, the scroll progress bar. Tokens only (tokens.css / scale.css). */
+
+/* ---------- reveal on scroll ---------- */
+
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity var(--dur-slow) var(--ease),
+    transform var(--dur-slow) var(--ease);
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* During a view transition the morph is the entrance (like .page-enter / .stagger). */
+:root[data-vt] .reveal {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+
+/* ---------- collapse (grid rows 0fr → 1fr) ---------- */
+
+.collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden; /* after the collapse: out of the tab order and the accessibility tree */
+  transition:
+    grid-template-rows var(--dur-slow) var(--ease),
+    opacity var(--dur-slow) var(--ease),
+    visibility 0s var(--dur-slow);
+}
+
+.collapse[data-open="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.collapse-inner {
+  min-height: 0;
+  overflow: hidden;
+  /* room for focus rings that would otherwise be clipped */
+  margin: -4px;
+  padding: 4px;
+}
+
+/* The Analytical view's blocks ease in instead of popping. */
+.details-in {
+  animation: rise var(--dur-med) var(--ease) backwards;
+}
+
+/* ---------- disclosure mark: plus that becomes a minus ---------- */
+
+.disclosure-mark {
+  position: relative;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+  transition: color var(--dur) var(--ease);
+}
+
+.disclosure-mark::before,
+.disclosure-mark::after {
+  content: "";
+  position: absolute;
+  background: currentColor;
+  transition: transform var(--dur-med) var(--ease);
+}
+
+.disclosure-mark::before {
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+}
+
+.disclosure-mark::after {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+}
+
+.disclosure-mark[data-open="true"] {
+  color: var(--accent-text);
+}
+
+.disclosure-mark[data-open="true"]::after {
+  transform: scaleY(0);
+}
+
+/* ---------- read more ---------- */
+
+.read-more.is-clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--read-more-lines, 5);
+  line-clamp: var(--read-more-lines, 5);
+  overflow: hidden;
+}
+
+.read-more-btn {
+  margin-top: var(--space-3);
+}
+
+/* ---------- quiet link: no box, an underline that warms up on hover ---------- */
+
+.link-quiet {
+  display: inline;
+  padding: 0 0 4px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: none;
+  color: var(--text-h);
+  font: inherit;
+  font-size: 0.95rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    border-color var(--dur) var(--ease),
+    color var(--dur) var(--ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .link-quiet:hover {
+    border-bottom-color: var(--accent);
+  }
+}
+
+/* ---------- eyebrow + display heading ---------- */
+
+.eyebrow {
+  display: block;
+  margin: 0 0 clamp(12px, 2.4vh, 28px);
+  font-family: var(--sans);
+  font-size: var(--fs-2xs);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.h-display {
+  display: block;
+  margin: 0;
+  font-family: var(--display);
+  word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
+  font-size: clamp(1.9rem, 3.6vw, 3rem);
+  line-height: 1.12;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  max-width: 20ch;
+  color: var(--text-h);
+}
+
+/* ---------- scroll progress ---------- */
+
+.scroll-progress {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 39;
+  pointer-events: none;
+  background: transparent;
+}
+
+.scroll-progress-fill {
+  height: 100%;
+  width: 100%;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-progress {
+    display: none;
+  }
+}

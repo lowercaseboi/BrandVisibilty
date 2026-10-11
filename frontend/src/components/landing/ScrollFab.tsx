@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useT } from "../../i18n";
-import { prefersReducedMotion } from "../../settings/motion";
+import { scrollBehavior } from "../../settings/motion";
 
 /** How close to the bottom of the page counts as "there" — flips the arrow to point up. */
 const BOTTOM_THRESHOLD_PX = 48;
@@ -37,7 +37,7 @@ export function ScrollFab() {
   }, []);
 
   const onClick = () => {
-    const behavior: ScrollBehavior = prefersReducedMotion() ? "auto" : "smooth";
+    const behavior: ScrollBehavior = scrollBehavior();
     if (atBottom) {
       window.scrollTo({ top: 0, behavior });
     } else {

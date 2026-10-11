@@ -31,13 +31,13 @@ export const common = {
   "theme.toDark": "Switch to dark theme",
   "theme.current": "Theme: {theme}",
 
-  "details.label": "Show detailed metrics",
-  "details.hint": "Component scores, confidence intervals and diagnostic tables",
+  "details.label": "Analytical view",
+  "details.hint": "Show the scores, ranges and tables behind each result",
   // Confirmations after the header switch is pressed.
-  "details.on": "Detailed metrics shown",
-  "details.off": "Detailed metrics hidden",
+  "details.on": "Analytical view on",
+  "details.off": "Analytical view off",
   // Small label in the header while detailed metrics are on.
-  "details.analyst": "Analyst view",
+  "details.analyst": "Analytical view",
 
   "footer.text": "Measures how often AI assistants recommend your brand in response to real customer questions.",
 

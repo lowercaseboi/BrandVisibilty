@@ -5,6 +5,7 @@ import type { AccountChoice } from "../../api/client";
 import type { AccountStatus, ChannelId } from "../../api/types";
 import { humanize } from "../../format";
 import { useT } from "../../i18n";
+import { Details, useDetails } from "../../settings/details";
 import { EmptyState } from "../EmptyState";
 import { AccountDialog } from "./AccountDialog";
 import { choiceKindKey, platformKey } from "./accountsModel";
@@ -30,6 +31,7 @@ export function ChooseAccountDialog({
   fallbackFocus: () => HTMLElement | null;
 }) {
   const t = useT();
+  const { showDetails } = useDetails();
   const uid = useId();
   const platform = t(platformKey(channel));
   const kindLabel = (kind: string) => {
@@ -67,7 +69,7 @@ export function ChooseAccountDialog({
       else setBusy(false);
     } catch (err) {
       setBusy(false);
-      setError(accountErrorText(t, err));
+      setError(accountErrorText(t, err, showDetails));
     }
   };
 
@@ -83,8 +85,11 @@ export function ChooseAccountDialog({
             tone="error"
             role="alert"
             title={t("brandinfo.accounts.choose.errorTitle")}
-            body={t("brandinfo.accounts.choose.error", { message: loadError })}
-          />
+          >
+            <Details>
+              <p className="small muted">{t("brandinfo.accounts.choose.error", { message: loadError })}</p>
+            </Details>
+          </EmptyState>
         )}
         {choices && choices.length === 0 && (
           <EmptyState compact as="p" icon="search" title={t("brandinfo.accounts.choose.emptyTitle")} body={t("brandinfo.accounts.choose.empty")} />

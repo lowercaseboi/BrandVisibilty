@@ -25,7 +25,7 @@
 }
 
 .sheet::backdrop {
-  background: color-mix(in srgb, var(--band-dark) 55%, transparent);
+  background: color-mix(in srgb, black 50%, transparent);
   backdrop-filter: blur(2px);
   animation: fade var(--dur-med) var(--ease-out);
 }
@@ -157,17 +157,12 @@
     max-height: calc(100dvh - 56px - env(safe-area-inset-top));
     margin: auto 0 0;
     border-bottom: 0;
-    border-radius: 14px 14px 0 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     animation: sheet-up var(--dur-med) var(--ease-out);
   }
 
   .sheet.card {
     margin: auto 0 0;
-  }
-
-  /* Corner ticks read as clutter on a sheet's rounded top. */
-  .sheet.card::after {
-    display: none;
   }
 
   .sheet[data-closing] {

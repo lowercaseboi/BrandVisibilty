@@ -1,8 +1,10 @@
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import type { Observation } from "../../api/types";
 import { useIntentLabel } from "../../format";
 import { useFormat, useT } from "../../i18n";
 import { EmptyState } from "../EmptyState";
+import { Collapse } from "../ui/Collapse";
+import { DisclosureMark } from "../ui/DisclosureMark";
 import { ObservationCard } from "./ObservationCard";
 import { NO_FILTER, distinct, filterObservations, isFiltered, mentionsBrand } from "./filter";
 import type { EvidenceFilter } from "./filter";
@@ -30,10 +32,11 @@ export function EvidenceLegend() {
 }
 
 /**
- * The browsable list of verbatim AI responses: text search, question type, AI and "only mentioning
- * you" filters over `observations` (already narrowed to a gap's evidence by the caller), then the
- * highlighted response cards. Filter state is local — key this component by the current selection
- * so picking another gap starts from a clean slate.
+ * The browsable list of verbatim AI responses: the count and legend always, text search, question
+ * type, AI and "only mentioning you" filters behind a quiet "Filter" toggle, over `observations`
+ * (already narrowed to a gap's evidence by the caller), then the highlighted response cards.
+ * Filter state is local — key this component by the current selection so picking another gap
+ * starts from a clean slate.
  */
 export function EvidenceBrowser({
   observations,
@@ -49,6 +52,8 @@ export function EvidenceBrowser({
   const intentLabel = useIntentLabel();
   const [filter, setFilter] = useState<EvidenceFilter>(NO_FILTER);
   const [limit, setLimit] = useState(PAGE);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterId = useId();
 
   const intents = useMemo(() => distinct(observations, (o) => o.intent_type), [observations]);
   const providers = useMemo(() => distinct(observations, (o) => o.provider_id), [observations]);
@@ -64,43 +69,17 @@ export function EvidenceBrowser({
 
   return (
     <div className="evidence-browser">
-      <div className="filters pg-filters evidence-filters">
-        <label className="evidence-search">
-          <span className="small">{t("pages.answers.search")}</span>
-          <input
-            className="search-input"
-            type="search"
-            value={filter.text}
-            onChange={(e) => update({ text: e.target.value })}
-            placeholder={t("pages.answers.searchPlaceholder")}
-          />
-        </label>
-        <label>
-          <span>{t("pages.answers.type")}</span>
-          <select value={filter.intent} onChange={(e) => update({ intent: e.target.value })}>
-            <option value="all">{t("pages.answers.allTypes")}</option>
-            {intents.map((i) => (
-              <option key={i} value={i}>
-                {intentLabel(i)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span>{t("pages.answers.ai")}</span>
-          <select value={filter.provider} onChange={(e) => update({ provider: e.target.value })}>
-            <option value="all">{t("pages.answers.allAis")}</option>
-            {providers.map((p) => (
-              <option key={p} value={p}>
-                {aiName(p)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="toggle">
-          <input type="checkbox" checked={filter.onlyBrand} onChange={(e) => update({ onlyBrand: e.target.checked })} />
-          <span>{t("pages.answers.onlyMine")}</span>
-        </label>
+      <div className="evidence-bar">
+        <button
+          type="button"
+          className="link-quiet evidence-filter-toggle"
+          aria-expanded={filterOpen}
+          aria-controls={filterId}
+          onClick={() => setFilterOpen((v) => !v)}
+        >
+          <DisclosureMark open={filterOpen} />
+          {t("dashboard.evidence.filter")}
+        </button>
         <span className="muted small filters-count" aria-live="polite">
           {t.n("pages.answers.count", observations.length, {
             shown: fmt.number(visible.length),
@@ -108,6 +87,46 @@ export function EvidenceBrowser({
           })}
         </span>
       </div>
+      <Collapse open={filterOpen} id={filterId}>
+        <div className="filters pg-filters evidence-filters">
+          <label className="evidence-search">
+            <span className="small">{t("pages.answers.search")}</span>
+            <input
+              className="search-input"
+              type="search"
+              value={filter.text}
+              onChange={(e) => update({ text: e.target.value })}
+              placeholder={t("pages.answers.searchPlaceholder")}
+            />
+          </label>
+          <label>
+            <span>{t("pages.answers.type")}</span>
+            <select value={filter.intent} onChange={(e) => update({ intent: e.target.value })}>
+              <option value="all">{t("pages.answers.allTypes")}</option>
+              {intents.map((i) => (
+                <option key={i} value={i}>
+                  {intentLabel(i)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>{t("pages.answers.ai")}</span>
+            <select value={filter.provider} onChange={(e) => update({ provider: e.target.value })}>
+              <option value="all">{t("pages.answers.allAis")}</option>
+              {providers.map((p) => (
+                <option key={p} value={p}>
+                  {aiName(p)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="toggle">
+            <input type="checkbox" checked={filter.onlyBrand} onChange={(e) => update({ onlyBrand: e.target.checked })} />
+            <span>{t("pages.answers.onlyMine")}</span>
+          </label>
+        </div>
+      </Collapse>
 
       <EvidenceLegend />
 
@@ -135,7 +154,7 @@ export function EvidenceBrowser({
       )}
 
       {rest > 0 && (
-        <button type="button" className="btn btn-secondary evidence-more" onClick={() => setLimit((n) => n + PAGE)}>
+        <button type="button" className="link-quiet read-more-btn evidence-more" onClick={() => setLimit((n) => n + PAGE)}>
           {t.n("modules.evidence.showMore", Math.min(PAGE, rest))}
         </button>
       )}

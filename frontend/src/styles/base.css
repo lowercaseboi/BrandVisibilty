@@ -52,38 +52,46 @@ html:lang(mr) * {
   letter-spacing: 0 !important;
 }
 
-/* Soft glow behind the whole app: gives the glass surfaces something to frost.
-   Static on purpose — moving it would force every blurred card to re-render. */
+/* Page backdrop: a faint dot grid, fixed and static (no scroll cost), fading toward the edges. The
+   grid pitch scales with --z (scale.css). `html` paints --bg; these sit above it, behind content. */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background:
-    radial-gradient(42% 38% at 8% 0%, var(--glow-1), transparent 70%),
-    radial-gradient(38% 34% at 96% 6%, var(--glow-2), transparent 70%),
-    radial-gradient(50% 44% at 78% 100%, var(--glow-3), transparent 72%);
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--text-h) 17.8%, transparent) 1px, transparent 1.4px);
+  background-size: calc(30px * var(--z)) calc(30px * var(--z));
+  -webkit-mask-image: radial-gradient(ellipse 85% 75% at 50% 35%, #000 25%, transparent 100%);
+  mask-image: radial-gradient(ellipse 85% 75% at 50% 35%, #000 25%, transparent 100%);
 }
 
-/* Faint blueprint grid on top of the glow, fading out towards the bottom and sides: minor lines
-   every 48px, a stronger major line every 4th (192px) — a drafting-table grid, not a checkerboard. */
+/* Near a real mouse cursor the same dots (same grid, drawn again on top) brighten and grow, fading
+   out with distance. useDotSpotlight (settings/) only sets --spot-x/--spot-y and toggles
+   `html.is-pointing`. */
 body::after {
   content: "";
   position: fixed;
-  inset: 0 -12%; /* wider than the viewport so the tilted plane still covers the edges */
+  inset: 0;
   z-index: -1;
   pointer-events: none;
-  /* A gentle backwards tilt: lines converge towards the bottom for a sense of depth. */
-  transform: perspective(1100px) rotateX(10deg);
-  transform-origin: 50% 0;
-  background:
-    linear-gradient(to right, var(--grid-line-major) 1px, transparent 1px) 0 0 / 192px 192px,
-    linear-gradient(to bottom, var(--grid-line-major) 1px, transparent 1px) 0 0 / 192px 192px,
-    linear-gradient(to right, var(--grid-line) 1px, transparent 1px) 0 0 / 48px 48px,
-    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px) 0 0 / 48px 48px;
-  mask-image: radial-gradient(ellipse 90% 75% at 50% 0%, #000 35%, transparent 100%);
-  -webkit-mask-image: radial-gradient(ellipse 90% 75% at 50% 0%, #000 35%, transparent 100%);
+  opacity: 0;
+  transition: opacity var(--dur-slow) var(--ease);
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--text-h) 49.5%, transparent) 1.3px, transparent 1.9px);
+  background-size: calc(30px * var(--z)) calc(30px * var(--z));
+  -webkit-mask-image: radial-gradient(circle calc(190px * var(--z)) at var(--spot-x, 50%) var(--spot-y, 50%), #000, transparent);
+  mask-image: radial-gradient(circle calc(190px * var(--z)) at var(--spot-x, 50%) var(--spot-y, 50%), #000, transparent);
+}
+
+:root.is-pointing body::after {
+  opacity: 1;
+}
+
+@media print {
+  body::before,
+  body::after {
+    display: none;
+  }
 }
 
 #root {
@@ -149,7 +157,7 @@ h2 {
 }
 
 h3 {
-  font-size: 15px;
+  font-size: calc(15px * var(--z));
   font-weight: 600;
   margin: 0;
 }
@@ -210,7 +218,7 @@ pre {
 
 kbd {
   display: inline-block;
-  font-size: 11px;
+  font-size: calc(11px * var(--z));
   line-height: 1.4;
   padding: 0 5px;
   border: 1px solid var(--border-strong);
@@ -288,7 +296,7 @@ textarea {
 input,
 select,
 textarea {
-  font-size: 13.5px;
+  font-size: calc(13.5px * var(--z));
   padding: 8px 12px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-strong);
@@ -470,7 +478,7 @@ section > .metric-cards {
   input,
   select,
   textarea {
-    font-size: 16px;
+    font-size: calc(16px * var(--z));
   }
 
   .app {

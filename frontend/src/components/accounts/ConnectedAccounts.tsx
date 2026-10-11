@@ -4,6 +4,7 @@ import { chooseAccount, disconnectAccount, listAccountChoices, startAccountOAuth
 import type { AccountChoice } from "../../api/client";
 import type { AccountStatus, ChannelId } from "../../api/types";
 import { useFormat, useT } from "../../i18n";
+import { Details, useDetails } from "../../settings/details";
 import { EmptyState } from "../EmptyState";
 import { toast } from "../Toaster";
 import { AccountCard } from "./AccountCard";
@@ -43,6 +44,7 @@ const cardHeading = (channel: ChannelId) => () => document.getElementById(`acc-c
  */
 export function ConnectedAccounts({ brandKey }: { brandKey: string }) {
   const t = useT();
+  const { showDetails } = useDetails();
   const fmt = useFormat();
   const location = useLocation();
   const navigate = useNavigate();
@@ -63,7 +65,7 @@ export function ConnectedAccounts({ brandKey }: { brandKey: string }) {
     const name = t(platformKey(ret.channel));
     if (ret.kind === "connected") return { [ret.channel]: { tone: "ok", text: t("brandinfo.accounts.toast.connected", { platform: name }) } };
     const known = connectReasonKey(ret.reason);
-    const reason = known ? t(known) : ret.reason;
+    const reason = known ? t(known) : "";
     const text = reason
       ? t("brandinfo.accounts.returnError", { platform: name, reason })
       : t("brandinfo.accounts.returnErrorPlain", { platform: name });
@@ -72,7 +74,7 @@ export function ConnectedAccounts({ brandKey }: { brandKey: string }) {
 
   const setNote = (c: ChannelId, note: CardNote | null) => setNotes((n) => ({ ...n, [c]: note ?? undefined }));
   const setBusyFor = (c: ChannelId, text: string | null) => setBusy((b) => ({ ...b, [c]: text ?? undefined }));
-  const describe = (err: unknown) => accountErrorText(t, err);
+  const describe = (err: unknown) => accountErrorText(t, err, showDetails);
 
   const handled = useRef(false);
   const { pathname, search, hash } = location;
@@ -239,13 +241,16 @@ export function ConnectedAccounts({ brandKey }: { brandKey: string }) {
           tone="error"
           role="alert"
           title={t("brandinfo.accounts.errorTitle")}
-          body={t("brandinfo.accounts.error", { message: error ?? "" })}
           primary={
             <button type="button" className="btn btn-small btn-secondary" onClick={() => void reload()}>
               {t("brandinfo.accounts.retry")}
             </button>
           }
-        />
+        >
+          <Details>
+            <p className="small muted">{t("brandinfo.accounts.error", { message: error ?? "" })}</p>
+          </Details>
+        </EmptyState>
       )}
 
       {offer && (

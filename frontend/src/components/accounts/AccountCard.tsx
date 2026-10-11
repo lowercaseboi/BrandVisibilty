@@ -1,5 +1,6 @@
 import type { AccountStatus } from "../../api/types";
 import { useFormat, useT } from "../../i18n";
+import { Details } from "../../settings/details";
 import { ChannelIcon } from "./ChannelIcon";
 import { SETUP_DOC_PATH, accountView, platformKey, setupDocUrl } from "./accountsModel";
 import type { AccountTone } from "./accountsModel";
@@ -42,7 +43,7 @@ export function AccountCard({
   const disabled = busy !== null;
 
   return (
-    <li className={`acc-card acc-tone-${view.tone}`} aria-busy={disabled || undefined}>
+    <li className="acc-card" aria-busy={disabled || undefined}>
       <div className="acc-card-head">
         <span className="acc-card-icon">
           <ChannelIcon channel={status.channel} />
@@ -59,23 +60,26 @@ export function AccountCard({
           {t(view.expiry === "soon" ? "brandinfo.accounts.expiresSoon" : "brandinfo.accounts.expiresOn", { date: fmt.date(status.expires_at) })}
         </p>
       )}
-      {status.state === "connected" && (status.method === "oauth" || status.method === "manual") && (
-        <p className="acc-card-sub">{t(status.method === "oauth" ? "brandinfo.accounts.via.oauth" : "brandinfo.accounts.via.manual", { platform })}</p>
-      )}
-      {view.showDetail && status.detail && (
-        <details className="acc-card-sub acc-tech">
-          <summary>{t("brandinfo.accounts.techDetail")}</summary>
-          <p>{status.detail}</p>
-        </details>
-      )}
-      {view.docs && (
-        <p className="acc-card-sub">
-          {t("brandinfo.accounts.docs")}{" "}
-          <a href={setupDocUrl(status.channel)} target="_blank" rel="noreferrer">
-            {SETUP_DOC_PATH}
-          </a>
-        </p>
-      )}
+      {/* How it was connected, the platform's raw detail and the setup guide are Analytical-view only. */}
+      <Details>
+        {status.state === "connected" && (status.method === "oauth" || status.method === "manual") && (
+          <p className="acc-card-sub">{t(status.method === "oauth" ? "brandinfo.accounts.via.oauth" : "brandinfo.accounts.via.manual", { platform })}</p>
+        )}
+        {view.showDetail && status.detail && (
+          <div className="acc-card-sub acc-tech">
+            <strong>{t("brandinfo.accounts.techDetail")}</strong>
+            <p>{status.detail}</p>
+          </div>
+        )}
+        {view.docs && (
+          <p className="acc-card-sub">
+            {t("brandinfo.accounts.docs")}{" "}
+            <a href={setupDocUrl(status.channel)} target="_blank" rel="noreferrer">
+              {SETUP_DOC_PATH}
+            </a>
+          </p>
+        )}
+      </Details>
 
       {note && (
         <div className={`acc-note acc-note-${note.tone}`} role={note.tone === "err" ? "alert" : "status"}>

@@ -2,11 +2,13 @@ import { useId, useMemo, useRef, useState } from "react";
 import { BOARD_COLUMNS } from "../../api/types";
 import type { BoardColumn, Observation } from "../../api/types";
 import { T, useFormat, useT } from "../../i18n";
-import { Details } from "../../settings/details";
+import { Details, useDetails } from "../../settings/details";
 import { useIsPhone } from "../../settings/useMediaQuery";
 import { InfoTip } from "../InfoTip";
 import { Sheet } from "../Sheet";
 import { toast } from "../Toaster";
+import { Collapse } from "../ui/Collapse";
+import { DisclosureMark } from "../ui/DisclosureMark";
 import { actionCopy } from "../dashboard/actions";
 import { campaignHref, useCampaignIndex } from "../campaign/CampaignIndex";
 import { statusView } from "../campaign/campaignModel";
@@ -22,6 +24,7 @@ import {
   impactOf,
   isExportOnly,
   localizeReasoningParams,
+  plainFinding,
   plainWhy,
   reasoningMessages,
 } from "./recView";
@@ -44,9 +47,10 @@ export interface RecCardProps {
 /**
  * One recommendation, in plain language for a shop owner: What to do (the title), Why (one
  * sentence from the gap and a real customer question), What it could change, Effort in time,
- * Evidence (n of 10 responses) and one big next step (create / open its campaign). Steps and the
- * full reasoning fold away; IDs, the priority formula and the class sit behind "Show the numbers
- * behind this". Every card links to the responses and gap it traces to (PRD AC-7). A ghost card
+ * how many AI answers it was seen in and one big next step (create / open its campaign). The steps
+ * fold away; the reasoning maths, the evidence meter, IDs, the priority formula and the class
+ * appear only in the Analytical view. Every card links to the responses and gap it traces to
+ * (PRD AC-7). A ghost card
  * (no current recommendation) is shown faded as "resolved in latest run" and can be removed.
  * The status is a compact select; on phones, a chip that opens a "Move to…" sheet.
  */
@@ -128,7 +132,7 @@ export function RecCard(props: RecCardProps) {
         <>
           <p className="rec-card-note">{t("board.card.resolvedNote")}</p>
           <div className="rec-card-foot">
-            <button type="button" className="btn-link rec-remove" aria-label={t("board.card.removeLabel", { title })} onClick={onRemove}>
+            <button type="button" className="link-quiet rec-remove" aria-label={t("board.card.removeLabel", { title })} onClick={onRemove}>
               {t("board.card.remove")}
             </button>
           </div>
@@ -202,6 +206,7 @@ type LiveProps = Omit<RecCardProps, "onStatus" | "onRemove">;
 function LiveCardBody({ card, title, brandKey, runId, entities, labelOf, observations, campaignsReady }: LiveProps) {
   const t = useT();
   const fmt = useFormat();
+  const { showDetails } = useDetails();
   const [open, setOpen] = useState(false);
   const moreId = useId();
 
@@ -214,9 +219,9 @@ function LiveCardBody({ card, title, brandKey, runId, entities, labelOf, observa
   const why = useMemo(
     () =>
       leadGap
-        ? (plainWhy(leadGap, observations, entities, labelOf) ?? gapFinding(leadGap, t, fmt, entities, labelOf))
-        : { key: "dashboard.why.unknown" as const },
-    [leadGap, observations, entities, labelOf, t, fmt],
+        ? (plainWhy(leadGap, observations, entities, labelOf) ?? plainFinding(leadGap, t, entities, labelOf))
+        : { key: "board.finding.unknown" as const },
+    [leadGap, observations, entities, labelOf, t],
   );
   const reason = useMemo(
     () => reasoningMessages(rec, (p) => localizeReasoningParams(p, t, fmt, labelOf)),
@@ -235,24 +240,28 @@ function LiveCardBody({ card, title, brandKey, runId, entities, labelOf, observa
   const creating = campaigns?.creating === card.key;
   const exportOnly = isExportOnly(card.action);
 
+  // The gain in words ("a lot"); the points and the tip explaining the estimate are Analytical-view only.
   let impactText: string;
-  let impactTip: { text: string; label: string } | null = null;
+  let impactTip: { text: string; label: string };
   if (impact.kind === "points") {
-    impactText = t.n("board.card.gain", impact.n, { n: fmt.number(impact.n) });
+    impactText = showDetails
+      ? t.n("board.card.gain", impact.n, { n: fmt.number(impact.n) })
+      : t(impact.n >= 10 ? "board.card.gainLot" : impact.n >= 3 ? "board.card.gainSome" : "board.card.gainLittle");
     impactTip = { text: t("board.card.gainTip"), label: t("board.card.gainTipLabel") };
   } else if (impact.kind === "small") {
-    impactText = t("board.card.gainSmall");
+    impactText = t(showDetails ? "board.card.gainSmall" : "board.card.gainLittle");
     impactTip = { text: t("board.card.gainTip"), label: t("board.card.gainTipLabel") };
   } else if (impact.kind === "flat") {
     impactText = t("board.card.flat");
     impactTip = { text: t("board.card.flatTip"), label: t("board.card.notScoredTipLabel") };
   } else {
-    impactText = t("board.card.notScored");
+    impactText = t(impact.reason === "source" ? "board.card.notScoredSource" : "board.card.notScored");
     impactTip = {
       text: t(impact.reason === "source" ? "board.card.notScoredSourceTip" : "board.card.notScoredTip"),
       label: t("board.card.notScoredTipLabel"),
     };
   }
+  const hasMore = !!copy || showDetails;
 
   return (
     <>
@@ -264,17 +273,19 @@ function LiveCardBody({ card, title, brandKey, runId, entities, labelOf, observa
           </dd>
         </div>
         <div className="rec-fact">
-          <dt className="eyebrow">{t("board.card.change")}</dt>
+          <dt className="sr-only">{t("board.card.change")}</dt>
           <dd className={`rec-gain is-${impact.kind}`}>
             {impactText}
-            {impactTip && <InfoTip text={impactTip.text} label={impactTip.label} />}
+            <Details>
+              <InfoTip text={impactTip.text} label={impactTip.label} />
+            </Details>
           </dd>
         </div>
       </dl>
 
-      <dl className="rec-facts rec-facts-pair">
-        <div className="rec-fact">
-          <dt className="eyebrow">{t("board.card.effort")}</dt>
+      <dl className="rec-meta">
+        <div>
+          <dt className="sr-only">{t("board.card.effort")}</dt>
           <dd>
             <span className={`effort-meter effort-${effortLevel(rec.effort)}`} aria-hidden="true">
               <i />
@@ -284,23 +295,26 @@ function LiveCardBody({ card, title, brandKey, runId, entities, labelOf, observa
             {t(effortWordKey(rec.effort))}
           </dd>
         </div>
-        <div className="rec-fact">
-          <dt className="eyebrow">{t("board.card.evidence")}</dt>
+        <div>
+          <dt className="sr-only">{t("board.card.evidence")}</dt>
           <dd>
-            <span className="evidence-meter" aria-hidden="true">
-              {Array.from({ length: FULL_EVIDENCE }, (_, i) => (
-                <i key={i} className={i < evidence ? "is-on" : undefined} />
-              ))}
-            </span>
-            <span className="rec-evidence-count">
-              {evidence >= FULL_EVIDENCE
-                ? t("board.card.evidenceFull", { n: fmt.number(evidence) })
-                : t("board.card.evidenceOf", { n: fmt.number(evidence) })}
-              <InfoTip text={t("board.card.evidenceTip")} label={t("board.card.evidenceTipLabel")} />
-            </span>
+            <span className="rec-evidence-count">{t.n("board.card.seenAnswers", evidence, { n: fmt.number(evidence) })}</span>
             <TransitionLink to={evidenceHref} className="rec-evidence">
               {t("board.card.seeEvidence")}
             </TransitionLink>
+            <Details>
+              <span className="evidence-meter" aria-hidden="true">
+                {Array.from({ length: FULL_EVIDENCE }, (_, i) => (
+                  <i key={i} className={i < evidence ? "is-on" : undefined} />
+                ))}
+              </span>
+              <span className="rec-evidence-count">
+                {evidence >= FULL_EVIDENCE
+                  ? t("board.card.evidenceFull", { n: fmt.number(evidence) })
+                  : t("board.card.evidenceOf", { n: fmt.number(evidence) })}
+                <InfoTip text={t("board.card.evidenceTip")} label={t("board.card.evidenceTipLabel")} />
+              </span>
+            </Details>
           </dd>
         </div>
       </dl>
@@ -330,60 +344,66 @@ function LiveCardBody({ card, title, brandKey, runId, entities, labelOf, observa
         )
       )}
 
-      <div className="rec-more">
-        <button
-          type="button"
-          className="btn-link rec-more-toggle"
-          aria-expanded={open}
-          aria-controls={moreId}
-          onClick={() => setOpen((o) => !o)}
-        >
-          <span className="disclosure-caret" aria-hidden="true" />
-          {t("board.card.more")}
-        </button>
-        <div id={moreId} className="rec-more-body" hidden={!open}>
-          {copy && (
-            <>
-              <p className="eyebrow rec-more-label">{t("board.card.how")}</p>
-              <ol className="rec-steps">
-                {copy.steps.map((k) => (
-                  <li key={k}>{t(k, { competitor: card.competitor ?? "" })}</li>
-                ))}
-              </ol>
-            </>
-          )}
-          {(reason || rec.reasoning) && (
-            <>
-              <p className="eyebrow rec-more-label">{t("board.card.reasoning")}</p>
-              {reason ? (
-                <p className="rec-rationale">
-                  {reason.map((m, i) => (
-                    <span key={m.key}>
-                      {i > 0 && " "}
-                      <T k={m.key} vars={m.vars} />
-                    </span>
-                  ))}
-                </p>
-              ) : (
-                <p className="rec-rationale" lang="en">
-                  {rec.reasoning}
-                </p>
+      {hasMore && (
+        <div className="rec-more">
+          <button
+            type="button"
+            className="link-quiet rec-more-toggle"
+            aria-expanded={open}
+            aria-controls={moreId}
+            onClick={() => setOpen((o) => !o)}
+          >
+            <DisclosureMark open={open} />
+            {t(showDetails ? "board.card.more" : "board.card.steps")}
+          </button>
+          <Collapse open={open} id={moreId}>
+            <div className="rec-more-body">
+              {copy && (
+                <>
+                  {showDetails && <p className="eyebrow rec-more-label">{t("board.card.how")}</p>}
+                  <ol className="rec-steps">
+                    {copy.steps.map((k) => (
+                      <li key={k}>{t(k, { competitor: card.competitor ?? "" })}</li>
+                    ))}
+                  </ol>
+                </>
               )}
-            </>
-          )}
-          {otherGaps.map((g) => {
-            const f = gapFinding(g, t, fmt, entities, labelOf);
-            return (
-              <p key={g.gap_id} className="rec-rationale">
-                <T k={f.key} vars={f.vars} />
-              </p>
-            );
-          })}
-          <p className="rec-drafted">
-            {rec.drafted_by === "template" ? t("board.card.draftedTemplate") : t("board.card.draftedOther", { by: rec.drafted_by })}
-          </p>
+              <Details>
+                {(reason || rec.reasoning) && (
+                  <>
+                    <p className="eyebrow rec-more-label">{t("board.card.reasoning")}</p>
+                    {reason ? (
+                      <p className="rec-rationale">
+                        {reason.map((m, i) => (
+                          <span key={m.key}>
+                            {i > 0 && " "}
+                            <T k={m.key} vars={m.vars} />
+                          </span>
+                        ))}
+                      </p>
+                    ) : (
+                      <p className="rec-rationale" lang="en">
+                        {rec.reasoning}
+                      </p>
+                    )}
+                  </>
+                )}
+                {otherGaps.map((g) => {
+                  const f = gapFinding(g, t, fmt, entities, labelOf);
+                  return (
+                    <p key={g.gap_id} className="rec-rationale">
+                      <T k={f.key} vars={f.vars} />
+                    </p>
+                  );
+                })}
+                <p className="rec-drafted">
+                  {rec.drafted_by === "template" ? t("board.card.draftedTemplate") : t("board.card.draftedOther", { by: rec.drafted_by })}
+                </p>
+              </Details>
+            </div>
+          </Collapse>
         </div>
-      </div>
+      )}
 
       <Details>
         <div className="rec-tech">

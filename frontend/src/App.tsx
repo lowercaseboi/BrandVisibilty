@@ -6,7 +6,9 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { usePopTransitions } from "./components/module/transition";
 import { RouteFocus } from "./components/RouteFocus";
 import { Toaster } from "./components/Toaster";
+import { ScrollProgress } from "./components/ui/ScrollProgress";
 import { useT } from "./i18n";
+import { useDotSpotlight } from "./settings/useDotSpotlight";
 import { BrandListPage } from "./pages/BrandListPage";
 import { AnalysisModule } from "./pages/brand/AnalysisModule";
 import { BoardModule } from "./pages/brand/BoardModule";
@@ -50,6 +52,8 @@ export default function App() {
   const { pathname } = useLocation();
   // Browser back / forward slides on phones like an in-app back (transition.tsx).
   usePopTransitions();
+  // Cursor glow on the page's dot grid (mouse only).
+  useDotSpotlight();
 
   // The landing page brings its own nav and footer. RouteFocus stays the first child in both
   // branches, so React keeps the same instance (and its "previous page") across landing ↔ app.
@@ -72,6 +76,7 @@ export default function App() {
         {t("common.app.skipToContent")}
       </a>
       <AppHeader />
+      <ScrollProgress />
       <main className="app" id="main" tabIndex={-1}>
         {/* Keyed per section so each page plays its entrance once (a brand's hub + modules share one). */}
         <div className="page-enter" key={sectionKey(pathname)}>

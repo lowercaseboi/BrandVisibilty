@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useT } from "../i18n";
 import { DetailsToggle, useDetails } from "../settings/details";
 import { useTheme } from "../settings/theme";
+import { useHeaderHeight } from "../settings/useHeaderHeight";
 import { useScrolled } from "../settings/useScrolled";
 import { LanguageToggle, Logo, ThemeButton, useLanguageCycle } from "./headerControls";
 import { Sheet } from "./Sheet";
@@ -62,7 +63,7 @@ function ConnectionsToggle() {
 }
 
 /**
- * The phone header's "⋯" sheet: theme, language, numbers view and Connections as full-width rows,
+ * The phone header's "⋯" sheet: theme, language, Analytical view and Connections as full-width rows,
  * each with its label spelled out and its current value on the right. The toggles act in place
  * (the sheet stays open, so you see the value change); Connections navigates, so it closes it.
  */
@@ -113,8 +114,8 @@ function SettingsRows({ onNavigate }: { onNavigate: () => void }) {
 
 /**
  * The one header for the whole product. `app`: logo → landing, then all tools. `landing`: the same
- * logo and slogan, the section anchors, theme + language only, and a "Try it out" CTA. On the landing it always
- * sits on the dark band; in the app it turns into a navy bar in light theme.
+ * logo and slogan, the section anchors, theme + language only, and a "Try it out" CTA. Both follow the page theme:
+ * transparent at the top, frosted with a hairline once scrolled.
  *
  * On phones (components.css) the app header is just the logo mark and one "⋯" button: the four
  * tools move into a bottom sheet as labelled rows, each showing its current value.
@@ -124,19 +125,16 @@ export function AppHeader({ variant = "app" }: { variant?: "app" | "landing" }) 
   const scrolled = useScrolled();
   const { showDetails } = useDetails();
   const [menuOpen, setMenuOpen] = useState(false);
+  const headerRef = useRef<HTMLElement | null>(null);
+  useHeaderHeight(headerRef);
   const landing = variant === "landing";
-  const cls = [
-    "app-header",
-    landing ? "app-header-landing on-band" : "app-header-app on-band-light",
-    scrolled ? "is-scrolled" : "",
-    !landing && showDetails ? "is-analyst" : "",
-  ]
+  const cls = ["app-header", landing ? "app-header-landing" : "app-header-app", scrolled ? "is-scrolled" : ""]
     .filter(Boolean)
     .join(" ");
   return (
     // Its own view-transition-name keeps the header still while brand pages morph beneath it
     // (otherwise it cross-fades with the rest of the page).
-    <header className={cls} style={landing ? undefined : { viewTransitionName: "app-header" }}>
+    <header ref={headerRef} className={cls} style={landing ? undefined : { viewTransitionName: "app-header" }}>
       <div className="app-header-inner">
         <Link to={landing ? "/app" : "/"} className="brand-mark" aria-label={landing ? t("common.nav.app") : t("common.app.home")}>
           <Logo />
@@ -162,13 +160,13 @@ export function AppHeader({ variant = "app" }: { variant?: "app" | "landing" }) 
           </ul>
         )}
         <div className="header-tools">
-          {/* Numbers view is a distinct mode: say so while it's on. */}
+          {/* The Analytical view is a distinct mode: say so while it's on. */}
           {!landing && showDetails && <span className="analyst-tag eyebrow">{t("common.details.analyst")}</span>}
           {/* Phones swap these for the "⋯" sheet (app header only; the landing keeps them). */}
           <span className="header-tools-full">
             <ThemeButton />
             <LanguageToggle />
-            {/* The landing keeps only theme + language; numbers and connections belong to the app. */}
+            {/* The landing keeps only theme + language; the Analytical view and connections belong to the app. */}
             {!landing && <DetailsToggle variant="header" />}
             {!landing && <ConnectionsToggle />}
           </span>

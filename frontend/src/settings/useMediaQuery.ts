@@ -27,3 +27,16 @@ function subscribePhone(onChange: () => void): () => void {
 export function useIsPhone(): boolean {
   return useSyncExternalStore(subscribePhone, isPhone, () => false);
 }
+
+/** Any media query, live. Width queries must still use the standard breakpoints (see top of file). */
+export function useMediaQuery(query: string): boolean {
+  return useSyncExternalStore(
+    (onChange) => {
+      const m = media(query);
+      m?.addEventListener("change", onChange);
+      return () => m?.removeEventListener("change", onChange);
+    },
+    () => media(query)?.matches ?? false,
+    () => false,
+  );
+}

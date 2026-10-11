@@ -1,8 +1,8 @@
-import type { MouseEvent, ReactNode } from "react";
+import { useId, useState } from "react";
+import type { ReactNode } from "react";
 import type { MessageKey } from "../../i18n";
 import { useT } from "../../i18n";
-import { prefersReducedMotion } from "../../settings/motion";
-import { Reveal } from "./Reveal";
+import { Reveal } from "../ui/Reveal";
 
 function iconProps() {
   return {
@@ -81,54 +81,63 @@ const CARDS: { icon: ReactNode; title: MessageKey; body: MessageKey }[] = [
   { icon: <TrendIcon />, title: "pages.landing.features.f6.title", body: "pages.landing.features.f6.body" },
 ];
 
-/** A touch screen's emulated mouse events would leave a card tilted after a tap. */
-const coarsePointer = () => typeof window !== "undefined" && !!window.matchMedia?.("(pointer: coarse)").matches;
+const matches = (q: string) => typeof window !== "undefined" && !!window.matchMedia?.(q).matches;
+/** Wide layout: the detail sits beside the list instead of opening under its title. */
+const isWide = () => matches("(min-width: 901px)");
+/** Hover only selects there, with a real pointer — never in the accordion, where it would shift rows. */
+const hoverSelects = () => matches("(min-width: 901px) and (hover: hover) and (pointer: fine)");
 
-/** Tilts the card slightly towards the pointer on hover; a no-op under reduced motion and on touch
- * screens (checked per move, so switching the OS setting mid-session takes effect at once). */
-function tiltHandlers() {
-  return {
-    onMouseMove: (e: MouseEvent<HTMLDivElement>) => {
-      const el = e.currentTarget;
-      if (prefersReducedMotion() || coarsePointer()) {
-        el.style.transform = "";
-        return;
-      }
-      const rect = el.getBoundingClientRect();
-      const px = (e.clientX - rect.left) / rect.width - 0.5;
-      const py = (e.clientY - rect.top) / rect.height - 0.5;
-      el.style.transform = `perspective(700px) rotateX(${(-py * 6).toFixed(2)}deg) rotateY(${(px * 8).toFixed(2)}deg) translateY(-3px)`;
-    },
-    onMouseLeave: (e: MouseEvent<HTMLDivElement>) => {
-      e.currentTarget.style.transform = "";
-    },
-  };
-}
-
-/** "What it does": six feature cards. */
+/**
+ * "What it does": six features as a quiet index. Wide screens: the titles stay put on the left and
+ * the picked feature's text shows beside them (hover, focus or click — nothing moves under the
+ * pointer). Narrow screens: the same markup is an accordion, the text opening under its title.
+ */
 export function Features() {
   const t = useT();
+  const uid = useId();
+  const [open, setOpen] = useState<number | null>(0);
+  // Wide screens always show one feature; only the accordion layout lets the open one close again.
+  const toggle = (i: number) => setOpen((cur) => (cur === i && !isWide() ? null : i));
   return (
-    <section id="features" className="lp-band-dark lp-section">
-      <div className="lp-container">
-        <Reveal>
-          <p className="lp-eyebrow">
-            <span className="lp-eyebrow-dot" />
-            {t("pages.landing.features.eyebrow")}
-          </p>
-          <h2 className="lp-h2 lp-features-title">{t("pages.landing.features.title")}</h2>
+    <section id="features" className="lp-section">
+      <div className="lp-container lp-features">
+        <Reveal className="lp-features-head">
+          <p className="eyebrow">{t("pages.landing.features.eyebrow")}</p>
+          <h2 className="h-display">{t("pages.landing.features.title")}</h2>
         </Reveal>
-        <div className="lp-feature-grid">
-          {CARDS.map((card, i) => (
-            <Reveal key={card.title} delay={(i % 3) * 60}>
-              <div className="lp-feature-card" {...tiltHandlers()}>
-                <div className="lp-feature-icon">{card.icon}</div>
-                <h3>{t(card.title)}</h3>
-                <p>{t(card.body)}</p>
-              </div>
-            </Reveal>
-          ))}
-        </div>
+        <Reveal delay={80}>
+          <div className="lp-acc">
+            {CARDS.map((card, i) => {
+              const isOpen = open === i;
+              const headId = `${uid}-h${i}`;
+              const panelId = `${uid}-p${i}`;
+              return (
+                <div key={card.title} className={`lp-acc-item${isOpen ? " is-open" : ""}`}>
+                  <h3 className="lp-acc-title">
+                    <button
+                      type="button"
+                      id={headId}
+                      className="lp-acc-head"
+                      aria-expanded={isOpen}
+                      aria-controls={panelId}
+                      onClick={() => toggle(i)}
+                      onMouseEnter={() => hoverSelects() && setOpen(i)}
+                    >
+                      <span className="lp-acc-icon">{card.icon}</span>
+                      <span className="lp-acc-label">{t(card.title)}</span>
+                      <span className="lp-acc-mark" aria-hidden="true" />
+                    </button>
+                  </h3>
+                  <div id={panelId} role="region" aria-labelledby={headId} className="lp-acc-panel">
+                    <div className="lp-acc-panel-inner">
+                      <p>{t(card.body)}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Reveal>
       </div>
     </section>
   );

@@ -10,13 +10,11 @@ import { humanizeId, toScore } from "./helpers";
 const WIDE_RANGE = 25;
 
 /**
- * Mention rate (share of responses naming each brand) for you and every competitor, on one
- * 0–100% axis. Deliberately NOT the composite score: competitors only have mention counts, and
- * mixing the two metrics on one axis would mislead.
+ * How often each brand is named in the AI answers, for you and every competitor. Deliberately NOT
+ * the composite score: competitors only have mention counts, and mixing the two metrics on one axis
+ * would mislead.
  */
-function PeerStrip({ snapshot }: { snapshot: Snapshot }) {
-  const t = useT();
-  const fmt = useFormat();
+function peerData(snapshot: Snapshot) {
   const summary = snapshot.mention_summary;
   const total = summary?.total_answers ?? 0;
   if (!summary?.entities || total <= 0 || !summary.entities.self) return null;
@@ -26,7 +24,31 @@ function PeerStrip({ snapshot }: { snapshot: Snapshot }) {
     .map((id) => ({ id, name: snapshot.entities?.[id] ?? humanizeId(id), rate: rate(id) }));
   if (others.length === 0) return null;
   const you = rate("self");
-  const ahead = others.filter((o) => o.rate > you).length;
+  return { others, you, ahead: others.filter((o) => o.rate > you).length };
+}
+
+/** One plain sentence: how many competitors are named more often than you. */
+function PeerLine({ snapshot }: { snapshot: Snapshot }) {
+  const t = useT();
+  const peers = peerData(snapshot);
+  if (!peers) return null;
+  const { others, ahead } = peers;
+  const text =
+    ahead === 0
+      ? t("dashboard.hero.peersAhead.none")
+      : ahead === others.length
+        ? t.n("dashboard.hero.peersAhead.all", ahead)
+        : t.n("dashboard.hero.peersAhead.some", ahead, { total: others.length });
+  return <p className="score-peers">{text}</p>;
+}
+
+/** The tick strip behind that sentence, on one 0–100% axis (Analytical view). */
+function PeerStrip({ snapshot }: { snapshot: Snapshot }) {
+  const t = useT();
+  const fmt = useFormat();
+  const peers = peerData(snapshot);
+  if (!peers) return null;
+  const { others, you, ahead } = peers;
   const pct = (x: number) => fmt.percent(x);
   const vars = { you: pct(you), ahead, n: others.length };
   return (
@@ -44,7 +66,10 @@ function PeerStrip({ snapshot }: { snapshot: Snapshot }) {
   );
 }
 
-/** "How visible is your brand?" — the 0–100 score, a rating word, plain counts and the honest range. */
+/**
+ * "How visible is your brand?" — the 0–100 score, a rating word and plain counts. The honest range,
+ * its bar and the measured-parts note belong to the Analytical view.
+ */
 export function ScoreHero({ snapshot, previous }: { snapshot: Snapshot; previous: Snapshot | null }) {
   const t = useT();
   const a = snapshot.analysis_result;
@@ -70,7 +95,7 @@ export function ScoreHero({ snapshot, previous }: { snapshot: Snapshot; previous
 
   return (
     <section className="card score-hero" aria-labelledby="score-hero-title">
-      <h2 id="score-hero-title" className="score-hero-title">
+      <h2 id="score-hero-title" className="eyebrow">
         {t("dashboard.hero.title")}
       </h2>
       <div className="score-hero-grid">
@@ -83,10 +108,12 @@ export function ScoreHero({ snapshot, previous }: { snapshot: Snapshot; previous
             </span>
           </p>
           <p className={`score-rating score-rating-${rating.band}`}>{t(RATING_KEY[rating.band])}</p>
-          {rating.upper && (
-            <p className="score-rating-upper">{t("pages.rating.couldBe", { rating: t(RATING_KEY[rating.upper]) })}</p>
-          )}
-          <MeasuredNote analysis={a} className="score-measured" />
+          <Details>
+            {rating.upper && (
+              <p className="score-rating-upper">{t("pages.rating.couldBe", { rating: t(RATING_KEY[rating.upper]) })}</p>
+            )}
+            <MeasuredNote analysis={a} className="score-measured" />
+          </Details>
           {change !== null && (
             <p className={`score-change ${change > 0 ? "is-up" : change < 0 ? "is-down" : ""}`}>
               {change > 0
@@ -113,33 +140,33 @@ export function ScoreHero({ snapshot, previous }: { snapshot: Snapshot; previous
             )}
           </p>
 
-          <div className="score-range">
-            <p className="score-range-text">
-              <strong>{t("dashboard.hero.range", { lo, hi })}</strong>{" "}
-              <span className="muted">{t("dashboard.hero.rangeWhy")}</span>
-            </p>
-            <div
-              className="range-bar"
-              role="img"
-              aria-label={t("dashboard.hero.bandAria", { lo, hi, score })}
-            >
-              <div className="range-bar-track" />
-              <div className="range-bar-band" style={{ left: `${lo}%`, width: `${Math.max(1, hi - lo)}%` }} />
-              <div className="range-bar-point" style={{ left: `${score}%` }} />
-              <span className="range-bar-min" aria-hidden="true">
-                0
-              </span>
-              <span className="range-bar-max" aria-hidden="true">
-                100
-              </span>
-            </div>
-            <PeerStrip snapshot={snapshot} />
-            {wide && (
-              <p className="score-range-hint">
-                <T k={samples >= 5 ? "dashboard.hero.rangeWideMax" : "dashboard.hero.rangeWide"} />
+          <PeerLine snapshot={snapshot} />
+
+          <Details block>
+            <div className="score-range">
+              <p className="score-range-text">
+                <strong>{t("dashboard.hero.range", { lo, hi })}</strong>{" "}
+                <span className="muted">{t("dashboard.hero.rangeWhy")}</span>
               </p>
-            )}
-          </div>
+              <div className="range-bar" role="img" aria-label={t("dashboard.hero.bandAria", { lo, hi, score })}>
+                <div className="range-bar-track" />
+                <div className="range-bar-band" style={{ left: `${lo}%`, width: `${Math.max(1, hi - lo)}%` }} />
+                <div className="range-bar-point" style={{ left: `${score}%` }} />
+                <span className="range-bar-min" aria-hidden="true">
+                  0
+                </span>
+                <span className="range-bar-max" aria-hidden="true">
+                  100
+                </span>
+              </div>
+              <PeerStrip snapshot={snapshot} />
+              {wide && (
+                <p className="score-range-hint">
+                  <T k={samples >= 5 ? "dashboard.hero.rangeWideMax" : "dashboard.hero.rangeWide"} />
+                </p>
+              )}
+            </div>
+          </Details>
         </div>
       </div>
       <Details>

@@ -18,17 +18,17 @@
    quick off the mark, long soft landing. Nothing else in the transition outlasts this 0.32s, so
    the live page takes over the moment the card lands (the hub's wires start just before). */
 ::view-transition-group(*) {
-  animation-duration: 0.32s;
-  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-duration: var(--dur-slow);
+  animation-timing-function: var(--ease-out);
 }
 
 /* Everything unshared fades out quickly, so the moving card reads as the one thing that stays. */
 :root[data-vt]::view-transition-old(root) {
-  animation: vt-fade-out 0.2s var(--ease) both;
+  animation: vt-fade-out var(--dur) var(--ease) both;
 }
 
 :root[data-vt]::view-transition-new(root) {
-  animation: vt-fade-in 0.26s var(--ease) 0.06s both;
+  animation: vt-fade-in var(--dur-med) var(--ease) 0.06s both;
 }
 
 /* Keep morphing elements' old/new images crisp instead of double-exposed. */
@@ -67,34 +67,34 @@
   }
 
   ::view-transition-group(*) {
-    animation-duration: 0.26s;
+    animation-duration: var(--dur-med);
     animation-timing-function: var(--ease-out);
   }
 
   :root[data-vt][data-vt-dir="forward"]::view-transition-old(root) {
-    animation: vt-push-out 0.26s var(--ease-out) both;
+    animation: vt-push-out var(--dur-med) var(--ease-out) both;
   }
 
   :root[data-vt][data-vt-dir="forward"]::view-transition-new(root) {
-    animation: vt-push-in 0.26s var(--ease-out) both;
+    animation: vt-push-in var(--dur-med) var(--ease-out) both;
   }
 
   /* Back: the page being left is the one on top, sliding away to uncover the one underneath. */
   :root[data-vt][data-vt-dir="back"]::view-transition-old(root) {
     z-index: 1;
-    animation: vt-pop-out 0.26s var(--ease-out) both;
+    animation: vt-pop-out var(--dur-med) var(--ease-out) both;
   }
 
   :root[data-vt][data-vt-dir="back"]::view-transition-new(root) {
-    animation: vt-pop-in 0.26s var(--ease-out) both;
+    animation: vt-pop-in var(--dur-med) var(--ease-out) both;
   }
 
   :root[data-vt][data-vt-dir="tab"]::view-transition-old(root) {
-    animation: vt-fade-out 0.16s var(--ease) both;
+    animation: vt-fade-out var(--dur) var(--ease) both;
   }
 
   :root[data-vt][data-vt-dir="tab"]::view-transition-new(root) {
-    animation: vt-fade-in 0.16s var(--ease) both;
+    animation: vt-fade-in var(--dur) var(--ease) both;
   }
 }
 
@@ -134,25 +134,16 @@
   gap: var(--space-5);
 }
 
+/* The calm header: back crumb, eyebrow (brand), title, blurb, then the module tabs on an 80% rule. */
+.module-top {
+  display: block;
+}
+
 .module-head {
   display: flex;
   align-items: flex-start;
   gap: var(--space-4);
-}
-
-.module-icon {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 52px;
-  height: 52px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  color: var(--accent);
-  background: var(--surface);
-  backdrop-filter: var(--blur);
-  -webkit-backdrop-filter: var(--blur);
-  box-shadow: var(--frame-ring-sm);
+  margin-bottom: var(--space-3);
 }
 
 .module-titles {
@@ -161,7 +152,9 @@
 }
 
 .module-titles h1 {
-  margin: 2px 0 4px;
+  margin: 2px 0 var(--space-1);
+  font-weight: 500;
+  letter-spacing: -0.025em;
 }
 
 .module-eyebrow {
@@ -171,46 +164,42 @@
 .module-blurb {
   margin: 0;
   color: var(--muted);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-md);
 }
 
+/* Module tabs: plain text, the active one underlined in the accent (like the landing's brand tabs). */
 .module-switcher {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-top: var(--space-4);
+  gap: 0 clamp(20px, 3vw, 40px);
+  background: var(--rule) bottom left / var(--rule-w) 1px no-repeat;
 }
 
 .module-chip {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 6px 12px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
+  margin-bottom: -1px;
+  min-height: 44px;
+  padding: 0 0 10px;
+  border-bottom: 2px solid transparent;
   color: var(--muted);
   font-size: var(--fs-sm);
   text-decoration: none;
-  background: color-mix(in srgb, var(--surface) 60%, transparent);
   transition:
     color var(--dur) var(--ease),
-    border-color var(--dur) var(--ease),
-    background var(--dur) var(--ease),
-    transform var(--dur) var(--ease);
+    border-color var(--dur) var(--ease);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .module-chip:hover {
     color: var(--text-h);
-    border-color: var(--line-strong);
-    transform: translateY(-1px);
   }
 }
 
 .module-chip.is-active {
-  color: var(--on-accent);
-  background: var(--accent);
-  border-color: var(--accent);
+  color: var(--text-h);
+  border-bottom-color: var(--accent);
 }
 
 .module-body {
@@ -242,21 +231,16 @@
   font-size: var(--fs-sm);
 }
 
-.module-chip:active {
-  transform: scale(0.97);
-  transition-duration: var(--dur-fast);
-}
-
-/* Phones: one compact row — back button, icon, brand + title. The bottom tab bar (MobileTabBar)
-   replaces the switcher chips, and the blurb gives the screen back to the content. */
+/* Phones: one compact row — back button, then brand + title. The bottom tab bar (MobileTabBar)
+   replaces the switcher tabs, and the blurb gives the screen back to the content. */
 @media (max-width: 640px) {
-  .module-band {
+  .module-top {
     display: flex;
     align-items: center;
     gap: var(--space-1);
   }
 
-  .module-band > .crumbs {
+  .module-top > .crumbs {
     flex: none;
     margin: 0;
   }
@@ -268,17 +252,6 @@
     gap: var(--space-3);
     min-width: 0;
     margin-bottom: 0;
-  }
-
-  .module-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: var(--radius-sm);
-  }
-
-  .module-icon svg {
-    width: 20px;
-    height: 20px;
   }
 
   .module-titles h1 {
@@ -344,7 +317,7 @@
 /* While the cursor is on it, follow it quickly (no spring lag), and lift. */
 .tilt[data-tilting] .tilt-inner {
   transition:
-    transform 0.12s linear,
+    transform var(--dur-fast) linear,
     box-shadow var(--dur-slow) var(--ease),
     border-color var(--dur) var(--ease);
   border-color: color-mix(in srgb, var(--accent) 55%, var(--line));

@@ -3,10 +3,11 @@ import type { PreflightPlan } from "../../api/client";
 import type { Asset, ChannelId } from "../../api/types";
 import { useFormat, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n";
+import { Details } from "../../settings/details";
 import { ChannelIcon } from "../accounts/ChannelIcon";
 import { EmptyState } from "../EmptyState";
 import { assetForVariant, charCount, composePost } from "./campaignModel";
-import { planState } from "./studioFlow";
+import { blockReason, planState } from "./studioFlow";
 import type { DestinationKind, Sendable } from "./studioFlow";
 
 export type SendState = "waiting" | "working" | "done" | "failed" | "skipped";
@@ -42,7 +43,7 @@ function SendPreview({ d, assets }: { d: Sendable; assets: Asset[] }) {
       <div>
         <p className="cs-send-text">{post || "—"}</p>
         <p className="muted small">
-          {t("board.campaign.where.chars", { n: fmt.number(charCount(d.channel, post)) })} ·{" "}
+          <Details>{t("board.campaign.where.chars", { n: fmt.number(charCount(d.channel, post)) })} · </Details>
           {asset ? t("board.campaign.where.withImage") : t("board.campaign.where.noImage")}
         </p>
       </div>
@@ -120,11 +121,15 @@ export function PublishStep({
               </div>
               {ps === "blocked" && plan?.detail && (
                 <p className="cs-result-line is-bad" role="note">
-                  {plan.detail}
+                  {blockReason(plan.detail) === "token_unset" ? t("board.campaign.result.block.token_unset") : plan.detail}
                 </p>
               )}
               {ps === "approve" && <p className="muted small">{t("board.campaign.publish.approveFirst")}</p>}
-              {(ps === "publish" || ps === "export") && plan?.detail && <p className="muted small">{plan.detail}</p>}
+              {(ps === "publish" || ps === "export") && plan?.detail && (
+                <Details>
+                  <p className="muted small">{plan.detail}</p>
+                </Details>
+              )}
               <SendPreview d={d} assets={assets} />
             </li>
           );

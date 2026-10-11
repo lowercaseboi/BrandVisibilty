@@ -6,11 +6,11 @@ export const brandinfo = {
   // ---- Connected accounts (first section of Details)
   "accounts.eyebrow": "Connected accounts",
   "accounts.title": "Where this brand posts",
-  "accounts.sub": "Connect each platform once. Campaigns then post from this brand's own accounts; anything not connected gives you the text to post yourself.",
+  "accounts.sub": "Connect once and posts go out from your own accounts. Otherwise you get the text to post yourself.",
   "accounts.count": "{n} of {total} connected",
   "accounts.loading": "Checking connected accounts…",
   "accounts.unavailableTitle": "Connected accounts aren't available here yet",
-  "accounts.unavailable": "This server doesn't support connecting accounts yet. Campaigns still give you the text to post yourself.",
+  "accounts.unavailable": "Connecting accounts isn't available yet. You still get the text to post yourself.",
   "accounts.errorTitle": "Couldn't load connected accounts",
   "accounts.error": "Reason: {message}",
   "accounts.retry": "Try again",
@@ -33,11 +33,11 @@ export const brandinfo = {
   "accounts.pill.ready": "Ready",
   "accounts.line.connectedAs": "Connected as {name}.",
   "accounts.line.connected": "Connected.",
-  "accounts.line.shared": "Using the server's shared account. Connect this brand's own account so posts come from it.",
-  "accounts.line.sharedAs": "Using the server's shared account ({name}). Connect this brand's own account so posts come from it.",
+  "accounts.line.shared": "Using a shared account. Connect your own so posts come from it.",
+  "accounts.line.sharedAs": "Using a shared account ({name}). Connect your own so posts come from it.",
   "accounts.line.not_connected": "Not connected yet. Campaigns give you the {platform} text to post yourself.",
-  "accounts.line.needs_setup": "One-click Connect for {platform} isn't set up on this server yet. You can still enter the details by hand.",
-  "accounts.line.pending_approval": "Google has to approve API access for this business first. Until then you get the text to post yourself.",
+  "accounts.line.needs_setup": "One-click connect isn't set up for {platform} yet. You can enter the details by hand.",
+  "accounts.line.pending_approval": "Google has to approve this business first. Until then you get the text to post yourself.",
   "accounts.line.expired": "The connection to {name} expired. Reconnect to keep posting.",
   "accounts.line.whatsapp": "No account needed: posts open WhatsApp with your text ready to send.",
   "accounts.expiresOn": "Access expires on {date}.",
@@ -64,11 +64,15 @@ export const brandinfo = {
 
   "accounts.test.ok": "Connection works.",
   "accounts.test.fail": "The test failed: {detail}.",
+  // Plain sentences by default; the *Tech variants (Analytical view) name the server setting.
   "accounts.err.action": "That didn't work: {message}",
-  "accounts.err.noSecretKey":
+  "accounts.err.actionPlain": "That didn't work. Please try again.",
+  "accounts.err.noSecretKey": "Not set up on this server yet — ask whoever runs this app.",
+  "accounts.err.noSecretKeyTech":
     "The server has no SECRET_KEY, so it can't store account tokens safely. Add SECRET_KEY to the server's .env (see docs/CHANNEL_SETUP.md) and restart it.",
   "accounts.err.invalidUrn": "{field} must start with urn:li:person: or urn:li:organization: followed by the ID.",
-  "accounts.err.noAdminToken": "Connecting accounts needs an admin token. Set ADMIN_TOKEN on the server first.",
+  "accounts.err.noAdminToken": "Connecting accounts needs an admin password. Ask whoever runs this app.",
+  "accounts.err.noAdminTokenTech": "Connecting accounts needs an admin token. Set ADMIN_TOKEN on the server first.",
 
   // Return from a platform sign-in (?connected= / ?connect_choose= / ?connect_error=)
   "accounts.toast.connected": "{platform} connected.",
@@ -92,8 +96,8 @@ export const brandinfo = {
   "accounts.reason.no_locations": "no Google Business locations were found for this login.",
   "accounts.reason.api_error": "the platform returned an error. Try again in a few minutes.",
   "accounts.reason.network": "we couldn't reach the platform. Check the connection and try again.",
-  "accounts.reason.not_configured": "one-click Connect isn't set up on this server.",
-  "accounts.reason.no_secret_key": "the server has no SECRET_KEY, so it can't store tokens safely.",
+  "accounts.reason.not_configured": "one-click connect isn't set up yet.",
+  "accounts.reason.no_secret_key": "this app isn't set up to store sign-ins safely yet.",
 
   // Manual entry dialog
   "accounts.manual.title": "Enter {platform} details",
@@ -181,10 +185,11 @@ export const brandinfo = {
   "accounts.offer.dismiss": "Not now",
 
   // Admin token prompt (same token as the Campaign Studio)
-  "accounts.token.title": "Admin token",
-  "accounts.token.hint": "Connecting or changing accounts needs the admin token set on the server (ADMIN_TOKEN). It is kept for this tab only.",
-  "accounts.token.rejected": "That token was not accepted. Try again.",
-  "accounts.token.label": "Token",
+  "accounts.token.title": "Admin password",
+  "accounts.token.hint": "Connecting or changing accounts needs an admin password. It is kept for this tab only.",
+  "accounts.token.hintTech": "This is the admin token set on the server (ADMIN_TOKEN).",
+  "accounts.token.rejected": "That password wasn't accepted. Try again.",
+  "accounts.token.label": "Password",
   "accounts.token.submit": "Continue",
 
   // ---- Profile section
@@ -199,8 +204,7 @@ export const brandinfo = {
   "profile.section.customers": "Customers",
 
   // ---- Edit form (reuses AddBrandForm's pages.add.* labels/placeholders/hints/errors)
-  "edit.comparabilityWarning":
-    "Changing competitors or alternate names starts a new comparability segment: future runs won't be comparable with earlier ones — the trend restarts.",
+  "edit.comparabilityWarning": "Changing these restarts your score history.",
   "edit.err.server": "The profile could not be saved. Reason: {message}",
   "edit.err.generic": "The profile could not be saved. Please try again.",
   "edit.err.forbidden": "Sample brands can't be edited.",
@@ -220,6 +224,6 @@ export const brandinfo = {
   "coverage.cellTitleGeneral_other": "{n} questions for {intent}, not tied to a city",
 
   // ---- Questions section head (the editor body keeps its own pages.q.* copy)
-  "questions.eyebrow": "Question set",
+  "questions.eyebrow": "Customer questions",
   "questions.unavailable": "The question set couldn't be loaded. Try reloading the page.",
 };

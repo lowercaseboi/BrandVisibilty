@@ -24,3 +24,8 @@ function subscribe(onChange: () => void): () => void {
 export function useReducedMotion(): boolean {
   return useSyncExternalStore(subscribe, prefersReducedMotion, () => false);
 }
+
+/** `behavior` for window.scrollTo / scrollBy / scrollIntoView: instant when reduced motion is on. */
+export function scrollBehavior(): ScrollBehavior {
+  return prefersReducedMotion() ? "auto" : "smooth";
+}
