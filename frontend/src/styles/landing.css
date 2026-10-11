@@ -92,72 +92,12 @@
   animation-delay: 200ms;
 }
 
-.lp-h2 {
-  font-family: var(--display);
-  word-spacing: normal;
-  font-size: clamp(1.9rem, 3.6vw, 3rem);
-  line-height: 1.12;
-  font-weight: 500;
-  letter-spacing: -0.025em;
-  max-width: 20ch;
-  margin: 0;
-}
-
-.lp-eyebrow {
-  display: block;
-  margin: 0 0 clamp(12px, 2.4vh, 28px);
-  font-family: var(--sans);
-  font-size: var(--fs-2xs);
-  font-weight: 500;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
 .lp-signal {
   color: var(--lp-accent-display);
 }
 
 :where(.lp) p {
   color: var(--muted);
-}
-
-/* A quiet text link: no box, just an underline that warms up on hover. Also used as a button. */
-.lp-link-quiet {
-  display: inline;
-  padding: 0 0 4px;
-  border: 0;
-  border-bottom: 1px solid var(--line);
-  background: none;
-  color: var(--text-h);
-  font: inherit;
-  font-size: 0.95rem;
-  text-decoration: none;
-  cursor: pointer;
-  transition:
-    border-color var(--dur) var(--ease),
-    color var(--dur) var(--ease);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .lp-link-quiet:hover {
-    border-bottom-color: var(--signal);
-  }
-}
-
-/* ---------- reveal-on-scroll ---------- */
-
-.lp-reveal {
-  opacity: 0;
-  transform: translateY(16px);
-  transition:
-    opacity var(--dur-slow) var(--ease),
-    transform var(--dur-slow) var(--ease);
-}
-
-.lp-reveal.is-visible {
-  opacity: 1;
-  transform: none;
 }
 
 /* ---------- primary button ---------- */
@@ -307,31 +247,6 @@
 /* =========================================================
    Scroll progress + scroll FAB
    ========================================================= */
-
-.lp-scroll-progress {
-  position: fixed;
-  left: 0;
-  right: 0;
-  height: 2px;
-  z-index: 39;
-  pointer-events: none;
-  background: transparent;
-}
-
-.lp-scroll-progress-fill {
-  height: 100%;
-  width: 100%;
-  background: var(--signal);
-  transform: scaleX(0);
-  transform-origin: 0 50%;
-  will-change: transform;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lp-scroll-progress {
-    display: none;
-  }
-}
 
 .lp-scroll-fab {
   position: fixed;
@@ -974,9 +889,6 @@
   color: var(--text);
 }
 
-.lp-sample-more {
-  margin-top: var(--space-3);
-}
 
 .lp-sample-legend {
   margin: var(--space-4) 0 0;

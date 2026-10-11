@@ -6,6 +6,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { usePopTransitions } from "./components/module/transition";
 import { RouteFocus } from "./components/RouteFocus";
 import { Toaster } from "./components/Toaster";
+import { ScrollProgress } from "./components/ui/ScrollProgress";
 import { useT } from "./i18n";
 import { useDotSpotlight } from "./settings/useDotSpotlight";
 import { BrandListPage } from "./pages/BrandListPage";
@@ -75,6 +76,7 @@ export default function App() {
         {t("common.app.skipToContent")}
       </a>
       <AppHeader />
+      <ScrollProgress />
       <main className="app" id="main" tabIndex={-1}>
         {/* Keyed per section so each page plays its entrance once (a brand's hub + modules share one). */}
         <div className="page-enter" key={sectionKey(pathname)}>

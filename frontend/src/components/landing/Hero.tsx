@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useT } from "../../i18n";
-import { Reveal } from "./Reveal";
+import { Reveal } from "../ui/Reveal";
 
 /**
  * Hero: the pitch and two CTAs on the left, the illustrative "AI assistant" answer beside them (under
@@ -13,7 +13,7 @@ export function Hero() {
     <section id="top" className="lp-section lp-hero">
       <div className="lp-container lp-hero-grid">
         <Reveal className="lp-hero-copy">
-          <p className="lp-eyebrow">{t("pages.landing.hero.eyebrow")}</p>
+          <p className="eyebrow">{t("pages.landing.hero.eyebrow")}</p>
           <h1 className="lp-h1">
             <span className="lp-h1-line lp-h1-line-1">{t("pages.landing.hero.line1")}</span>
             <span className="lp-h1-line lp-h1-line-2">
@@ -25,7 +25,7 @@ export function Hero() {
             <Link to="/app" className="btn lp-btn-signal">
               {t("pages.landing.cta")}
             </Link>
-            <a href="#how-it-works" className="lp-link-quiet">
+            <a href="#how-it-works" className="link-quiet">
               {t("pages.landing.hero.workflowCta")} <span aria-hidden="true">↓</span>
             </a>
           </div>

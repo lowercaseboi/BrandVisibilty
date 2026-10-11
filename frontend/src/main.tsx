@@ -15,6 +15,7 @@ import "./styles/primitives.css";
 import "./styles/campaign.css";
 import "./styles/sheet.css";
 import "./styles/tabbar.css";
+import "./styles/ui.css";
 import "./styles/scale.css";
 import App from "./App.tsx";
 import { LanguageProvider } from "./i18n";

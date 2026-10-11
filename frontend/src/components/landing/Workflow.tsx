@@ -3,7 +3,7 @@ import type { MessageKey } from "../../i18n";
 import { useT } from "../../i18n";
 import { useReducedMotion } from "../../settings/motion";
 import { useMediaQuery } from "../../settings/useMediaQuery";
-import { Reveal } from "./Reveal";
+import { Reveal } from "../ui/Reveal";
 
 const STEPS: { title: MessageKey; body: MessageKey }[] = [
   { title: "pages.landing.workflow.step1.title", body: "pages.landing.workflow.step1.body" },
@@ -92,8 +92,8 @@ export function Workflow() {
         <div className="lp-workflow-frame">
           <div className="lp-container lp-workflow-head">
             <Reveal>
-              <p className="lp-eyebrow">{t("pages.landing.workflow.eyebrow")}</p>
-              <h2 className="lp-h2">{t("pages.landing.workflow.title")}</h2>
+              <p className="eyebrow">{t("pages.landing.workflow.eyebrow")}</p>
+              <h2 className="h-display">{t("pages.landing.workflow.title")}</h2>
             </Reveal>
           </div>
           <div className="lp-container lp-workflow-stage">

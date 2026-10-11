@@ -2,7 +2,7 @@ import { useId, useState } from "react";
 import type { ReactNode } from "react";
 import type { MessageKey } from "../../i18n";
 import { useT } from "../../i18n";
-import { Reveal } from "./Reveal";
+import { Reveal } from "../ui/Reveal";
 
 function iconProps() {
   return {
@@ -102,8 +102,8 @@ export function Features() {
     <section id="features" className="lp-section">
       <div className="lp-container lp-features">
         <Reveal className="lp-features-head">
-          <p className="lp-eyebrow">{t("pages.landing.features.eyebrow")}</p>
-          <h2 className="lp-h2">{t("pages.landing.features.title")}</h2>
+          <p className="eyebrow">{t("pages.landing.features.eyebrow")}</p>
+          <h2 className="h-display">{t("pages.landing.features.title")}</h2>
         </Reveal>
         <Reveal delay={80}>
           <div className="lp-acc">

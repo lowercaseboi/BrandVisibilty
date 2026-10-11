@@ -5,7 +5,7 @@ import { toast } from "../components/Toaster";
 import { useT } from "../i18n";
 import { readFlag, writeFlag } from "./persisted";
 
-// "Show the numbers behind this": off by default, so brand owners get the simple view.
+// The Analytical view: off by default, so brand owners get the simple view.
 // When on, <Details> blocks render the technical panels (CI, admission, gap IDs, per-AI tables).
 
 type DetailsCtx = { showDetails: boolean; setShowDetails(v: boolean): void };
@@ -30,10 +30,12 @@ export function useDetails(): DetailsCtx {
   return useContext(DetailsContext);
 }
 
-/** Renders its children only while "Show the numbers behind this" is on. */
-export function Details({ children }: { children: ReactNode }) {
+/** Renders its children only while the Analytical view is on. */
+export function Details({ children, block = false }: { children: ReactNode; block?: boolean }) {
   const { showDetails } = useDetails();
-  return showDetails ? <>{children}</> : null;
+  if (!showDetails) return null;
+  // `block` wraps the content in an element that eases in (fade + small rise) instead of popping.
+  return block ? <div className="details-in">{children}</div> : <>{children}</>;
 }
 
 function ChartIcon() {

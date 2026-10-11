@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "../../settings/motion";
 
 /**
- * A hairline amber bar fixed just under the header, filling left-to-right with how far down the
+ * A hairline accent bar fixed just under the header, filling left-to-right with how far down the
  * page you've scrolled. Measures the header's own height so it sits flush beneath it without this
  * file touching AppHeader. Skipped under reduced motion.
  */
@@ -47,8 +47,8 @@ export function ScrollProgress() {
   }, [reduced]);
 
   return (
-    <div className="lp-scroll-progress" style={{ top }} aria-hidden="true">
-      <div ref={fillRef} className="lp-scroll-progress-fill" />
+    <div className="scroll-progress" style={{ top }} aria-hidden="true">
+      <div ref={fillRef} className="scroll-progress-fill" />
     </div>
   );
 }
