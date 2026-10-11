@@ -3,6 +3,7 @@ import type { KeyboardEvent } from "react";
 import type { ChannelStatus, Variant, VariantPatch } from "../../api/types";
 import { useFormat, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n";
+import { Details } from "../../settings/details";
 import { channelName, charBudget, isAdvisory, normalizeHashtag, parseHashtags } from "./campaignModel";
 import { IssueList } from "./IssueList";
 import { removeHashtag, removePhrase, variantIssues } from "./studioFlow";
@@ -124,7 +125,12 @@ export function VariantEditor({ variant, statuses, saveState, locked, onChange }
             onChange={(e) => onChange({ text: e.target.value })}
           />
           <span className="field-hint">
-            {variant.channel === "x" ? t("board.campaign.editor.countHintX") : t("board.campaign.editor.countHint")}
+            {t("board.campaign.editor.countHint")}
+            {variant.channel === "x" && (
+              <Details>
+                <span> {t("board.campaign.editor.countHintX")}</span>
+              </Details>
+            )}
           </span>
         </div>
 

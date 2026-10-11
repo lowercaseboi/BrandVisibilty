@@ -2,6 +2,7 @@
 import { useCallback, useId, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { useT } from "../../i18n";
+import { Details } from "../../settings/details";
 import { Sheet } from "../Sheet";
 import { clearAdminToken, isTokenRejected, readAdminToken, saveAdminToken } from "./adminToken";
 
@@ -93,6 +94,9 @@ function TokenDialog({ rejected, onClose }: { rejected: boolean; onClose: (token
           )}
           <p id={hintId} className="muted small">
             {t("board.campaign.token.hint")}
+            <Details>
+              <span className="cs-tech-note"> {t("board.campaign.token.hintDetail")}</span>
+            </Details>
           </p>
           <label className="field">
             {t("board.campaign.token.label")}

@@ -1,8 +1,9 @@
 /* Recommendation list: pages/brand/BoardModule.tsx + components/board/*.
-   Tokens only. Each status sets --tone (the card's status dot and the filter chip). Only colour /
-   opacity fades, which the global reduced-motion rule covers; the small press-scale on tappable
-   chips is skipped under reduced motion. On phones (≤640) the filters become swipeable lanes
-   (RecLanes.tsx) and the status select a "Move to…" sheet — see the end of this file. */
+   Tokens only. Each status sets --tone (the card's status dot). Flat cards, text-chip filters with
+   an accent underline. Only colour / opacity fades, which the global reduced-motion rule covers;
+   the small press-scale on tappable chips is skipped under reduced motion. On phones (≤640) the
+   filters become swipeable lanes (RecLanes.tsx) and the status select a "Move to…" sheet — see the
+   end of this file. */
 
 .board-section {
   display: flex;
@@ -10,14 +11,26 @@
   gap: var(--space-3);
 }
 
-.board-section .module-section-head {
-  flex-wrap: wrap;
-  margin-bottom: 0;
+.board-section > .read-more-btn {
+  align-self: flex-start;
 }
 
-.board-run {
-  margin: 0 !important;
-  font-size: var(--fs-xs) !important;
+.board-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px var(--space-4);
+}
+
+.board-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+.board-head .board-run {
+  font-size: var(--fs-xs);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -30,9 +43,9 @@
   gap: 4px 8px;
   margin: 0;
   padding: 8px 12px;
-  border: 1px dashed var(--line);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--surface-2) 60%, transparent);
+  background: var(--surface-2);
   color: var(--muted);
   font-size: var(--fs-sm);
 }
@@ -45,49 +58,47 @@
   background: var(--warn);
 }
 
-.board-notice .btn-link {
+.board-notice .link-quiet {
   font-size: var(--fs-sm);
-  cursor: pointer;
 }
 
-/* ---------- filter bar ---------- */
+/* ---------- filter bar: plain text, the active one underlined in the accent ---------- */
 
 .rec-filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px clamp(18px, 2.4vw, 32px);
+  background: var(--rule) bottom left / var(--rule-w) 1px no-repeat;
 }
 
 .rec-filter {
   display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 8px 5px 12px;
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
-  background: transparent;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: -1px;
+  padding: 0 0 10px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
   color: var(--muted);
+  font: inherit;
   font-size: var(--fs-sm);
-  font-weight: 500;
   cursor: pointer;
   transition:
-    border-color var(--dur) var(--ease),
-    background-color var(--dur) var(--ease),
     color var(--dur) var(--ease),
+    border-color var(--dur) var(--ease),
     transform var(--dur-fast) var(--ease);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .rec-filter:hover {
-    border-color: var(--line-strong);
     color: var(--text-h);
   }
 }
 
 .rec-filter.is-active {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent-text);
+  border-bottom-color: var(--accent);
+  color: var(--text-h);
 }
 
 .rec-filter:focus-visible {
@@ -96,44 +107,30 @@
 }
 
 .rec-filter-count {
-  min-width: 20px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--surface-2);
-  font-family: var(--display);
-  word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
   font-size: var(--fs-xs);
-  font-weight: 600;
   font-variant-numeric: tabular-nums;
-  text-align: center;
-  color: var(--text-h);
-}
-
-.rec-filter.is-active .rec-filter-count {
-  background: color-mix(in srgb, var(--accent) 22%, transparent);
-  color: var(--accent-text);
+  color: var(--muted);
 }
 
 .rec-filter-empty {
   margin: 0;
   padding: var(--space-4) var(--space-3);
-  border: 1px dashed var(--border-strong);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--muted);
   font-size: var(--fs-sm);
   text-align: center;
 }
 
-.rec-filter-empty .btn-link {
+.rec-filter-empty .link-quiet {
   font-size: var(--fs-sm);
-  cursor: pointer;
 }
 
 /* ---------- the grid: cards side by side, highest priority first ---------- */
 
 .rec-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(calc(320px * var(--z)), 100%), 1fr));
   gap: var(--card-gap);
   align-items: start;
   margin: 0;
@@ -141,31 +138,23 @@
   list-style: none;
 }
 
-/* ---------- cards: the glass .card, denser (no double frame ring) ---------- */
+/* ---------- cards: the flat .card, denser ---------- */
 
 .rec-card {
   --tone: var(--accent);
-  --mark-size: 6px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-width: 0;
   padding: var(--card-pad-y) var(--card-pad-x);
-  box-shadow:
-    var(--shadow-1),
-    inset 0 1px 0 var(--glass-highlight);
   transition:
     border-color var(--dur) var(--ease),
-    box-shadow var(--dur) var(--ease),
     opacity var(--dur) var(--ease);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .rec-card:hover {
     border-color: var(--line-strong);
-    box-shadow:
-      var(--shadow-2),
-      inset 0 1px 0 var(--glass-highlight);
   }
 }
 
@@ -195,19 +184,16 @@
 .rec-card[data-status="rejected"] {
   opacity: 0.86;
   filter: saturate(0.35);
-  box-shadow: none;
 }
 
 .rec-card[data-status="rejected"] .rec-card-title {
   color: var(--muted);
 }
 
-/* Resolved in the latest run: faded, dashed, no lift. */
+/* Resolved in the latest run: faded. */
 .rec-card.is-resolved {
   opacity: 0.8;
   filter: saturate(0.35);
-  border-style: dashed;
-  box-shadow: none;
 }
 
 .rec-card:is([data-status="done"], [data-status="rejected"], .is-resolved):is(:hover, :focus-within) {
@@ -222,8 +208,9 @@
   gap: var(--space-2);
 }
 
-.rec-what {
+.rec-card .rec-what {
   margin: 0;
+  white-space: nowrap;
 }
 
 .rec-card-title {
@@ -231,7 +218,7 @@
   font-family: var(--display);
   word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
   font-size: calc(15.5px * var(--z));
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.35;
   letter-spacing: -0.01em;
   color: var(--text-h);
@@ -244,13 +231,13 @@
   color: var(--muted);
 }
 
-/* Plain facts: Why · What it could change, then Effort | Evidence side by side. */
+/* Plain facts: Why · What it could change, then one quiet line: Effort · Seen in n answers. */
 .rec-facts {
   display: grid;
   gap: 10px;
   margin: 0;
   padding-top: 10px;
-  border-top: 1px solid var(--border);
+  background: var(--rule) top center / var(--rule-w) 1px no-repeat;
 }
 
 .rec-fact {
@@ -295,29 +282,29 @@
   color: var(--muted);
 }
 
-.rec-facts-pair {
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-  gap: 10px 14px;
-  padding-top: 0;
-  border-top: 0;
+.rec-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px var(--space-4);
+  margin: 0;
 }
 
-.rec-facts-pair dd {
+.rec-meta dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+  margin: 0;
   font-size: var(--fs-xs);
-  font-weight: 500;
   font-variant-numeric: tabular-nums;
+  color: var(--text-h);
 }
 
 /* Tooltips anchor to their row (or the cap line), not the tiny marker, so they stay inside the
    card and never overflow a phone screen. */
 .rec-fact,
-.rec-facts-pair,
 .board-cap {
   position: relative;
-}
-
-.rec-facts-pair .rec-fact {
-  position: static;
 }
 
 .rec-fact .info-tip,
@@ -334,7 +321,7 @@
   transform: none;
 }
 
-/* How many responses back it: ten ticks, filled up to the count (10+ = full confidence). */
+/* Analytical view: how many responses back it, ten ticks (10+ = full confidence). */
 .evidence-meter {
   display: inline-flex;
   gap: 2px;
@@ -375,16 +362,17 @@
 }
 
 .rec-evidence {
-  color: var(--accent-text);
+  color: var(--text-h);
   font-size: var(--fs-xs);
-  font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
+  border-bottom: 1px solid var(--line);
+  transition: border-color var(--dur) var(--ease);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .rec-evidence:hover {
-    text-decoration: underline;
+    border-bottom-color: var(--accent);
   }
 }
 
@@ -395,23 +383,18 @@
   margin-top: 2px;
 }
 
-/* Steps and full reasoning, folded away. */
+/* Steps (and, in the Analytical view, the full reasoning), folded away. */
 .rec-more {
-  padding-top: 6px;
-  border-top: 1px dashed var(--border);
+  padding-top: 8px;
+  background: var(--rule) top center / var(--rule-w) 1px no-repeat;
 }
 
-.rec-more-toggle {
+.link-quiet.rec-more-toggle {
   display: inline-flex;
   align-items: center;
-  padding: 2px 0;
+  gap: 8px;
+  padding: 2px 0 3px;
   font-size: var(--fs-sm);
-  cursor: pointer;
-  transition: opacity var(--dur-fast) var(--ease);
-}
-
-.rec-more-toggle:active {
-  opacity: 0.6;
 }
 
 .rec-more-body {
@@ -453,12 +436,12 @@
   color: var(--muted);
 }
 
-/* Technical details: only with "Show the numbers behind this" on. */
+/* Technical details: Analytical view only. */
 .rec-tech {
   display: grid;
   gap: 8px;
   padding: 10px 12px;
-  border: 1px dashed var(--border-strong);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-size: var(--fs-xs);
 }
@@ -558,7 +541,7 @@
   height: 28px;
   padding: 2px 26px 2px 24px;
   border: 1px solid var(--border-strong);
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   background-color: transparent;
   color: var(--text-h);
   font-size: var(--fs-xs);
@@ -572,9 +555,8 @@
   }
 }
 
-.rec-remove {
+.link-quiet.rec-remove {
   font-size: var(--fs-xs);
-  cursor: pointer;
 }
 
 /* ---------- empty board ---------- */
@@ -606,11 +588,9 @@
   gap: var(--space-4);
 }
 
-.rec-how {
-  padding: 12px var(--card-pad-x);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
+.rec-how.is-open {
+  padding-bottom: var(--space-3);
+  background: var(--rule) bottom center / var(--rule-w) 1px no-repeat;
 }
 
 .rec-how-head {
@@ -620,30 +600,25 @@
   gap: var(--space-2);
 }
 
-.rec-how-title {
+.rec-how .rec-how-title {
   margin: 0;
-  font-size: var(--fs-xs);
 }
 
-.rec-how-toggle {
+.link-quiet.rec-how-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 8px;
+  padding-bottom: 2px;
   font-size: var(--fs-sm);
-  cursor: pointer;
 }
 
 .rec-how-steps {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-3);
+  gap: var(--space-4);
   margin: 12px 0 2px;
   padding: 0;
   list-style: none;
-}
-
-.rec-how-steps[hidden] {
-  display: none;
 }
 
 .rec-how-steps li {
@@ -655,17 +630,11 @@
 
 .rec-how-num {
   flex: none;
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: var(--accent-soft);
-  color: var(--accent-text);
   font-family: var(--display);
   word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
-  font-size: var(--fs-sm);
-  font-weight: 700;
+  font-size: var(--fs-lg);
+  line-height: 1.2;
+  color: var(--accent-text);
 }
 
 .rec-how-step {
@@ -673,7 +642,7 @@
   font-family: var(--display);
   word-spacing: normal; /* base.css tightens hi/mr word gaps for the mono body font only */
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.35;
   color: var(--text-h);
 }
@@ -702,7 +671,6 @@
 
 .board-failed {
   border-color: var(--warn-border);
-  border-style: dashed;
 }
 
 .board-failed-eyebrow {
@@ -736,7 +704,7 @@
   height: 12px;
   border-radius: var(--radius-xs);
   background:
-    linear-gradient(100deg, transparent 30%, var(--glass-highlight) 50%, transparent 70%) 0 0 / 250% 100%,
+    linear-gradient(100deg, transparent 30%, var(--surface-2) 50%, transparent 70%) 0 0 / 250% 100%,
     var(--surface-3);
   animation: shimmer 1.4s linear infinite;
 }
@@ -789,12 +757,14 @@
     top: var(--header-h);
     z-index: 15;
     flex-wrap: nowrap;
-    gap: 6px;
-    padding: 8px 0;
+    gap: 4px 22px;
+    padding: 0;
     overflow-x: auto;
     overscroll-behavior-x: contain;
     scrollbar-width: none;
-    background: color-mix(in srgb, var(--bg) 86%, transparent);
+    background:
+      var(--rule) bottom center / var(--rule-w) 1px no-repeat,
+      color-mix(in srgb, var(--bg) 86%, transparent);
     backdrop-filter: var(--blur);
     -webkit-backdrop-filter: var(--blur);
   }
@@ -805,8 +775,9 @@
 
   .rec-filter {
     flex: none;
-    min-height: 36px;
-    padding: 6px 8px 6px 14px;
+    align-items: center;
+    min-height: 44px;
+    padding: 0;
     white-space: nowrap;
   }
 
@@ -830,7 +801,7 @@
   .rec-lane {
     flex: 0 0 100%;
     min-width: 0;
-    /* a little room for the cards' shadows, which the scroller would otherwise clip */
+    /* a little room so the scroller doesn't clip the cards' edges and focus rings */
     padding: 2px 2px 8px;
     scroll-snap-align: start;
     scroll-snap-stop: always;
@@ -842,7 +813,7 @@
     min-height: 40px;
     padding: 0 12px 0 24px;
     border: 1px solid var(--border-strong);
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     background: transparent;
     color: var(--text-h);
     font: inherit;

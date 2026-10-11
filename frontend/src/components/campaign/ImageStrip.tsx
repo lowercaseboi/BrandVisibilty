@@ -4,6 +4,8 @@ import { IMAGE_SIZES } from "../../api/types";
 import type { Asset, ImageFormat, RegenerateImageRequest } from "../../api/types";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n";
+import { useDetails } from "../../settings/details";
+import { Collapse } from "../ui/Collapse";
 import { FORMAT_LABEL } from "./campaignModel";
 
 /** Style chips: the value sent as `style` to regenerate-image. */
@@ -34,6 +36,7 @@ export interface ImageStripProps {
  */
 export function ImageStrip({ assets, activeAssetId, channelName, formats, busy, disabled, onRegenerate, onUse }: ImageStripProps) {
   const t = useT();
+  const { showDetails } = useDetails();
   const [open, setOpen] = useState(false);
   const [format, setFormat] = useState<ImageFormat>(formats[0] ?? "square");
   const [prompt, setPrompt] = useState("");
@@ -74,7 +77,10 @@ export function ImageStrip({ assets, activeAssetId, channelName, formats, busy, 
         <ul className="cs-strip">
           {sorted.map((a) => {
             const active = a.asset_id === activeAssetId;
-            const label = `${t(FORMAT_LABEL[a.format])} · ${a.provider === "template" ? t("board.campaign.image.template") : a.provider}`;
+            // Which engine drew it is Analytical-view detail.
+            const label = showDetails
+              ? `${t(FORMAT_LABEL[a.format])} · ${a.provider === "template" ? t("board.campaign.image.template") : a.provider}`
+              : t(FORMAT_LABEL[a.format]);
             return (
               <li key={a.asset_id}>
                 <button
@@ -103,8 +109,8 @@ export function ImageStrip({ assets, activeAssetId, channelName, formats, busy, 
         <p className="muted small">{t("board.campaign.image.none")}</p>
       )}
 
-      {open && (
-        <fieldset className="cs-regen field-group" id={formId} disabled={disabled || busy}>
+      <Collapse open={open} id={formId}>
+        <fieldset className="cs-regen field-group" disabled={disabled || busy || !open}>
           <legend className="sr-only">{t("board.campaign.image.regenerate")}</legend>
           <div className="field-pair">
             <label className="field">
@@ -112,7 +118,7 @@ export function ImageStrip({ assets, activeAssetId, channelName, formats, busy, 
               <select value={format} onChange={(e) => setFormat(e.target.value as ImageFormat)}>
                 {formats.map((f) => (
                   <option key={f} value={f}>
-                    {t(FORMAT_LABEL[f])} · {IMAGE_SIZES[f].join("×")}
+                    {showDetails ? `${t(FORMAT_LABEL[f])} · ${IMAGE_SIZES[f].join("×")}` : t(FORMAT_LABEL[f])}
                   </option>
                 ))}
               </select>
@@ -143,7 +149,7 @@ export function ImageStrip({ assets, activeAssetId, channelName, formats, busy, 
             </button>
           </div>
         </fieldset>
-      )}
+      </Collapse>
     </section>
   );
 }

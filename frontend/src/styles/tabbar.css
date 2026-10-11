@@ -13,8 +13,9 @@
     z-index: 45;
     display: block;
     padding: 0 var(--space-1) env(safe-area-inset-bottom);
-    border-top: 1px solid var(--line);
-    background: color-mix(in srgb, var(--bg) 84%, transparent);
+    background:
+      var(--rule) top center / var(--rule-w) 1px no-repeat,
+      color-mix(in srgb, var(--bg) 88%, transparent);
     backdrop-filter: var(--blur);
     -webkit-backdrop-filter: var(--blur);
     /* Its own snapshot, so it stays put while the pages slide / cross-fade beneath it. */

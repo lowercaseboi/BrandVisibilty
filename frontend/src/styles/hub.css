@@ -112,11 +112,6 @@
   animation: card-pick 0.2s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
 }
 
-.home.is-picking .sample-card.is-picked::before {
-  opacity: 1;
-  transform: scale(1.2);
-}
-
 @keyframes card-pick {
   to {
     /* translateZ under perspective ≈ 1.07× and the scale the rest: ~1.08× in all. */
@@ -211,7 +206,7 @@
   isolation: isolate;
   width: var(--hub-w);
   margin-inline: calc((100% - var(--hub-w)) / 2);
-  min-height: clamp(560px, calc(100dvh - 200px), 760px);
+  min-height: clamp(520px, calc(100dvh - var(--header-h) - 200px), 760px);
   display: grid;
   grid-template-columns: minmax(0, 1fr) clamp(272px, 24vw, 340px) minmax(0, 1fr);
   grid-template-rows: 1fr 1fr;
@@ -219,7 +214,7 @@
     "tl centre tr"
     "bl centre br";
   column-gap: clamp(64px, 9vw, 136px);
-  row-gap: clamp(28px, 6vh, 64px);
+  row-gap: clamp(20px, 3.5vh, 48px);
   padding-block: var(--space-2) var(--space-5);
 }
 
@@ -248,10 +243,35 @@
 /* The same card as on the brand list (BrandCardBody), plus a soft accent halo: it's the source. */
 .hub-centre-card {
   width: 100%;
+  isolation: isolate;
+  overflow: hidden;
   /* Same reason as .hub-module-glass: the wires' glow animates under its edges. */
   background: color-mix(in srgb, var(--surface-solid) 92%, transparent);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+}
+
+/* The Hub keeps the brand card's corner glow (the list's flat card dropped it). */
+.hub-centre-card::before {
+  content: "";
+  position: absolute;
+  inset: auto -30% -45% auto;
+  z-index: -1;
+  width: 80%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--glow-1), transparent);
+  opacity: 0.55;
+  transition:
+    opacity var(--dur-slow) var(--ease),
+    transform var(--dur-slow) var(--ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hub-centre-card:hover::before {
+    opacity: 1;
+    transform: scale(1.2);
+  }
 }
 
 .hub-centre-card:not(.is-skeleton) {

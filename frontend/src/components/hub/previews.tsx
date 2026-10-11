@@ -3,6 +3,7 @@ import { humanize, ratingFromRange, scoreBandClass, scoreOutOf100, scoreRange } 
 import { useFormat, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n";
 import { useBrandData } from "../../pages/brand/BrandContext";
+import { Details } from "../../settings/details";
 import { POSTING_CHANNELS, countConnected } from "../accounts/accountsModel";
 import { useAccounts } from "../accounts/useAccounts";
 import { countGapTypes, sparkPoints } from "./previewMath";
@@ -138,18 +139,19 @@ export function AnalysisPreview({ latest, history }: { latest: Snapshot | null; 
             <span aria-hidden="true">{tone === "up" ? "↗" : tone === "down" ? "↘" : "→"}</span> {t(verdict)}
           </span>
         )}
-        {history.length > 0 && <span className="muted">{t.n("hub.preview.analysis.runs", history.length)}</span>}
+        <Details>{history.length > 0 && <span className="muted">{t.n("hub.preview.analysis.runs", history.length)}</span>}</Details>
       </p>
     </div>
   );
 }
 
+// Plain names for the preview badges (the gaps page has its own wording).
 const GAP_TYPE_KEY: Record<string, MessageKey> = {
-  presence: "dashboard.gaps.type.presence",
-  prominence: "dashboard.gaps.type.prominence",
-  competitive: "dashboard.gaps.type.competitive",
-  representation: "dashboard.gaps.type.representation",
-  source: "dashboard.gaps.type.source",
+  presence: "hub.gapType.presence",
+  prominence: "hub.gapType.prominence",
+  competitive: "hub.gapType.competitive",
+  representation: "hub.gapType.representation",
+  source: "hub.gapType.source",
 };
 
 /** Gaps & evidence: how many gaps, with a small badge per gap type. */
@@ -166,7 +168,7 @@ export function GapsPreview({ latest }: { latest: Snapshot | null }) {
         {countGapTypes(gaps).map(([type, n]) => (
           <li key={type} className={`hub-pv-badge hub-pv-badge-${type}`}>
             {GAP_TYPE_KEY[type] ? t(GAP_TYPE_KEY[type]) : humanize(type)}
-            {n > 1 && <b>×{fmt.number(n)}</b>}
+            <Details>{n > 1 && <b>×{fmt.number(n)}</b>}</Details>
           </li>
         ))}
       </ul>

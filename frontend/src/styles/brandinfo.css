@@ -3,7 +3,7 @@
    classes in pages.css and components.css unchanged — nothing here duplicates those. */
 
 /* Deep links (#accounts, #profile, #coverage, #questions — the old /questions route lands on
-   #questions): leave room for the sticky module band. The heading takes focus on arrival; a
+   #questions): leave room for the sticky header. The heading takes focus on arrival; a
    script-moved focus ring is only drawn for keyboard users. */
 .bi-anchor {
   scroll-margin-top: calc(var(--header-h) + 14px);
@@ -31,11 +31,11 @@
   letter-spacing: normal;
 }
 
-/* Identity / Competition / Customers, each a labelled group separated by a hairline. */
-.bi-section + .bi-section {
+/* Identity / Competition / Customers, each a labelled group separated by an 80% hairline. */
+.bi-profile .bi-section + .bi-section {
   margin-top: var(--space-5);
   padding-top: var(--space-5);
-  border-top: 1px solid var(--line);
+  background: var(--rule) top center / var(--rule-w) 1px no-repeat;
 }
 
 .bi-section-title {
@@ -79,7 +79,7 @@
 .bi-chip {
   padding: 3px 10px;
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   background: var(--surface-2);
   font-size: var(--fs-sm);
   color: var(--text-h);
@@ -116,7 +116,7 @@
 }
 
 .bi-longlist-item + .bi-longlist-item {
-  border-top: 1px solid var(--line);
+  background: var(--rule) top center / var(--rule-w) 1px no-repeat;
 }
 
 .bi-longlist-marker {
@@ -294,7 +294,7 @@
 
 .acc-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(300px * var(--z))), 1fr));
   gap: var(--space-3);
   margin: 0;
   padding: 0;
@@ -302,7 +302,6 @@
 }
 
 .acc-card {
-  --acc-tone: var(--border-strong);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -311,23 +310,6 @@
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
   background: var(--surface-solid);
-  box-shadow: inset 3px 0 0 var(--acc-tone);
-}
-
-.acc-tone-ok {
-  --acc-tone: var(--ok);
-}
-
-.acc-tone-warn {
-  --acc-tone: var(--warn);
-}
-
-.acc-tone-err {
-  --acc-tone: var(--err);
-}
-
-.acc-tone-info {
-  --acc-tone: var(--info);
 }
 
 /* Icon | name | status. A long status ("Waiting for approval") wraps the name, never drops
@@ -395,17 +377,8 @@
   font-family: var(--mono);
 }
 
-.acc-tech summary {
-  width: fit-content;
-  font-size: var(--fs-xs);
-  color: var(--muted);
-  cursor: pointer;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .acc-tech summary:hover {
-    color: var(--text);
-  }
+.acc-tech strong {
+  font-weight: 600;
 }
 
 .acc-tech p {
@@ -481,11 +454,20 @@
   background: var(--surface-2);
 }
 
-.acc-howto summary {
+.acc-howto-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
   padding: var(--space-2) var(--space-3);
+  border: 0;
+  background: none;
+  font: inherit;
   font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text-h);
+  text-align: left;
   cursor: pointer;
 }
 
@@ -529,7 +511,7 @@
 
 .acc-choice.is-picked {
   border-color: var(--accent);
-  box-shadow: inset 3px 0 0 var(--accent);
+  background: var(--accent-soft);
 }
 
 .acc-choice input {
@@ -590,7 +572,6 @@
   --ob-w: min(1240px, calc(100vw - 2 * var(--gutter)));
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
   width: var(--ob-w);
   margin-inline: calc((100% - var(--ob-w)) / 2);
   /* Never roomier than the card-pad tokens (which shrink on phones). */
@@ -636,13 +617,31 @@
   transition: transform var(--dur-slow) var(--ease);
 }
 
-.ob-hide {
-  margin-left: auto;
+.ob-next {
+  min-width: 0;
   font-size: var(--fs-sm);
+}
+
+.ob-all-done {
+  color: var(--ok);
+}
+
+.ob-toggle,
+.ob-hide {
+  font-size: var(--fs-sm);
+}
+
+/* .ob prefix: ui.css (later) gives .link-quiet display: inline. */
+.ob .ob-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
 }
 
 .ob-steps {
   display: grid;
+  margin-top: var(--space-2);
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: var(--space-2);
   margin: 0;
@@ -705,7 +704,6 @@
 
 .ob-step.is-current .ob-link {
   border-color: var(--accent);
-  box-shadow: inset 0 -2px 0 var(--accent);
   color: var(--text-h);
   font-weight: 600;
 }
@@ -717,7 +715,7 @@
 }
 
 .ob-hint {
-  margin: 0;
+  margin: var(--space-2) 0 0;
   font-size: var(--fs-xs);
   color: var(--muted);
 }
@@ -743,6 +741,20 @@
 @media (max-width: 640px) {
   .ob-meter {
     display: none;
+  }
+
+  /* Row 1: title, progress, Hide. Row 2: the next step, the steps toggle. */
+  .ob .ob-hide {
+    order: 1;
+    margin-left: auto;
+  }
+
+  .ob-next {
+    order: 2;
+  }
+
+  .ob .ob-toggle {
+    order: 3;
   }
 
   .ob-steps {

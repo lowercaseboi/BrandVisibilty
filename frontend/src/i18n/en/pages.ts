@@ -26,30 +26,30 @@ export const pages = {
   // Generated responses used to demonstrate the product; not a real measurement.
   "origin.synthetic": "Simulated data",
   // Real AI responses recorded earlier and scored again.
-  "origin.replay": "Replayed responses",
+  "origin.replay": "Earlier answers re-checked",
 
   // ---------------------------------------------------------------- question groups (intents)
   // Group headings on the questions page. "…" stands for words that change per brand.
-  "intent.category_discovery": "Category discovery (“best … for …”)",
-  "intent.problem_first": "Problem-led (“how do I …”)",
-  "intent.alternative_seeking": "Alternatives (“alternatives to …”)",
-  "intent.attribute_constrained": "Attribute-led (“cheapest / fastest …”)",
-  "intent.local_contextual": "Local intent",
-  "intent.recommendation_seeking": "Recommendation requests",
-  "intent.identity": "Brand identity",
-  "intent.fit": "Suitability (“is … right for …”)",
+  "intent.category_discovery": "“Best … for …” questions",
+  "intent.problem_first": "“How do I …” questions",
+  "intent.alternative_seeking": "“Alternatives to …” questions",
+  "intent.attribute_constrained": "“Cheapest / fastest …” questions",
+  "intent.local_contextual": "“Near me” questions",
+  "intent.recommendation_seeking": "Asking for recommendations",
+  "intent.identity": "About the brand",
+  "intent.fit": "“Is … right for me?” questions",
   "intent.commercial": "Pricing and offers",
-  "intent.head_to_head": "Head-to-head comparisons",
-  "intent.trust": "Trust and reputation",
+  "intent.head_to_head": "Comparisons",
+  "intent.trust": "Trust and reviews",
   "intent.sourcing": "Reviews and sources",
-  "intent.custom": "Custom questions",
+  "intent.custom": "Your own questions",
   "intent.other": "Other questions",
 
   // ---------------------------------------------------------------- Home (samples, your brands, try your own)
-  "brands.samplesEyebrow": "Benchmarks",
-  "brands.samples": "Sample brands",
-  "brands.samplesSub": "Pilot brands measured across leading AI assistants. Open one to view the full report.",
-  "brands.yoursEyebrow": "Workspace",
+  "brands.samplesEyebrow": "Examples",
+  "brands.samples": "Example businesses",
+  "brands.samplesSub": "Open one to see a full report.",
+  "brands.yoursEyebrow": "Yours",
   "brands.yours": "Your brands",
   "brands.yoursSub": "Brands added to this workspace.",
   "brands.tryOwnEyebrow": "New analysis",
@@ -59,6 +59,7 @@ export const pages = {
   // Under a brand's name on its card.
   "brands.tracked_one": "{n} tracked question",
   "brands.tracked_other": "{n} tracked questions",
+  "brands.checksQuestions": "Checks customer questions",
   "brands.loading": "Loading brands…",
   "brands.loadError": "Brands could not be loaded.",
   // Accessible name for the whole score, e.g. "Score 42 out of 100".
@@ -67,8 +68,7 @@ export const pages = {
   "brands.checked": "Updated {when}",
   "brands.noChecks": "Not analysed yet",
   "brands.hasResults": "Results available",
-  "brands.thin_one": "Only {n} question — low precision",
-  "brands.thin_other": "Only {n} questions — low precision",
+  "brands.thin": "Add more questions for a reliable score",
   // Delete button on a user's own brand card (never shown on a sample brand).
   "brands.deleteLabel": "Delete analysis",
   "brands.deleteAriaLabel": "Delete analysis for {brand}",
@@ -140,10 +140,9 @@ export const pages = {
   "q.back": "← {brand}",
   "q.backGeneric": "← Back to report",
   "q.title": "Question set",
-  "q.lede":
-    "Questions a real customer might put to an AI assistant. Each analysis runs every active question and records whether your brand appears in the response.",
-  "q.namedNote":
-    "Questions that name your brand are still run but excluded from the score — an AI will always mention a brand the question names.",
+  "q.lede": "Questions your customers might ask an AI assistant. We check whether your brand comes up.",
+  "q.namedNote": "Questions that name your brand don't count toward your score: an AI will always mention a brand it's asked about.",
+  "q.why": "Why are some questions dimmed?",
   "q.loading": "Loading questions…",
   "q.loadError": "Questions could not be loaded.",
   "q.asked": "Active",
@@ -155,9 +154,11 @@ export const pages = {
   "q.suggested": "Suggested set",
   "q.unchecked_one": "{n} new or edited question will be screened for your brand name on save.",
   "q.unchecked_other": "{n} new or edited questions will be screened for your brand name on save.",
-  "q.baseline": "Changing the question set starts a new baseline: new results will not be comparable with earlier ones.",
+  "q.baseline": "Editing questions restarts your score history.",
   // "{on} of {total}" questions in this group are active.
   "q.groupCount": "{on} of {total} active",
+  "q.total_one": "{n} question",
+  "q.total_other": "{n} questions",
   "q.askedTitle": "Run in every analysis",
   "q.notAskedTitle": "Paused",
   // Accessible name of the on/off switch. {text} is the question itself.
@@ -183,6 +184,8 @@ export const pages = {
   // {message} is an English message from the server.
   "q.saveError": "The questions could not be saved. Reason: {message}",
   "q.resetError": "The questions could not be reset. Reason: {message}",
+  "q.saveErrorPlain": "The questions couldn't be saved. Please try again.",
+  "q.resetErrorPlain": "The questions couldn't be restored. Please try again.",
   "q.reset": "Restore suggested set",
   "q.resetting": "Restoring…",
   "q.save": "Save question set",
@@ -228,15 +231,14 @@ export const pages = {
 
   // ---------------------------------------------------------------- Connections (AI assistants)
   "ais.title": "Connections",
-  "ais.lede": "AI assistants queried during each analysis.",
+  "ais.lede": "The AI assistants we ask about your brand.",
   "ais.loading": "Loading connections…",
   "ais.loadError": "Connections could not be loaded.",
   "ais.connected": "Connected",
-  "ais.notSetUp": "Not configured",
+  "ais.notSetUp": "Not set up",
   "ais.model": "Model: {model}",
-  "ais.askToSetUp": "Requires an API key. Contact your administrator to enable it.",
-  "ais.noneConnected":
-    "No AI assistant is connected, so analyses use simulated data. Contact your administrator to add an API key.",
+  "ais.askToSetUp": "Not set up yet — ask whoever runs this app.",
+  "ais.noneConnected": "No AI assistant is connected, so you'll see sample data. Ask whoever runs this app.",
   "ais.connectedCount": "{on} of {total} connected",
   "ais.detailsTitle": "Technical configuration",
   "ais.detailsKeys":

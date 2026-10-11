@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useT } from "../../i18n";
 import { useBrandData } from "../../pages/brand/BrandContext";
+import { Details } from "../../settings/details";
 import { MODULES, ModuleIcon, brandHref, moduleDef, moduleVtName } from "./modules";
 import type { ModuleId } from "./modules";
 import { TransitionLink } from "./transition";
@@ -37,9 +38,9 @@ export function BackLink({
 }
 
 /**
- * The frame every brand module renders in, so all four look and behave the same: a band header
- * (back to the hub, brand eyebrow, module icon + title + blurb, optional actions), a module
- * switcher to hop between modules without going back through the hub, then the module body.
+ * The frame every brand module renders in, so all four look and behave the same: a calm header
+ * (back to the hub, brand eyebrow, module title + blurb, optional actions), a module switcher of
+ * quiet text tabs to hop between modules without going back through the hub, then the module body.
  * On phones (modules.css) the header packs into one row behind a back button, and the switcher
  * and blurb give way to the bottom tab bar (MobileTabBar).
  *
@@ -53,12 +54,9 @@ export function ModuleShell({ id, actions, children }: { id: ModuleId; actions?:
 
   return (
     <div className="module" data-module={id}>
-      <div className="on-band-light dash-band module-band">
+      <header className="module-top">
         <BackLink to={brandHref(brandKey)} label={t("hub.back.hub")} iconOnly />
         <div className="page-head module-head" style={{ viewTransitionName: moduleVtName(id) }}>
-          <span className="module-icon">
-            <ModuleIcon id={id} size={26} />
-          </span>
           <div className="module-titles">
             <p className="eyebrow module-eyebrow">{brandName}</p>
             <h1>{t(def.titleKey)}</h1>
@@ -80,11 +78,15 @@ export function ModuleShell({ id, actions, children }: { id: ModuleId; actions?:
             </TransitionLink>
           ))}
         </nav>
-      </div>
+      </header>
 
       {status === "error" && (
         <div className="alert alert-error" role="alert">
-          {t("hub.error.load")} <span className="small">{error}</span>
+          {t("hub.error.load")} {t("hub.error.retry")}
+          <Details>
+            {" "}
+            <span className="small">{error}</span>
+          </Details>
         </div>
       )}
       {status === "loading" && <p className="status">{t("hub.loading")}</p>}

@@ -23,7 +23,7 @@ import { brandHref } from "../../components/module/modules";
 import { TransitionLink, useTransitionNavigate } from "../../components/module/transition";
 import { toast } from "../../components/Toaster";
 import { useFormat, useT } from "../../i18n";
-import { Details } from "../../settings/details";
+import { Details, useDetails } from "../../settings/details";
 import { useBrandData } from "./BrandContext";
 
 /** Drafting crashed for this run: the scores are fine, the suggestions just need another run. */
@@ -91,6 +91,7 @@ export function BoardModule() {
   const fmt = useFormat();
   const { brandKey, latest, labelOf } = useBrandData();
   const { state, status, retrying, commit, retry } = useBoardState(brandKey);
+  const { showDetails } = useDetails();
   const shortDate = useShortDate();
   const headingId = useId();
 
@@ -186,11 +187,17 @@ export function BoardModule() {
             setCampaigns((prev) => [campaign, ...(prev ?? [])]);
             go(campaignHref(brandKey, campaign.campaign_id));
           })
-          .catch((err: unknown) => toast(t("board.campaign.toast.createFailed", { error: err instanceof Error ? err.message : String(err) })))
+          .catch((err: unknown) =>
+            toast(
+              showDetails
+                ? t("board.campaign.toast.createFailedWhy", { error: err instanceof Error ? err.message : String(err) })
+                : t("board.campaign.toast.createFailed"),
+            ),
+          )
           .finally(() => setCreating(null));
       },
     };
-  }, [campaigns, creating, brandKey, go, t]);
+  }, [campaigns, creating, brandKey, go, t, showDetails]);
 
   const onRemove = useCallback(
     (key: string) => {
@@ -210,25 +217,26 @@ export function BoardModule() {
   else
     body = (
       <section className="board-section" aria-labelledby={headingId}>
-        <div className="module-section-head">
-          <div>
-            <p className="eyebrow">{t("board.eyebrow")}</p>
-            <h2 id={headingId}>{t("board.title")}</h2>
-            <p>{t("board.intro")}</p>
-          </div>
+        <div className="board-head">
+          <h2 id={headingId} className="sr-only">
+            {t("board.title")}
+          </h2>
+          <p>{t("board.intro")}</p>
           {runDate && <p className="board-run">{t("board.meta.run", { date: runDate })}</p>}
         </div>
         {cap && (
-          <p className="board-cap">
-            {t("board.cap.line", { n: fmt.number(cap.n), total: fmt.number(cap.total) })}
-            <InfoTip text={t("board.cap.tip")} label={t("board.cap.tipLabel")} />
-          </p>
+          <Details block>
+            <p className="board-cap">
+              {t("board.cap.line", { n: fmt.number(cap.n), total: fmt.number(cap.total) })}
+              <InfoTip text={t("board.cap.tip")} label={t("board.cap.tipLabel")} />
+            </p>
+          </Details>
         )}
         {status === "offline" && (
           <p className="board-notice" role="status">
             <span className="board-notice-dot" aria-hidden="true" />
             {t("board.offline.notice")}{" "}
-            <button type="button" className="btn-link" onClick={retry} disabled={retrying}>
+            <button type="button" className="link-quiet" onClick={retry} disabled={retrying}>
               {retrying ? t("board.offline.retrying") : t("board.offline.retry")}
             </button>
           </p>
@@ -253,8 +261,8 @@ export function BoardModule() {
     <ModuleShell id="recommendations">
       <div className="board-stack">
         <HowItWorks />
-        <CampaignsStrip brandKey={brandKey} campaigns={campaigns} />
         {body}
+        <CampaignsStrip brandKey={brandKey} campaigns={campaigns} />
       </div>
     </ModuleShell>
   );

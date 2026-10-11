@@ -5,6 +5,7 @@ import type { Gap, Observation, Recommendation } from "../../api/types";
 import { dashboard as enDashboard } from "../../i18n/en/dashboard";
 import type { Formatter, MessageKey, TFunction, Vars } from "../../i18n";
 import { gapTypeText, humanizeId } from "../dashboard/helpers";
+import { oneIn, wholeRank } from "../ui/plain";
 
 export interface Msg {
   key: MessageKey;
@@ -275,5 +276,71 @@ export function plainWhy(
     }
     default:
       return null;
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The gap in plain words, for the card's "Why" when no real question is available (rates become
+// "about 1 in N", positions whole numbers). The numeric wording stays in the Analytical view.
+// ---------------------------------------------------------------------------------------------
+
+function numberOf(d: Record<string, unknown>, key: string): number | undefined {
+  const v = d[key];
+  return typeof v === "number" && Number.isFinite(v) ? v : undefined;
+}
+
+/** "none" / "about 1 in N" / "often" wording of a share that is below half. */
+function shareKey(share: number, keys: { none: MessageKey; few: MessageKey; some: MessageKey }): Msg {
+  if (share <= 0) return { key: keys.none };
+  const n = oneIn(share);
+  return n ? { key: keys.few, vars: { n } } : { key: keys.some };
+}
+
+export function plainFinding(
+  gap: Gap,
+  t: TFunction,
+  entities: Record<string, string> | undefined,
+  labelOf: (providerId: string) => string,
+): Msg {
+  const d = gap.detail ?? {};
+  switch (gap.gap_type) {
+    case "presence": {
+      const cov = numberOf(d, "coverage") ?? 0;
+      if (d.scope === "provider") {
+        const ai = labelOf(String(d.provider_id ?? ""));
+        const m = shareKey(cov, { none: "board.finding.providerNone", few: "board.finding.providerFew", some: "board.finding.providerSome" });
+        return { key: m.key, vars: { ...m.vars, ai } };
+      }
+      if (d.scope === "intent") {
+        const exampleKey = `intent.${String(d.intent_type ?? "")}`;
+        if (typeof DASHBOARD_KEYS[exampleKey] !== "string")
+          return shareKey(cov, { none: "board.finding.intentGenericNone", few: "board.finding.intentGenericFew", some: "board.finding.intentGenericSome" });
+        const m = shareKey(cov, { none: "board.finding.intentNone", few: "board.finding.intentFew", some: "board.finding.intentSome" });
+        return { key: m.key, vars: { ...m.vars, example: t(`dashboard.${exampleKey}` as MessageKey) } };
+      }
+      return shareKey(cov, { none: "board.finding.presenceNone", few: "board.finding.presenceFew", some: "board.finding.presenceSome" });
+    }
+    case "prominence": {
+      const rank = wholeRank(numberOf(d, "mean_rank") ?? 1);
+      return rank > 1 ? { key: "board.finding.prominence", vars: { rank } } : { key: "board.finding.prominenceLow" };
+    }
+    case "competitive": {
+      const id = String(d.competitor_id ?? "");
+      const competitor = entities?.[id] ?? humanizeId(id);
+      return { key: (numberOf(d, "beat_rate") ?? 0) >= 0.75 ? "board.finding.competitiveMost" : "board.finding.competitiveOften", vars: { competitor } };
+    }
+    case "representation": {
+      const rate = numberOf(d, "disagreement_rate") ?? 0;
+      const mixed = d.disagree_with_each_other === true;
+      if (rate > 0 && mixed) return { key: "board.finding.representationBoth" };
+      return { key: rate > 0 ? "board.finding.representation" : "board.finding.representationMixed" };
+    }
+    case "source": {
+      const k = numberOf(d, "non_mentioning_count") ?? 0;
+      const n = numberOf(d, "dominant_source_count") ?? 0;
+      return { key: n > 0 && k / n < 0.5 ? "board.finding.sourceSome" : "board.finding.sourceMost" };
+    }
+    default:
+      return { key: "board.finding.unknown" };
   }
 }

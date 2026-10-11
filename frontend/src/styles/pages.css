@@ -41,45 +41,28 @@
 
 .home {
   padding-top: var(--space-3);
-  counter-reset: home-sec;
 }
 
 .home-section + .home-section {
   margin-top: 56px;
 }
 
-/* Section head: eyebrow, title, one line of context — a hairline + index tick under the eyebrow,
-   numbered in document order ("§ 01 Samples", "§ 02 Your brands", "§ 03 Try your own"). */
+/* Section head: eyebrow, title, one line of context, then an 80% hairline. */
 .home-head {
-  position: relative;
   margin-bottom: 20px;
   padding-bottom: 14px;
-  border-bottom: 1px solid var(--line);
-}
-
-.home-head::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  bottom: -1px;
-  width: 16px;
-  height: 3px;
-  background: var(--accent);
+  background: var(--rule) bottom left / var(--rule-w) 1px no-repeat;
 }
 
 .home-head .eyebrow {
-  counter-increment: home-sec;
-}
-
-.home-head .eyebrow::before {
-  content: "§ " counter(home-sec, decimal-leading-zero) "  ";
-  color: var(--accent-text);
+  margin-bottom: 0;
 }
 
 .home-title {
   margin: 6px 0 4px;
   font-size: var(--fs-xl);
-  letter-spacing: -0.05em;
+  font-weight: 500;
+  letter-spacing: -0.025em;
 }
 
 .home-sub {
@@ -95,13 +78,11 @@
   gap: 20px;
 }
 
-/* Tall glass card: name, score ring, rating. A warm glow in the corner brightens on hover.
-   Each card spans six rows of the parent grid (subgrid), so the same slot — e.g. the rating —
-   sits at the same height in every card of a row, however many cards there are. */
+/* Tall flat card: name, score ring, rating. Each card spans six rows of the parent grid (subgrid),
+   so the same slot — e.g. the rating — sits at the same height in every card of a row, however
+   many cards there are. */
 .sample-card {
   position: relative;
-  isolation: isolate;
-  overflow: hidden;
   display: grid;
   grid-row: span 6;
   grid-template-rows: subgrid;
@@ -113,28 +94,6 @@
 .sample-card-slot:empty {
   display: block;
   min-height: 0;
-}
-
-.sample-card::before {
-  content: "";
-  position: absolute;
-  inset: auto -30% -45% auto;
-  z-index: -1;
-  width: 80%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, var(--glow-1), transparent);
-  opacity: 0.55;
-  transition:
-    opacity var(--dur-slow) var(--ease),
-    transform var(--dur-slow) var(--ease);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .sample-card:hover::before {
-    opacity: 1;
-    transform: scale(1.2);
-  }
 }
 
 .sample-card-top {
@@ -177,9 +136,14 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
+  /* A subtle lift (a.card's is 3px) with the border change from components.css. */
+  a.sample-card:hover {
+    transform: translateY(-2px);
+  }
+
   .sample-card:hover .sample-card-go {
     color: var(--on-accent);
-    background: var(--accent-grad);
+    background: var(--accent);
     transform: translateX(3px);
   }
 }
@@ -214,7 +178,7 @@
   justify-content: flex-end;
   align-items: center;
   padding-top: var(--space-2);
-  border-top: 1px dashed var(--border);
+  background: var(--rule) top center / var(--rule-w) 1px no-repeat;
 }
 
 .sample-card-delete {
@@ -229,8 +193,8 @@
   font-size: var(--fs-xs);
   font-weight: 500;
   transition:
-    color 0.2s var(--ease),
-    background 0.2s var(--ease);
+    color var(--dur) var(--ease),
+    background var(--dur) var(--ease);
 }
 
 .sample-card-delete:focus-visible {
@@ -260,7 +224,7 @@
   display: block;
   min-height: 300px;
   background:
-    linear-gradient(100deg, transparent 30%, var(--glass-highlight) 50%, transparent 70%) 0 0 / 250% 100%,
+    linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--text-h) 7%, transparent) 50%, transparent 70%) 0 0 / 250% 100%,
     var(--surface);
   animation: shimmer 1.4s linear infinite;
 }
@@ -492,7 +456,7 @@
 .pg-thin {
   margin: var(--space-3) 0 0;
   padding-top: var(--space-2);
-  border-top: 1px dashed var(--border);
+  background: var(--rule) top center / var(--rule-w) 1px no-repeat;
   font-size: var(--fs-sm);
   color: var(--warn);
 }
@@ -717,10 +681,19 @@
   }
 }
 
-/* The one-line note under the question-set intro: body-note size, not lede size. */
+/* "Why are some questions dimmed?": a quiet link that opens the note. */
+.q-why {
+  margin: 0;
+}
+
+.q-why-btn {
+  font-size: var(--fs-sm);
+}
+
+/* The note under it: body-note size, not lede size. */
 .q-named-note {
   font-size: var(--fs-sm);
-  margin: var(--space-2) 0 var(--space-3);
+  margin: var(--space-2) 0 0;
 }
 
 /* Questions that name the brand: dimmed with a hollow marker (the header explains once why). */
@@ -775,10 +748,23 @@
   margin-top: var(--space-6);
 }
 
-.q-paused > summary {
-  cursor: pointer;
+.q-paused-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  margin-bottom: var(--space-3);
+  padding: 0 0 var(--space-2);
+  border: 0;
+  background: var(--rule) bottom left / var(--rule-w) 1px no-repeat;
+  color: var(--text-h);
+  font: inherit;
   font-size: var(--fs-lg);
   font-weight: 600;
-  color: var(--text-h);
-  margin-bottom: var(--space-3);
+  text-align: left;
+  cursor: pointer;
+}
+
+.q-paused-toggle > span:first-child {
+  flex: 1;
 }

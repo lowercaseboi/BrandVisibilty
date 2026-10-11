@@ -1,10 +1,9 @@
-/* Analysis + Gaps & evidence modules (pages/brand/AnalysisModule.tsx, GapsModule.tsx and
-   components/evidence/*). Builds on the moved dashboard pieces (dashboard.css / components.css) and
-   the shared module frame (modules.css); tokens only. */
+/* Analysis + "What's holding you back" modules (pages/brand/AnalysisModule.tsx, GapsModule.tsx and
+   components/evidence/*). Builds on the dashboard pieces (dashboard.css / components.css) and the
+   shared module frame (modules.css); tokens only. */
 
-/* Sections sit in .module-body's flex gap, so drop the old dashboard's stacked-page margins. */
-.module[data-module="analysis"] .dash-section,
-.module[data-module="gaps"] .dash-section {
+/* Sections sit in .module-body's flex gap, so drop the stacked-page margins. */
+.module[data-module="analysis"] .dash-section {
   margin-top: 0;
 }
 
@@ -27,9 +26,9 @@
   margin-bottom: 0;
 }
 
-/* The two main cards: score first, then the run panel, stacked full width (as in the old
-   dashboard). Both cards are always full-width, so their internal layouts (score-hero-grid,
-   run-grid) only need the viewport-based breakpoints already in dashboard.css. */
+/* The two main cards: the score, then the one-line run panel, stacked full width. Both are always
+   full-width, so their internal layouts (score-hero-grid, run-grid) only need the viewport-based
+   breakpoints already in dashboard.css. */
 .analysis-main {
   display: flex;
   flex-direction: column;
@@ -46,8 +45,9 @@
   justify-content: center;
 }
 
-/* Lead card: a little more room than a plain card, shrinking with the card-pad tokens on phones. */
-.analysis-trend {
+/* Lead cards: a little more room than a plain card, shrinking with the card-pad tokens on phones. */
+.analysis-trend,
+.analysis-who {
   padding: calc(var(--card-pad-y) + 4px) calc(var(--card-pad-x) + 2px);
 }
 
@@ -57,6 +57,14 @@
 
 .analysis-trend .count {
   white-space: nowrap;
+}
+
+.analysis-who-title {
+  margin: 0 0 var(--space-2);
+}
+
+.analysis-who .section-note {
+  margin: 0 0 var(--space-3);
 }
 
 /* =========================================================
@@ -84,16 +92,16 @@
    Right padding leaves room for the selected card's connector notch (below). */
 .gaps-list-pane {
   position: sticky;
-  top: calc(var(--header-h) + 14px);
-  max-height: calc(100dvh - var(--header-h) - 30px);
+  top: calc(var(--header-h) + var(--space-3));
+  max-height: calc(100dvh - var(--header-h) - var(--space-6));
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 2px 12px 12px 2px;
   scrollbar-width: thin;
 }
 
-.gaps-list-pane .gap-list {
-  gap: var(--space-3);
+.gaps-list-pane .gap-list .gap-item {
+  margin-bottom: var(--space-3);
 }
 
 .gap-item.is-selectable {
@@ -111,17 +119,7 @@
   }
 }
 
-/* Selected: the existing highlight plus a notch pointing at the evidence pane, and a short pulse. */
-.gap-item.is-selected {
-  animation: gap-pick var(--dur-slow) var(--ease);
-}
-
-@keyframes gap-pick {
-  from {
-    box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 30%, transparent);
-  }
-}
-
+/* Selected: the existing highlight plus a notch pointing at the evidence pane. */
 .gap-select[aria-pressed="true"] {
   color: var(--accent-text);
   text-decoration: underline;
@@ -146,7 +144,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  scroll-margin-top: calc(var(--header-h) + 14px);
+  scroll-margin-top: calc(var(--header-h) + var(--space-3));
 }
 
 .gaps-evidence-pane > .module-section-head {
@@ -167,8 +165,8 @@
   align-items: center;
   gap: var(--space-2) var(--space-3);
   padding: 10px var(--space-3) 10px var(--space-4);
-  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line));
-  border-left: 3px solid var(--accent);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--accent);
   border-radius: var(--radius);
   background: var(--accent-soft);
   animation: rise var(--dur-med) var(--ease-out) backwards;
@@ -191,15 +189,6 @@
   margin-left: auto;
 }
 
-.evidence-spotlight {
-  position: relative;
-}
-
-.evidence-spotlight-label {
-  margin: 0 0 var(--space-1);
-  color: var(--accent-text);
-}
-
 .evidence-spotlight .section-note {
   margin: 0 0 var(--space-3);
 }
@@ -207,7 +196,7 @@
 .evidence-hint {
   margin: 0;
   padding-left: var(--space-3);
-  border-left: 2px dashed var(--line-strong);
+  border-left: 2px solid var(--border);
   color: var(--muted);
   font-size: var(--fs-sm);
 }
@@ -219,11 +208,39 @@
 .evidence-browser {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+}
+
+.evidence-browser > * + * {
+  margin-top: var(--space-3);
+}
+
+/* The filters hide behind a quiet toggle; the count sits opposite it. */
+.evidence-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+.evidence-bar .filters-count {
+  margin: 0;
+  padding: 0;
+}
+
+.link-quiet.evidence-filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .evidence-browser .filters {
   margin: 0;
+  padding-top: var(--space-3);
+}
+
+.evidence-browser > .collapse {
+  margin-top: 0;
 }
 
 .evidence-search {
@@ -243,10 +260,6 @@
 
   .evidence-filters select {
     width: 100%;
-  }
-
-  .evidence-filters .filters-count {
-    margin-left: 0;
   }
 }
 
@@ -276,7 +289,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gap-item.is-selected,
   .evidence-selection {
     animation: none;
   }

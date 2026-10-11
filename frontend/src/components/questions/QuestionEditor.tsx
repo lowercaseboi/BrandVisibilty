@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { getObservations, resetQuestions, saveQuestions } from "../../api/client";
 import type { QuestionInput, QuestionSet, QuestionSource } from "../../api/types";
 import { useAsync } from "../../api/useAsync";
@@ -6,6 +6,8 @@ import { useIntentLabel } from "../../format";
 import { T, useFormat, useT } from "../../i18n";
 import { useBrandData } from "../../pages/brand/BrandContext";
 import { Details } from "../../settings/details";
+import { Collapse } from "../ui/Collapse";
+import { DisclosureMark } from "../ui/DisclosureMark";
 
 // Unprompted intents a customer can file a new question under (templates.py), plus "custom".
 const ADDABLE_INTENTS = [
@@ -112,6 +114,10 @@ export function QuestionEditor() {
   const [busy, setBusy] = useState<"save" | "reset" | null>(null);
   const [newText, setNewText] = useState("");
   const [newIntent, setNewIntent] = useState("custom");
+  const [whyOpen, setWhyOpen] = useState(false);
+  const [pausedOpen, setPausedOpen] = useState(false);
+  const whyId = useId();
+  const pausedId = useId();
 
   // Results of the last analysis per question; no snapshot yet (or the fetch failing) just hides
   // the bars, same as the old page.
@@ -245,7 +251,9 @@ export function QuestionEditor() {
             {r.source === "custom" && <span className="badge">{t("pages.q.badgeYours")}</span>}
           </span>
         </div>
-        <HitBar hit={nb === false && hits ? hits.get(r.text) : undefined} />
+        <Details>
+          <HitBar hit={nb === false && hits ? hits.get(r.text) : undefined} />
+        </Details>
         {r.source === "custom" && (
           <button
             type="button"
@@ -272,25 +280,26 @@ export function QuestionEditor() {
 
   return (
     <>
-      <p className="lede q-named-note">{t("pages.q.namedNote")}</p>
-
       <div className="card q-summary">
-        <div className="kv">
-          <span className="kv-label">{t("pages.q.asked")}</span>
-          <span className="kv-value">{n(enabled.length)}</span>
-        </div>
-        <div className="kv">
-          <span className="kv-label">{t("pages.q.counted")}</span>
-          <span className="kv-value">{n(scored)}</span>
-        </div>
-        <div className="kv">
-          <span className="kv-label">{t("pages.q.notCounted")}</span>
-          <span className="kv-value">{n(unscored)}</span>
-        </div>
-        <div className="kv">
-          <span className="kv-label">{t("pages.q.off")}</span>
-          <span className="kv-value">{n(rows.length - enabled.length)}</span>
-        </div>
+        <p className="q-summary-count">{t.n("pages.q.total", enabled.length)}</p>
+        <Details>
+          <div className="kv">
+            <span className="kv-label">{t("pages.q.asked")}</span>
+            <span className="kv-value">{n(enabled.length)}</span>
+          </div>
+          <div className="kv">
+            <span className="kv-label">{t("pages.q.counted")}</span>
+            <span className="kv-value">{n(scored)}</span>
+          </div>
+          <div className="kv">
+            <span className="kv-label">{t("pages.q.notCounted")}</span>
+            <span className="kv-value">{n(unscored)}</span>
+          </div>
+          <div className="kv">
+            <span className="kv-label">{t("pages.q.off")}</span>
+            <span className="kv-value">{n(rows.length - enabled.length)}</span>
+          </div>
+        </Details>
         <div className="q-summary-state">
           {dirty ? (
             <span className="badge badge-job-partial">{t("pages.q.unsaved")}</span>
@@ -299,7 +308,7 @@ export function QuestionEditor() {
           ) : (
             <span className="badge badge-muted">{t("pages.q.suggested")}</span>
           )}
-          {unchecked > 0 && <span className="muted small">{t.n("pages.q.unchecked", unchecked)}</span>}
+          <Details>{unchecked > 0 && <span className="muted small">{t.n("pages.q.unchecked", unchecked)}</span>}</Details>
         </div>
         <Details>
           <div className="pg-tech small muted">
@@ -311,16 +320,33 @@ export function QuestionEditor() {
 
       <div className="alert alert-info small">{t("pages.q.baseline")}</div>
 
+      {unscored > 0 && (
+        <div className="q-why">
+          <button
+            type="button"
+            className="link-quiet q-why-btn"
+            aria-expanded={whyOpen}
+            aria-controls={whyId}
+            onClick={() => setWhyOpen((v) => !v)}
+          >
+            {t("pages.q.why")}
+          </button>
+          <Collapse open={whyOpen} id={whyId}>
+            <p className="lede q-named-note">{t("pages.q.namedNote")}</p>
+          </Collapse>
+        </div>
+      )}
+
       {groups
         .filter(([, list]) => list.some((r) => r.enabled))
         .map(([intent, list]) => (
           <section key={intent} className="q-group">
             <h3>
-              {intentLabel(intent)}{" "}
-              <span className="count">
-                {t("pages.q.groupCount", { on: n(list.filter((r) => r.enabled).length), total: n(list.length) })}
-              </span>
+              {intentLabel(intent)}
               <Details>
+                <span className="count">
+                  {t("pages.q.groupCount", { on: n(list.filter((r) => r.enabled).length), total: n(list.length) })}
+                </span>
                 <code className="pg-code-muted">{intent}</code>
               </Details>
             </h3>
@@ -331,12 +357,23 @@ export function QuestionEditor() {
         ))}
 
       {paused.length > 0 && (
-        <details className="q-paused">
-          <summary>{t("pages.q.pausedTitle", { n: fmt.number(paused.length) })}</summary>
-          <div className="card card-flush">
-            <ul className="q-list">{paused.map(renderRow)}</ul>
-          </div>
-        </details>
+        <div className="q-paused">
+          <button
+            type="button"
+            className="q-paused-toggle"
+            aria-expanded={pausedOpen}
+            aria-controls={pausedId}
+            onClick={() => setPausedOpen((v) => !v)}
+          >
+            <span>{t("pages.q.pausedTitle", { n: fmt.number(paused.length) })}</span>
+            <DisclosureMark open={pausedOpen} />
+          </button>
+          <Collapse open={pausedOpen} id={pausedId}>
+            <div className="card card-flush">
+              <ul className="q-list">{paused.map(renderRow)}</ul>
+            </div>
+          </Collapse>
+        </div>
       )}
 
       <section>
@@ -387,7 +424,11 @@ export function QuestionEditor() {
 
       {error && error.kind !== "duplicate" && (
         <div className="alert alert-error" role="alert">
-          <T k={error.kind === "save" ? "pages.q.saveError" : "pages.q.resetError"} vars={{ message: error.message }} />
+          {t(error.kind === "save" ? "pages.q.saveErrorPlain" : "pages.q.resetErrorPlain")}
+          <Details>
+            {" "}
+            <T k={error.kind === "save" ? "pages.q.saveError" : "pages.q.resetError"} vars={{ message: error.message }} />
+          </Details>
         </div>
       )}
       {notice && (

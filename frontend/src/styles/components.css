@@ -12,41 +12,42 @@
   /* Clear of the notch / status bar when installed to the home screen (viewport-fit=cover). The
      header's full height, inset included, is --header-h (base.css), for things that stick under it. */
   padding-top: env(safe-area-inset-top);
-  /* No rule underneath. Transparent at the top of the page; frosts only once content scrolls under it. */
+  /* Transparent at the top of the page; frosts (with an 80% hairline) once content scrolls under it. */
   background: transparent;
-  transition:
-    background var(--dur-slow) var(--ease),
-    box-shadow var(--dur-slow) var(--ease);
-}
-
-/* Analyst (numbers) view: an accent hairline under the header and a label by the icons. */
-.app-header.is-analyst {
-  box-shadow: inset 0 -2px 0 var(--accent);
-}
-
-.app-header.is-analyst.is-scrolled {
-  box-shadow:
-    inset 0 -2px 0 var(--accent),
-    0 12px 32px -24px rgb(0 0 0 / 0.35);
-}
-
-.analyst-tag {
-  margin-right: 4px;
-  color: var(--accent-text);
-  animation: fade var(--dur-med) var(--ease);
-}
-
-@media (max-width: 640px) {
-  .analyst-tag {
-    display: none;
-  }
+  transition: background var(--dur-slow) var(--ease);
 }
 
 .app-header.is-scrolled {
-  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  background:
+    var(--rule) bottom center / var(--rule-w) 1px no-repeat,
+    color-mix(in srgb, var(--bg) 86%, transparent);
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
-  box-shadow: 0 12px 32px -24px rgb(0 0 0 / 0.35);
+}
+
+/* Analytical view: a small accent dot + label by the icons (.header-tools: outranks ui.css's .eyebrow). */
+.header-tools .analyst-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 4px 0 0;
+  color: var(--accent-text);
+  white-space: nowrap;
+  animation: fade var(--dur-med) var(--ease);
+}
+
+.header-tools .analyst-tag::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+@media (max-width: 640px) {
+  .header-tools .analyst-tag {
+    display: none;
+  }
 }
 
 .app-header-inner {
@@ -122,18 +123,6 @@
   flex: none;
 }
 
-/* Navy bar in light theme (app pages): solid band colour; frosted once scrolled. */
-:root[data-theme="light"] .app-header-app {
-  background: var(--band-dark);
-}
-
-:root[data-theme="light"] .app-header-app.is-scrolled,
-.app-header-landing.is-scrolled {
-  background: color-mix(in srgb, var(--band-dark) 82%, transparent);
-  backdrop-filter: var(--blur);
-  -webkit-backdrop-filter: var(--blur);
-}
-
 /* Landing: section anchors in a pill between the logo and the tools. */
 .header-links {
   display: flex;
@@ -179,8 +168,7 @@
   }
 }
 
-/* Square glass control (theme, language, numbers), double-framed like a drafted instrument panel
-   button: its own hairline border, then a --bg-coloured gap, then a second hairline (--frame-ring). */
+/* Flat square control (theme, language, Analytical view): a hairline, nothing else. */
 .icon-btn {
   position: relative;
   display: inline-flex;
@@ -190,18 +178,13 @@
   height: 38px;
   padding: 0;
   color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: transparent;
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  box-shadow:
-    var(--frame-ring-sm),
-    var(--shadow-1),
-    inset 0 1px 0 var(--glass-highlight);
   cursor: pointer;
   text-decoration: none;
   transition:
     transform var(--dur) var(--ease),
-    box-shadow var(--dur) var(--ease),
     background var(--dur) var(--ease),
     border-color var(--dur) var(--ease),
     color var(--dur) var(--ease);
@@ -210,12 +193,7 @@
 @media (hover: hover) and (pointer: fine) {
   .icon-btn:hover {
     color: var(--text-h);
-    border-color: var(--line-strong);
-    box-shadow:
-      var(--frame-ring-sm),
-      var(--shadow-2),
-      inset 0 1px 0 var(--glass-highlight);
-    transform: translateY(-1px);
+    border-color: var(--border-strong);
   }
 }
 
@@ -305,6 +283,15 @@
   .icon-btn-round {
     margin-left: 8px;
   }
+}
+
+/* Footer: a shade darker than the page (like .lp-footer), an 80% hairline on top. Overrides the
+   plain base.css rule, which is only the padding/size fallback. */
+.app-footer {
+  border-top: 0;
+  background:
+    var(--rule) top center / var(--rule-w) 1px no-repeat,
+    color-mix(in srgb, black 9%, var(--bg));
 }
 
 /* =========================================================
@@ -558,7 +545,6 @@
   border-radius: var(--radius);
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 8%, var(--surface));
-  box-shadow: var(--frame-ring-sm);
 }
 
 .empty-state.is-compact .empty-state-icon {
@@ -1108,19 +1094,6 @@ a.card:active {
   font-size: calc(13.5px * var(--z));
 }
 
-.check {
-  font-weight: 600;
-  font-size: calc(13.5px * var(--z));
-}
-
-.check-yes {
-  color: var(--ok);
-}
-
-.check-no {
-  color: var(--muted);
-}
-
 .bar-cell {
   display: flex;
   align-items: center;
@@ -1131,17 +1104,17 @@ a.card:active {
 }
 
 .bar-track {
-  width: 140px;
+  width: calc(140px * var(--z));
   max-width: 40vw;
-  height: 8px;
-  border-radius: 4px;
+  height: calc(8px * var(--z));
+  border-radius: 2px;
   background: var(--surface-3);
   overflow: hidden;
 }
 
 .bar-fill {
   height: 100%;
-  border-radius: 4px;
+  border-radius: 2px;
   background: var(--accent);
 }
 
@@ -1181,75 +1154,10 @@ a.card:active {
    Run panel + progress
    ========================================================= */
 
-.run-panel {
-  margin: var(--space-4) 0;
-}
-
-.run-panel-head p {
-  margin: 2px 0 var(--space-3);
-}
-
-.run-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3) var(--space-4);
-  align-items: flex-end;
-}
-
-.run-controls select {
-  min-width: 140px;
-}
-
-.run-controls label {
-  min-width: 0;
-  max-width: 100%;
-}
-
-.run-panel > p.small {
-  margin: 10px 0 0;
-}
-
-.run-plan strong {
-  color: var(--text-h);
-}
-
-.run-meta {
-  font-size: calc(14px * var(--z));
-  color: var(--muted);
-  margin: 0;
-}
-
-.job {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
-}
-
-.job p {
-  margin: var(--space-2) 0 0;
-}
-
-.job-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  font-size: calc(14.5px * var(--z));
-}
-
-.job-message {
-  flex: 1;
-  min-width: 0;
-}
-
-.job-count {
-  font-family: var(--mono);
-}
-
 .progress {
   margin-top: 10px;
-  height: 8px;
-  border-radius: 4px;
+  height: calc(8px * var(--z));
+  border-radius: 2px;
   background: var(--surface-3);
   overflow: hidden;
 }
@@ -1267,89 +1175,7 @@ a.card:active {
 
 .progress-mini {
   margin-top: 0;
-  height: 6px;
-}
-
-.provider-progress {
-  list-style: none;
-  margin: var(--space-3) 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.provider-row {
-  display: grid;
-  grid-template-columns: minmax(90px, 140px) minmax(60px, 1fr) auto auto minmax(0, 1.4fr) auto;
-  align-items: center;
-  gap: 10px;
-  font-size: calc(14.5px * var(--z));
-}
-
-.provider-row-label {
-  font-weight: 600;
-  color: var(--text-h);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.provider-row-note {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.provider-skipped .progress-bar {
-  background: var(--muted);
-}
-
-@media (max-width: 640px) {
-  .provider-row {
-    grid-template-columns: minmax(0, 1fr) auto auto auto;
-    grid-template-areas:
-      "label count badge action"
-      "bar bar bar bar"
-      "note note note note";
-    row-gap: var(--space-1);
-  }
-
-  .provider-row-label {
-    grid-area: label;
-  }
-
-  .provider-row .progress-mini {
-    grid-area: bar;
-  }
-
-  .provider-row-count {
-    grid-area: count;
-  }
-
-  .provider-row-badge {
-    grid-area: badge;
-  }
-
-  .provider-row-note {
-    grid-area: note;
-  }
-
-  .provider-row-action {
-    grid-area: action;
-  }
-}
-
-.run-depth {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.run-depth-label {
-  font-size: calc(14px * var(--z));
-  font-weight: 600;
-  color: var(--text-h);
+  height: calc(6px * var(--z));
 }
 
 /* segmented control (Quick / Standard / Thorough) */
@@ -1464,10 +1290,6 @@ a.card:active {
   gap: 2px;
 }
 
-.metric-card-composite .metric-explainer {
-  grid-column: 1 / -1;
-}
-
 .metric-label {
   font-size: calc(14px * var(--z));
   font-weight: 600;
@@ -1502,12 +1324,6 @@ a.card:active {
   color: var(--text);
 }
 
-.metric-explainer {
-  font-size: calc(13px * var(--z));
-  color: var(--muted);
-  margin-top: var(--space-1);
-}
-
 @media (max-width: 640px) {
   .metric-cards,
   .metric-card-composite {
@@ -1532,18 +1348,10 @@ a.card:active {
   color: var(--text-h);
 }
 
-.kv-value.pos {
-  color: var(--ok);
-}
-
-.kv-value.neg {
-  color: var(--err);
-}
-
 /* confidence-interval bar */
 .ci-bar {
   position: relative;
-  height: 36px;
+  height: calc(36px * var(--z));
 }
 
 .ci-bar::before {
@@ -1551,26 +1359,26 @@ a.card:active {
   position: absolute;
   left: 0;
   right: 0;
-  top: 10px;
-  height: 8px;
-  border-radius: 4px;
+  top: calc(10px * var(--z));
+  height: calc(8px * var(--z));
+  border-radius: 2px;
   background: var(--surface-3);
 }
 
 .ci-bar-range {
   position: absolute;
-  top: 10px;
-  height: 8px;
-  border-radius: 4px;
+  top: calc(10px * var(--z));
+  height: calc(8px * var(--z));
+  border-radius: 2px;
   background: var(--chart-band);
   box-shadow: inset 0 0 0 1px var(--accent);
 }
 
 .ci-bar-point {
   position: absolute;
-  top: 6px;
+  top: calc(6px * var(--z));
   width: 4px;
-  height: 16px;
+  height: calc(16px * var(--z));
   margin-left: -2px;
   border-radius: 2px;
   background: var(--text-h);
@@ -1579,7 +1387,7 @@ a.card:active {
 .ci-bar-min,
 .ci-bar-max {
   position: absolute;
-  top: 22px;
+  top: calc(22px * var(--z));
   font-family: var(--mono);
   font-size: calc(11px * var(--z));
   color: var(--muted);
@@ -1672,12 +1480,6 @@ a.card:active {
   stroke-dasharray: 5 4;
 }
 
-.trend-break-label {
-  fill: var(--warn);
-  font-size: calc(11px * var(--z));
-  font-weight: 600;
-}
-
 .trend-crosshair {
   stroke: var(--muted);
   stroke-width: 1;
@@ -1703,14 +1505,10 @@ a.card:active {
   gap: 6px;
 }
 
-.trend-baseline p {
-  margin: 6px 0 0;
-}
-
 .swatch {
   display: inline-block;
-  width: 18px;
-  height: 10px;
+  width: calc(18px * var(--z));
+  height: calc(10px * var(--z));
   border-radius: 2px;
 }
 
@@ -1726,7 +1524,7 @@ a.card:active {
 
 .swatch-break {
   width: 0;
-  height: 14px;
+  height: calc(14px * var(--z));
   border-left: 2px dashed var(--warn);
 }
 
@@ -1734,10 +1532,8 @@ a.card:active {
    Gaps
    ========================================================= */
 
-.gap-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+.gap-list .gap-item {
+  margin-bottom: var(--space-4);
 }
 
 .gap-item {
@@ -1751,7 +1547,6 @@ a.card:active {
 .gap-item.is-highlighted {
   border-color: var(--accent);
   background: var(--accent-soft);
-  box-shadow: 0 0 0 1px var(--accent);
 }
 
 .gap-head {
@@ -1787,8 +1582,8 @@ a.card:active {
 }
 
 .gap-scope {
-  font-weight: 600;
-  color: var(--text-h);
+  font-size: var(--fs-sm);
+  color: var(--muted);
 }
 
 .gap-id {
@@ -1798,7 +1593,9 @@ a.card:active {
 }
 
 .gap-explainer {
-  margin: 6px 0 0;
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-md);
+  line-height: 1.5;
 }
 
 .gap-foot {
@@ -1814,18 +1611,6 @@ a.card:active {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2) var(--space-5);
-}
-
-.link-evidence {
-  font-size: calc(14px * var(--z));
-  font-weight: 600;
-  text-decoration: none;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .link-evidence:hover {
-    text-decoration: underline;
-  }
 }
 
 /* =========================================================
@@ -1920,7 +1705,7 @@ a.card:active {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 10px;
+  margin-top: var(--space-3);
 }
 
 .rank-chip {
@@ -1964,36 +1749,6 @@ a.card:active {
   line-height: 1.6;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  max-height: 420px;
-  overflow-y: auto;
-}
-
-.obs-more {
-  margin-top: var(--space-2);
-  font-size: var(--fs-sm);
-}
-
-/* Phones: the whole response flows in the page, clamped to six lines until "Show more"
-   (ObservationCard adds .is-clamped and only offers the toggle when the text overflows). */
-@media (max-width: 640px) {
-  .obs-response {
-    max-height: none;
-    overflow: visible;
-    padding: 10px 12px;
-    font-size: var(--fs-md);
-  }
-
-  .obs-response.is-clamped {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 6;
-    line-clamp: 6;
-    overflow: hidden;
-  }
-
-  .obs-ranks {
-    margin-top: var(--space-2);
-  }
 }
 
 .hl {
@@ -2028,6 +1783,12 @@ a.card:active {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3) 28px;
+}
+
+.q-summary-count {
+  margin: 0;
+  font-weight: 500;
+  color: var(--text-h);
 }
 
 .q-summary-state {
@@ -2328,7 +2089,7 @@ a.card:active {
   line-height: 1.4;
   white-space: normal;
   overflow-wrap: anywhere;
-  animation: toast-in 0.2s var(--ease-out);
+  animation: toast-in var(--dur) var(--ease-out);
 }
 
 .toast::before {
@@ -2350,7 +2111,7 @@ a.card:active {
 /* Trend verdict (AC-8): one plain-language line above the score-history chart. */
 .trend-verdict {
   margin: 0 0 var(--space-3);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-md);
   line-height: 1.5;
   color: var(--text);
 }

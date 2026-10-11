@@ -1,5 +1,5 @@
 /* Campaign Studio (pages/brand/CampaignStudio.tsx + components/campaign/*), the "Your campaigns"
-   strip, the "Since your campaign" card, the recommendation card's campaign button and the trend
+   strip, the "Since your campaign" card and the trend
    chart's "Published" markers. Built on primitives.css (stepper, tabs, action bar, field groups,
    status pills). Tokens only, so dark and light both work; the app mockups use the same tokens
    (no platform colours or logos). Standard breakpoints only. */
@@ -25,7 +25,10 @@
 .cs-step-head h2 { font-size: var(--fs-xl); }
 .cs-step-head h2:focus { outline: none; }
 .cs-step-head h2:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; }
-.cs-step-head p { margin: 2px 0 0; }
+.cs-step-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-3); }
+.cs-step-head .eyebrow { order: 1; margin: 0; }
+.cs-step-head h2 { order: 0; }
+.cs-step-head p.muted { flex-basis: 100%; order: 2; margin: 2px 0 0; }
 .cs-spinner {
   display: inline-block;
   flex: none;
@@ -56,7 +59,6 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface-solid);
-  box-shadow: var(--shadow-1);
 }
 .cs-top-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .cs-title {
@@ -77,6 +79,10 @@
   font-size: var(--fs-sm);
 }
 .cs-trace-rec { color: var(--text-h); font-weight: 600; }
+.cs-trace-back { color: var(--muted); text-decoration: none; }
+@media (hover: hover) and (pointer: fine) {
+  .cs-trace-back:hover { color: var(--text-h); text-decoration: underline; }
+}
 .cs-badges { display: flex; flex-wrap: wrap; gap: 6px; }
 .cs-badge {
   padding: 1px 8px;
@@ -90,7 +96,12 @@
 }
 /* Honest labels (template image): the synthetic-data look, like the run banners. */
 .cs-badge.is-honest { border-color: var(--synthetic-border); background: var(--synthetic-bg); color: var(--synthetic-text); }
-.cs-delete { margin-left: auto; color: var(--err); font-size: var(--fs-sm); }
+.link-quiet.cs-delete { margin-left: auto; padding-bottom: 2px; border-bottom-color: transparent; color: var(--err); font-size: var(--fs-sm); }
+@media (hover: hover) and (pointer: fine) {
+  .link-quiet.cs-delete:hover:not(:disabled) { border-bottom-color: var(--err); }
+}
+.cs-tech { padding-top: var(--space-2); background: var(--rule) top center / var(--rule-w) 1px no-repeat; }
+.cs-tech-note { color: var(--muted); }
 .cs-save { color: var(--muted); font-size: var(--fs-xs); white-space: nowrap; }
 .cs-save.is-saved { color: var(--rate-high); }
 .cs-save.is-saved::before { content: "✓ "; }
@@ -122,7 +133,7 @@
   border-radius: var(--radius-sm);
   background: var(--surface-2);
 }
-.cs-gen-art span { height: 10px; border-radius: 4px; background: var(--surface-3); }
+.cs-gen-art span { height: 10px; border-radius: var(--radius-xs); background: var(--surface-3); }
 .cs-gen-art span:first-child { height: 80px; }
 .cs-gen-art span:last-child { width: 60%; }
 .cs-gen-art.is-live span {
@@ -162,14 +173,15 @@
 .cs-focus { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: var(--space-4); align-items: start; }
 .cs-preview {
   position: sticky;
-  top: calc(var(--header-h) + 108px * var(--z)); /* below the app header + progress header */
+  /* below the app header and the progress header (--cs-top-h is measured by the Studio) */
+  top: calc(var(--header-h) + var(--cs-top-h, calc(108px * var(--z))) + var(--space-3));
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 16px;
-  border: 1px dashed var(--line);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
+  background: var(--surface-2);
 }
 .cs-preview .eyebrow { margin: 0; }
 .cs-preview .is-off { opacity: 0.45; filter: grayscale(0.6); }
@@ -241,7 +253,7 @@
   align-items: center;
   gap: 4px;
   padding: 2px 4px 2px 8px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-xs);
   background: var(--accent-soft);
   color: var(--accent-text);
   font-size: var(--fs-xs);
@@ -300,7 +312,7 @@
   color: var(--accent-text);
   font-weight: 700;
 }
-.cs-regen { padding: 12px; border: 1px dashed var(--line); border-radius: var(--radius-sm); }
+.cs-regen { padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
 /* website text */
 .cs-pieces, .cs-sends, .cs-cards {
   display: grid;
@@ -311,6 +323,8 @@
 }
 .cs-piece, .cs-sendrow, .cs-mini, .cs-since { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .cs-paste { margin: 0; color: var(--text-h); font-size: var(--fs-sm); }
+.link-quiet.cs-code-toggle { display: inline-flex; align-items: center; gap: 8px; padding-bottom: 3px; font-size: var(--fs-sm); }
+.cs-code .field-head { margin-top: var(--space-2); }
 .cs-code pre {
   max-height: 200px;
   margin: 6px 0;
@@ -420,7 +434,7 @@
   overflow-wrap: anywhere;
 }
 .cs-next-card .btn { align-self: flex-start; }
-.cs-log-wrap summary { color: var(--muted); font-size: var(--fs-sm); font-weight: 600; cursor: pointer; }
+.link-quiet.cs-log-toggle { display: inline-flex; align-items: center; gap: 8px; padding-bottom: 3px; font-size: var(--fs-sm); }
 .cs-log { margin: 8px 0 0; padding: 0; list-style: none; }
 .cs-log-row {
   display: grid;
@@ -431,7 +445,7 @@
   align-items: center;
   gap: 2px 10px;
   padding: 8px 0;
-  border-top: 1px solid var(--border);
+  background: var(--rule) top center / var(--rule-w) 1px no-repeat;
   font-size: var(--fs-sm);
 }
 .cs-log-dot {
@@ -514,8 +528,8 @@
 .pv-avatar.is-square { border-radius: 8px; }
 .pv-text { padding: 0 12px 10px; }
 .pv-text p, .pv-wa-bubble p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-.pv-clamp { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; }
-.pv-more { padding: 0; border: 0; background: none; color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer; }
+/* ReadMore inside a mockup: its toggle looks like the app's own "… more", not the product's link. */
+.pv .read-more-btn { margin-top: 2px; padding: 0; border: 0; color: var(--muted); font-family: inherit; font-size: 13px; font-weight: 600; }
 .pv-tag { color: var(--pv-tag); }
 .pv-media {
   display: grid;
@@ -595,10 +609,8 @@
   font-weight: 600;
 }
 
-/* ---------- recommendation card button + trend chart markers ---------- */
+/* ---------- trend chart markers ---------- */
 
-.rec-card-foot .rec-campaign { margin-left: auto; gap: 6px; font-size: var(--fs-xs); }
-.rec-card-foot .rec-remove + .rec-campaign, .rec-card-foot .rec-campaign + .rec-remove { margin-left: 0; }
 .trend-pub-line { stroke: var(--accent); stroke-width: 1; stroke-dasharray: 2 4; opacity: 0.45; }
 .trend-pub-line.is-active { opacity: 0.9; }
 .trend-pub { cursor: pointer; }

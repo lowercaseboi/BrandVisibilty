@@ -8,6 +8,10 @@ import type { BoardCard, BoardColumnView, BoardFilter } from "./boardModel";
 import { FILTER_LABEL, STATUS_LABEL } from "./columns";
 import { RecCard } from "./RecCard";
 import { RecLanes } from "./RecLanes";
+import { TopN } from "../ui/TopN";
+
+/** How many suggestions show before "Show more": the top few fill one window. */
+const TOP_CARDS = 3;
 
 export interface RecListProps {
   columns: BoardColumnView[];
@@ -24,7 +28,7 @@ export interface RecListProps {
 
 /**
  * The recommendations as one priority-sorted grid of cards (side by side, one per suggestion
- * group), with a slim filter bar over it. Status changes never reorder the grid; when a change takes
+ * group; the top few, the rest behind "Show more"), with a slim filter bar over it. Status changes never reorder the grid; when a change takes
  * a card out of the current filter, focus returns to that filter's button. Changes are announced in
  * a polite live region. On phones the filters become swipeable lanes (RecLanes) over the same
  * cards, and the focused filter is the lane on screen.
@@ -77,29 +81,39 @@ export function RecList(props: RecListProps) {
 
   const cardsFor = (f: BoardFilter) => {
     const shown = cards.filter((c) => matchesFilter(c, f));
+    // TopN shows its first item and folds the rest, so each of the two lists is one item: the
+    // top cards, and (when there are more) the others. Each stays a proper <ol> grid.
+    const groups = [shown.slice(0, TOP_CARDS), shown.slice(TOP_CARDS)].filter((g) => g.length > 0);
     return shown.length > 0 ? (
-      <ol className="rec-grid">
-        {shown.map((card) => (
-          <RecCard
-            key={card.key}
-            card={card}
-            title={titleOf(card)}
-            brandKey={brandKey}
-            runId={runId}
-            entities={entities}
-            labelOf={labelOf}
-            observations={observations}
-            campaignsReady={campaignsReady}
-            onStatus={(to) => changeStatus(card, to)}
-            onRemove={() => remove(card)}
-          />
-        ))}
-      </ol>
+      <TopN
+        key={f}
+        items={groups}
+        n={1}
+        render={(group, i) => (
+          <ol key={i} className="rec-grid">
+            {group.map((card) => (
+              <RecCard
+                key={card.key}
+                card={card}
+                title={titleOf(card)}
+                brandKey={brandKey}
+                runId={runId}
+                entities={entities}
+                labelOf={labelOf}
+                observations={observations}
+                campaignsReady={campaignsReady}
+                onStatus={(to) => changeStatus(card, to)}
+                onRemove={() => remove(card)}
+              />
+            ))}
+          </ol>
+        )}
+      />
     ) : (
       <p className="rec-filter-empty">
         {t("board.filter.empty")}{" "}
         {f !== "all" && (
-          <button type="button" className="btn-link" onClick={() => setFilter("all")}>
+          <button type="button" className="link-quiet" onClick={() => setFilter("all")}>
             {t("board.filter.showAll")}
           </button>
         )}

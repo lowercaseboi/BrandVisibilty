@@ -13,6 +13,8 @@ import { CompetitorBars } from "../../components/dashboard/CompetitorBars";
 import { ScoreHero } from "../../components/dashboard/ScoreHero";
 import { useListFormat } from "../../components/dashboard/helpers";
 import { useFormat, useT } from "../../i18n";
+import { Details } from "../../settings/details";
+import { Reveal } from "../../components/ui/Reveal";
 import { useBrandData } from "./BrandContext";
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
@@ -25,9 +27,10 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /**
- * Analysis: how visible the brand is now (ScoreHero) next to running a new check (RunPanel), the
- * score over time with its AC-8 verdict (TrendChart), and the diagnostics behind it all in one
- * collapsed "Deeper numbers" section.
+ * Analysis: how visible the brand is now (ScoreHero), a one-line way to run a new check (RunPanel),
+ * the score over time with its AC-8 verdict (TrendChart) and who AI recommends instead. The
+ * diagnostics behind it all (run ID, scores, ranges, per-AI table) are one collapsed "Deeper
+ * numbers" section that only the Analytical view shows.
  */
 export function AnalysisModule() {
   const t = useT();
@@ -49,10 +52,12 @@ export function AnalysisModule() {
         <p className="analysis-meta">
           {snapshot.data_origin === "synthetic"
             ? t("dashboard.head.lastCheckedPractice", { when: fmt.relativeTime(snapshot.collection_completed_at) })
-            : t("dashboard.head.lastChecked", {
-                when: fmt.relativeTime(snapshot.collection_completed_at),
-                ais: list(askedIds.map(labelOf)),
-              })}
+            : t("dashboard.head.lastChecked", { when: fmt.relativeTime(snapshot.collection_completed_at) })}
+          <Details>
+            {snapshot.data_origin !== "synthetic" && (
+              <> · {t("dashboard.head.sources", { ais: list(askedIds.map(labelOf)) })}</>
+            )}
+          </Details>
         </p>
       )}
 
@@ -82,45 +87,55 @@ export function AnalysisModule() {
                 <p className="eyebrow">{t("modules.analysis.trend.eyebrow")}</p>
                 <h2 id="analysis-trend-title">{t("dashboard.trend.title")}</h2>
               </div>
-              <span className="count">{t.n("dashboard.trend.count", analysisCount)}</span>
+              <Details>
+                <span className="count">{t.n("dashboard.trend.count", analysisCount)}</span>
+              </Details>
             </div>
             <TrendChart snapshots={history.length ? history : [snapshot]} currentRunId={snapshot.run_id} labelOf={labelOf} events={publishMarkers} />
           </section>
 
-          <CollapsibleSection
-            id="analysis-deeper"
-            title={t("modules.analysis.deeper.title")}
-            summary={t("modules.analysis.deeper.summary")}
-          >
-            <p className="section-note">{t("dashboard.details.intro")}</p>
+          <Reveal>
+            <section className="card analysis-who" aria-labelledby="analysis-who-title">
+              <h2 id="analysis-who-title" className="analysis-who-title">
+                {t("dashboard.who.title")}
+              </h2>
+              <CompetitorBars summary={snapshot.mention_summary} entities={snapshot.entities} selfName={brandName} />
+            </section>
+          </Reveal>
 
-            <h3 className="dash-sub">{t("modules.analysis.deeper.facts")}</h3>
-            <dl className="card dash-facts">
-              <Fact label={t("dashboard.details.runId")}>
-                <code>{snapshot.run_id}</code>
-              </Fact>
-              <Fact label={t("dashboard.details.checkedOn")}>{fmt.date(snapshot.collection_completed_at)}</Fact>
-              <Fact label={t("dashboard.details.scored")}>{fmt.number(snapshot.observation_count)}</Fact>
-              <Fact label={t("dashboard.details.mentioning")}>{fmt.number(snapshot.mentioned_count)}</Fact>
-              <Fact label={t("dashboard.details.unscored")}>{fmt.number(snapshot.unscored_observation_count ?? 0)}</Fact>
-              <Fact label={t("dashboard.details.clusters")}>{fmt.number(snapshot.cluster_count)}</Fact>
-              <Fact label={t("dashboard.details.samples")}>{fmt.number(snapshot.sampling_config?.samples_per_query ?? 0)}</Fact>
-            </dl>
+          <Details block>
+            <CollapsibleSection
+              id="analysis-deeper"
+              title={t("modules.analysis.deeper.title")}
+              summary={t("modules.analysis.deeper.summary")}
+            >
+              <p className="section-note">{t("dashboard.details.intro")}</p>
 
-            <h3 className="dash-sub">{t("dashboard.details.metrics")}</h3>
-            <MetricCards analysis={snapshot.analysis_result} />
+              <h3 className="dash-sub">{t("modules.analysis.deeper.facts")}</h3>
+              <dl className="card dash-facts">
+                <Fact label={t("dashboard.details.runId")}>
+                  <code>{snapshot.run_id}</code>
+                </Fact>
+                <Fact label={t("dashboard.details.checkedOn")}>{fmt.date(snapshot.collection_completed_at)}</Fact>
+                <Fact label={t("dashboard.details.scored")}>{fmt.number(snapshot.observation_count)}</Fact>
+                <Fact label={t("dashboard.details.mentioning")}>{fmt.number(snapshot.mentioned_count)}</Fact>
+                <Fact label={t("dashboard.details.unscored")}>{fmt.number(snapshot.unscored_observation_count ?? 0)}</Fact>
+                <Fact label={t("dashboard.details.clusters")}>{fmt.number(snapshot.cluster_count)}</Fact>
+                <Fact label={t("dashboard.details.samples")}>{fmt.number(snapshot.sampling_config?.samples_per_query ?? 0)}</Fact>
+              </dl>
 
-            <h3 className="dash-sub">{t("dashboard.details.admission")}</h3>
-            <AdmissionBanner admission={snapshot.admission} runStatus={snapshot.status} labelOf={labelOf} />
+              <h3 className="dash-sub">{t("dashboard.details.metrics")}</h3>
+              <MetricCards analysis={snapshot.analysis_result} />
 
-            <h3 className="dash-sub">{t("dashboard.details.perAi")}</h3>
-            <div className="card card-flush">
-              <ProviderTable providers={snapshot.analysis_result.per_provider_coverage ?? []} labelOf={labelOf} />
-            </div>
+              <h3 className="dash-sub">{t("dashboard.details.admission")}</h3>
+              <AdmissionBanner admission={snapshot.admission} runStatus={snapshot.status} labelOf={labelOf} />
 
-            <h3 className="dash-sub">{t("dashboard.who.title")}</h3>
-            <CompetitorBars summary={snapshot.mention_summary} entities={snapshot.entities} selfName={brandName} />
-          </CollapsibleSection>
+              <h3 className="dash-sub">{t("dashboard.details.perAi")}</h3>
+              <div className="card card-flush">
+                <ProviderTable providers={snapshot.analysis_result.per_provider_coverage ?? []} labelOf={labelOf} />
+              </div>
+            </CollapsibleSection>
+          </Details>
         </>
       )}
     </ModuleShell>
