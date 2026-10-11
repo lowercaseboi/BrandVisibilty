@@ -11,13 +11,11 @@ export const modules = {
 
   // ---- Gaps & evidence: left pane
   "gaps.eyebrow": "Found by fixed rules",
-  "gaps.hint": "Select a gap to see the responses behind it.",
   "gaps.select": "Select",
   "gaps.none.body": "Gaps, and the AI responses behind them, appear after the first analysis.",
   "gaps.none.cta": "Go to Analysis",
 
   // ---- Gaps & evidence: right pane
-  "evidence.eyebrow": "Evidence",
   "evidence.forGap_one": "Showing the **{n}** response behind this gap.",
   "evidence.forGap_other": "Showing the **{n}** responses behind this gap.",
   "evidence.forRefs_one": "Showing the **{n}** response behind this recommendation.",
@@ -26,9 +24,6 @@ export const modules = {
   "evidence.noneLinked": "No AI response from this analysis is linked here — this evidence points at other sources.",
   "evidence.clear": "Clear",
   "evidence.clearAria": "Clear the selection and show every response",
-  "evidence.spotlight": "Spotlight",
-  "evidence.spotlightOutranked": "A verbatim response where a competitor is named before you.",
-  "evidence.spotlightNamed": "A verbatim response that names your brand.",
   "evidence.hint": "Select a gap to narrow the responses below to the ones behind it.",
   "evidence.all": "Every response",
   "evidence.showMore_one": "Show {n} more",

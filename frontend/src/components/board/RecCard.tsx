@@ -113,7 +113,7 @@ export function RecCard(props: RecCardProps) {
         />
       )}
 
-      <h3 id={titleId} className="rec-card-title">
+      <h3 id={titleId} className="rec-card-title" title={title}>
         {title}
       </h3>
 
@@ -276,9 +276,6 @@ function LiveCardBody({ card, title, brandKey, runId, entities, labelOf, observa
           <dt className="sr-only">{t("board.card.change")}</dt>
           <dd className={`rec-gain is-${impact.kind}`}>
             {impactText}
-            <Details>
-              <InfoTip text={impactTip.text} label={impactTip.label} />
-            </Details>
           </dd>
         </div>
       </dl>
@@ -302,19 +299,6 @@ function LiveCardBody({ card, title, brandKey, runId, entities, labelOf, observa
             <TransitionLink to={evidenceHref} className="rec-evidence">
               {t("board.card.seeEvidence")}
             </TransitionLink>
-            <Details>
-              <span className="evidence-meter" aria-hidden="true">
-                {Array.from({ length: FULL_EVIDENCE }, (_, i) => (
-                  <i key={i} className={i < evidence ? "is-on" : undefined} />
-                ))}
-              </span>
-              <span className="rec-evidence-count">
-                {evidence >= FULL_EVIDENCE
-                  ? t("board.card.evidenceFull", { n: fmt.number(evidence) })
-                  : t("board.card.evidenceOf", { n: fmt.number(evidence) })}
-                <InfoTip text={t("board.card.evidenceTip")} label={t("board.card.evidenceTipLabel")} />
-              </span>
-            </Details>
           </dd>
         </div>
       </dl>
@@ -399,63 +383,77 @@ function LiveCardBody({ card, title, brandKey, runId, entities, labelOf, observa
                 <p className="rec-drafted">
                   {rec.drafted_by === "template" ? t("board.card.draftedTemplate") : t("board.card.draftedOther", { by: rec.drafted_by })}
                 </p>
+                <p className="eyebrow rec-more-label">{t("board.card.evidence")}</p>
+                <p className="rec-rationale rec-evidence-line">
+                  <span className="evidence-meter" aria-hidden="true">
+                    {Array.from({ length: FULL_EVIDENCE }, (_, i) => (
+                      <i key={i} className={i < evidence ? "is-on" : undefined} />
+                    ))}
+                  </span>
+                  {evidence >= FULL_EVIDENCE
+                    ? t("board.card.evidenceFull", { n: fmt.number(evidence) })
+                    : t("board.card.evidenceOf", { n: fmt.number(evidence) })}
+                  <InfoTip text={t("board.card.evidenceTip")} label={t("board.card.evidenceTipLabel")} />
+                </p>
+                <p className="rec-rationale">
+                  {impactText}
+                  <InfoTip text={impactTip.text} label={impactTip.label} />
+                </p>
+                <div className="rec-tech">
+                  <p className="eyebrow">{t("board.card.tech")}</p>
+                  <div className="rec-tech-chips">
+                    <span className="badge badge-accent">{classKey ? t(classKey) : humanizeId(rec.action_class)}</span>
+                    {(s.gaps.length > 0 ? s.gaps : [null]).map((g) => {
+                      const id = g?.gap_id ?? rec.gap_id;
+                      return (
+                        <TransitionLink
+                          key={id}
+                          to={gapsHref(brandKey, { gapId: id, runId: runId ?? undefined })}
+                          className="rec-trace"
+                          title={t("board.card.traceTitle", { id })}
+                        >
+                          <span aria-hidden="true">↳ </span>
+                          {t("board.card.trace", { type: g ? gapTypeText(g.gap_type, t) : humanizeId(id) })}
+                        </TransitionLink>
+                      );
+                    })}
+                  </div>
+                  <dl className="rec-tech-list">
+                    <div>
+                      <dt>{t("board.card.tech.rec")}</dt>
+                      <dd>
+                        <code>{rec.recommendation_id}</code>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{t("board.card.tech.gap")}</dt>
+                      <dd>
+                        <code>{rec.gap_id}</code>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{t("board.card.tech.priority")}</dt>
+                      <dd>
+                        {t("board.card.tech.formula", {
+                          p: fmt.number(rec.priority ?? 0, 3),
+                          delta: fmt.number(rec.delta_composite ?? 0, 2),
+                          conf: fmt.number(rec.confidence ?? 0, 2),
+                          effort: fmt.number(rec.effort ?? 0),
+                        })}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{t("board.card.tech.confidence")}</dt>
+                      <dd>{fmt.percent(rec.confidence ?? 0)}</dd>
+                    </div>
+                  </dl>
+                </div>
               </Details>
             </div>
           </Collapse>
         </div>
       )}
 
-      <Details>
-        <div className="rec-tech">
-          <p className="eyebrow">{t("board.card.tech")}</p>
-          <div className="rec-tech-chips">
-            <span className="badge badge-accent">{classKey ? t(classKey) : humanizeId(rec.action_class)}</span>
-            {(s.gaps.length > 0 ? s.gaps : [null]).map((g) => {
-              const id = g?.gap_id ?? rec.gap_id;
-              return (
-                <TransitionLink
-                  key={id}
-                  to={gapsHref(brandKey, { gapId: id, runId: runId ?? undefined })}
-                  className="rec-trace"
-                  title={t("board.card.traceTitle", { id })}
-                >
-                  <span aria-hidden="true">↳ </span>
-                  {t("board.card.trace", { type: g ? gapTypeText(g.gap_type, t) : humanizeId(id) })}
-                </TransitionLink>
-              );
-            })}
-          </div>
-          <dl className="rec-tech-list">
-            <div>
-              <dt>{t("board.card.tech.rec")}</dt>
-              <dd>
-                <code>{rec.recommendation_id}</code>
-              </dd>
-            </div>
-            <div>
-              <dt>{t("board.card.tech.gap")}</dt>
-              <dd>
-                <code>{rec.gap_id}</code>
-              </dd>
-            </div>
-            <div>
-              <dt>{t("board.card.tech.priority")}</dt>
-              <dd>
-                {t("board.card.tech.formula", {
-                  p: fmt.number(rec.priority ?? 0, 3),
-                  delta: fmt.number(rec.delta_composite ?? 0, 2),
-                  conf: fmt.number(rec.confidence ?? 0, 2),
-                  effort: fmt.number(rec.effort ?? 0),
-                })}
-              </dd>
-            </div>
-            <div>
-              <dt>{t("board.card.tech.confidence")}</dt>
-              <dd>{fmt.percent(rec.confidence ?? 0)}</dd>
-            </div>
-          </dl>
-        </div>
-      </Details>
     </>
   );
 }

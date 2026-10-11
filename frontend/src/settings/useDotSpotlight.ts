@@ -5,12 +5,13 @@ import { useMediaQuery } from "./useMediaQuery";
 /**
  * The cursor glow on the page's dot grid (base.css `body::after`). Only for a real mouse — touch
  * has no hover. It eases toward the pointer (instantly under reduced motion) by writing
- * `--spot-x/--spot-y` on <html> and toggling `html.is-pointing`; React never re-renders.
+ * `--spot-x/--spot-y` on <html> and toggling `html.is-pointing`; React never re-renders. `enabled`
+ * switches it off per route (spotlightRoutes.ts).
  */
-export function useDotSpotlight(): void {
+export function useDotSpotlight(enabled = true): void {
   const fine = useMediaQuery("(hover: hover) and (pointer: fine)");
   useEffect(() => {
-    if (!fine) return;
+    if (!fine || !enabled) return;
     const root = document.documentElement;
     const smooth = !prefersReducedMotion();
     let tx = 0;
@@ -45,5 +46,5 @@ export function useDotSpotlight(): void {
       cancelAnimationFrame(raf);
       root.classList.remove("is-pointing");
     };
-  }, [fine]);
+  }, [fine, enabled]);
 }

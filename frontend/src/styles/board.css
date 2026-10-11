@@ -132,11 +132,12 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(calc(320px * var(--z)), 100%), 1fr));
   gap: var(--card-gap);
-  align-items: start;
+  align-items: stretch; /* every card in a row is as tall as the tallest */
   margin: 0;
   padding: 0;
   list-style: none;
 }
+
 
 /* ---------- cards: the flat .card, denser ---------- */
 
@@ -223,6 +224,12 @@
   letter-spacing: -0.01em;
   color: var(--text-h);
   text-wrap: pretty;
+  /* Same size for every card: long titles end in an ellipsis (the full text is in the title attr). */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
 }
 
 .rec-card-note {
@@ -234,6 +241,8 @@
 /* Plain facts: Why · What it could change, then one quiet line: Effort · Seen in n answers. */
 .rec-facts {
   display: grid;
+  align-content: start;
+  flex: 1; /* soaks up spare height so the buttons below line up across cards */
   gap: 10px;
   margin: 0;
   padding-top: 10px;
@@ -263,7 +272,11 @@
 }
 
 .rec-fact dd.rec-why-line {
-  display: block;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
   color: var(--text);
   overflow-wrap: anywhere;
 }

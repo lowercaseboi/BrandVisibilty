@@ -1,3 +1,6 @@
+/* NOTE: the px font sizes in this file are deliberate — the Hub keeps its original look and does
+   not follow the product-wide --z scale (scale.css). */
+
 /* Brand hub (pages/brand/HubPage.tsx): the brand card in the centre, four 3D glass module cards at
    the corners, joined to it by live wires (components/hub/LiveWires.tsx). Shared primitives (tilt,
    view-transition timing) live in modules.css; this file only adds the hub's own look. */
@@ -11,6 +14,8 @@
 }
 
 .hub {
+  /* The live wires, ports and arrows stay vermillion in both themes — independent of the accent. */
+  --wire: #ff6a3d;
   /* One sequence out of the brand card: each wire grows from the centre card toward its corner,
      and its module card emerges from behind the centre card and rides out to the wire's end.
      --hub-delay is when the first wire starts: almost at once on a direct load, or as the picked
@@ -56,6 +61,17 @@
   --border-strong: rgb(236 230 215 / 0.18);
   --line: rgb(236 230 215 / 0.26);
   --line-strong: rgb(236 230 215 / 0.48);
+}
+
+/* Cards on the Hub keep the glass (blur + inner highlight) that .card no longer has. :where() keeps
+   this at zero specificity so the Hub's own card rules still win. */
+:where(.hub) .card {
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  box-shadow:
+    var(--frame-ring),
+    var(--shadow-1),
+    inset 0 1px 0 var(--glass-highlight);
 }
 
 /* Reached through the list → hub morph: start as the card touches down (its fast-start easing
@@ -927,7 +943,7 @@
 
 /* The glowing conductor. */
 .hub-wire-core {
-  stroke: var(--accent);
+  stroke: var(--wire);
   stroke-width: 1.3;
   opacity: 0.7;
   transition:
@@ -963,14 +979,14 @@
 }
 
 .hub-wire-pulse {
-  stroke: var(--accent);
+  stroke: var(--wire);
   stroke-width: 2;
   stroke-dasharray: 12 58;
   animation: hub-flow var(--flow-dur) linear infinite;
 }
 
 .hub-wire-pulse-boost {
-  stroke: color-mix(in srgb, var(--accent) 40%, white);
+  stroke: color-mix(in srgb, var(--wire) 40%, white);
   stroke-width: 1.4;
   stroke-dasharray: 4 66;
   stroke-dashoffset: -8;
@@ -1008,12 +1024,12 @@
 }
 
 .hub-wire-spark {
-  stroke: color-mix(in srgb, var(--accent) 30%, white);
+  stroke: color-mix(in srgb, var(--wire) 30%, white);
   stroke-width: 4.6;
 }
 
 .hub-wire-spark-tail {
-  stroke: color-mix(in srgb, var(--accent) 55%, white);
+  stroke: color-mix(in srgb, var(--wire) 55%, white);
   stroke-width: 2;
   opacity: 0.6;
   stroke-dashoffset: var(--spark-tail);
@@ -1064,17 +1080,17 @@
 
 .hub-port-ring {
   fill: var(--surface-solid);
-  stroke: var(--accent);
+  stroke: var(--wire);
   stroke-width: 1.4;
 }
 
 .hub-port-core {
-  fill: var(--accent);
-  filter: drop-shadow(0 0 3px var(--accent));
+  fill: var(--wire);
+  filter: drop-shadow(0 0 3px var(--wire));
 }
 
 .hub-port-halo {
-  fill: var(--accent);
+  fill: var(--wire);
   opacity: 0;
   transform-box: fill-box;
   transform-origin: center;
@@ -1110,10 +1126,10 @@
   place-items: center;
   width: 17px;
   height: 17px;
-  border: 1px solid color-mix(in srgb, var(--accent) 65%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--wire) 65%, var(--line));
   border-radius: 50%;
   background: var(--surface-solid);
-  color: var(--accent);
+  color: var(--wire);
   font: 600 10px/1 var(--mono);
   font-variant-numeric: tabular-nums;
   pointer-events: none;
@@ -1154,18 +1170,18 @@
 .hub-rail-node circle,
 .hub-rail-arrow circle {
   fill: var(--surface-solid);
-  stroke: var(--accent);
+  stroke: var(--wire);
   stroke-width: 1.4;
 }
 
 .hub-rail-node .hub-rail-node-core {
-  fill: var(--accent);
+  fill: var(--wire);
   stroke: none;
 }
 
 .hub-rail-arrow path {
   fill: none;
-  stroke: var(--accent);
+  stroke: var(--wire);
   stroke-width: 1.6;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -1182,7 +1198,7 @@
 }
 
 .hub-wire.is-active .hub-wire-base {
-  stroke: color-mix(in srgb, var(--accent) 45%, var(--line));
+  stroke: color-mix(in srgb, var(--wire) 45%, var(--line));
 }
 
 .hub-wire.is-active .hub-wire-pulse {
@@ -1190,11 +1206,11 @@
 }
 
 .hub-wire.is-active .hub-port-ring {
-  fill: var(--accent);
+  fill: var(--wire);
 }
 
 .hub-wire.is-active .hub-port-core {
-  fill: color-mix(in srgb, var(--accent) 30%, white);
+  fill: color-mix(in srgb, var(--wire) 30%, white);
 }
 
 /* ---------- light theme: glow reads as ink, so keep it tighter ---------- */

@@ -489,7 +489,9 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- platform previews (look-alike mockups; tokens only) ---------- */
+/* ---------- platform previews (look-alike mockups; tokens only) ----------
+   Their px font sizes are deliberate: they imitate third-party apps, so they do not follow the
+   product-wide --z scale. */
 
 .pv {
   --pv-tag: var(--info);

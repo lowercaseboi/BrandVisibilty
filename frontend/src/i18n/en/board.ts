@@ -4,10 +4,9 @@
 // - {title} is a card's action title, {status} a status name.
 export const board = {
   "eyebrow": "Recommendations",
-  "title": "Suggestions",
+  "title": "Recommendation Engine",
   "intro": "The best things to do next, biggest gain for the least effort first. Mark each one as you go.",
   "meta.run": "From the analysis of {date}",
-  "loading": "Loading recommendations…",
 
   // Statuses (a card's saved column)
   "status.suggested": "Suggested",
@@ -104,11 +103,10 @@ export const board = {
   "card.draftedOther": "Drafted by: {by}",
   "card.trace": "Gap: {type}",
   "card.traceTitle": "Trace to gap {id} in Gaps & evidence",
-  // Technical details (only with "Show the numbers behind this" on).
+  // Technical details (only with the Analytical view on).
   "card.tech": "Technical details",
   "card.tech.rec": "Recommendation ID",
   "card.tech.gap": "Gap ID",
-  "card.tech.class": "Class",
   "card.tech.confidence": "Confidence",
   "card.tech.priority": "Priority",
   // {p} priority, {delta} points, {conf} confidence (0–1), {effort} the 1/3/5/8 effort number.
@@ -374,10 +372,8 @@ export const board = {
   "campaign.where.chars": "{n} characters",
   "campaign.where.withImage": "with image",
   "campaign.where.noImage": "text only",
-  "campaign.where.include": "Post to {channel}",
   "campaign.where.connect": "Connect {channel}",
   "campaign.where.exportInstead": "Export it instead",
-  "campaign.where.exporting": "Exporting",
   "campaign.where.fix": "Fix in the draft",
   "campaign.where.chosen_one": "{n} channel chosen.",
   "campaign.where.chosen_other": "{n} channels chosen.",
@@ -407,7 +403,6 @@ export const board = {
   "campaign.publish.notYet": "Pressing the button approves this exact copy, then sends it.",
   "campaign.publish.approvedAt": "Approved {when}. Pressing the button sends it.",
   "campaign.publish.nothing": "Nothing chosen yet — go back and pick at least one channel.",
-  "campaign.publish.go": "Looks good — approve and publish",
   "campaign.publish.goN_one": "Approve & publish to {n} channel",
   "campaign.publish.goN_other": "Approve & publish to {n} channels",
   "campaign.publish.goApprovedN_one": "Publish to {n} channel",
@@ -419,7 +414,6 @@ export const board = {
   "campaign.publish.someBlocked_other": "{n} chosen channels won't be sent — see why above. The rest go out when you press this.",
   "campaign.publish.approveFirst": "Approved when you press the button, then sent.",
   "campaign.publish.tokenAhead": "Posting to {names} needs a posting password — you'll be asked for it when you press Publish.",
-  "campaign.publish.goApproved": "Publish now",
   "campaign.publish.working": "Publishing…",
   "campaign.effect.post": "Posts publicly on {channel}",
   "campaign.effect.unconnected": "Exported — you post it yourself",
@@ -451,8 +445,6 @@ export const board = {
   "campaign.outcome.blocked": "Not sent",
   "campaign.result.view": "View the post ↗",
   "campaign.result.openWa": "Open in WhatsApp ↗",
-  "campaign.result.inPack": "in your download pack",
-  "campaign.result.simulated": "practice run, nothing was posted",
   "campaign.result.retry": "Try again",
   "campaign.result.retryToken": "Enter admin token and retry",
   "campaign.result.connect": "Connect {channel}",

@@ -86,6 +86,9 @@ export function isExportOnly(action: string): boolean {
 // `dashboard.recs.why.<key>` from the same params.
 // ---------------------------------------------------------------------------------------------
 
+// The English dictionary doubles as the schema for the reasoning keys: a server-sent
+// `reasoning_key` is only rendered when it exists here (otherwise the English reasoning string is
+// shown). So the keys listed above must exist, spelled identically, in i18n/en/dashboard.ts.
 const DASHBOARD_KEYS: Record<string, string> = enDashboard;
 
 type Params = Record<string, string | number>;

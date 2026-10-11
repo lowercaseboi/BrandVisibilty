@@ -72,10 +72,24 @@
   color: var(--muted);
 }
 
+/* Three equal columns across the full content width (the same columns for "Your brands", so one
+   own-brand card sits in the first slot); two on tablets, one on phones. */
 .sample-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+
+@media (max-width: 900px) {
+  .sample-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .sample-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* Tall flat card: name, score ring, rating. Each card spans six rows of the parent grid (subgrid),
@@ -87,8 +101,16 @@
   grid-row: span 6;
   grid-template-rows: subgrid;
   row-gap: var(--space-2);
-  padding: calc(var(--card-pad-y) + 4px) calc(var(--card-pad-x) + 2px);
+  padding: calc(var(--card-pad-y) + 10px) calc(var(--card-pad-x) + 8px);
   border-radius: var(--radius-lg);
+  /* A touch of glass (about a fifth of the old frosted look): a slightly see-through fill over the
+     dot grid, a soft blur, a faint corner tint and a thin inner highlight on light. */
+  background:
+    radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 60%),
+    color-mix(in srgb, var(--surface) 78%, transparent);
+  backdrop-filter: blur(8px) saturate(125%);
+  -webkit-backdrop-filter: blur(8px) saturate(125%);
+  box-shadow: inset 0 1px 0 var(--card-sheen);
 }
 
 .sample-card-slot:empty {
