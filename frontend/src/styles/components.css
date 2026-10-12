@@ -618,14 +618,11 @@
 .card {
   position: relative;
   background: var(--surface);
-  backdrop-filter: var(--blur);
-  -webkit-backdrop-filter: var(--blur);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow:
     var(--frame-ring),
-    var(--shadow-1),
-    inset 0 1px 0 var(--glass-highlight);
+    var(--shadow-1);
   padding: var(--card-pad-y) var(--card-pad-x);
 }
 
@@ -680,8 +677,7 @@ a.card:active,
     transform: translateY(-3px);
     box-shadow:
       var(--frame-ring),
-      var(--shadow-2),
-      inset 0 1px 0 var(--glass-highlight);
+      var(--shadow-2);
   }
 }
 

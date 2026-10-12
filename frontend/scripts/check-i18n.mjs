@@ -1,13 +1,19 @@
 #!/usr/bin/env node
 // Translation drift guard: every hi/mr dictionary must have exactly the English keys, and each
 // translated value must keep the English {placeholders} and the same number of ** bold markers.
+// It also fails on English keys that nothing references any more (orphans left behind when a
+// component is rewritten) — a key counts as used when its full string appears in the code, when a
+// template literal such as `dashboard.gaps.type.${k}` covers its prefix, or when it is a plural
+// variant (_one/_other) of a used key.
 // Run by `npm run lint`. Exits 1 on any problem.
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const I18N = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "i18n");
+const SRC = join(I18N, "..");
 const NAMESPACES = ["common", "dashboard", "pages"];
+const ALL_NAMESPACES = ["common", "dashboard", "pages", "hub", "brandinfo", "modules", "board"];
 const TRANSLATIONS = ["hi", "mr"];
 
 /** Evaluates the object literal of `export const <ns> ... = { ... }` (comments and trailing commas are fine). */
@@ -49,6 +55,31 @@ for (const ns of NAMESPACES) {
     for (const key of Object.keys(dict)) {
       if (!(key in en)) problems.push(`${file}: extra key "${key}" (not in English)`);
     }
+  }
+}
+
+// ---- unused English keys ----
+function sourceFiles(dir) {
+  const out = [];
+  for (const name of readdirSync(dir)) {
+    const full = join(dir, name);
+    if (full === I18N) continue;
+    if (statSync(full).isDirectory()) out.push(...sourceFiles(full));
+    else if (/\.(ts|tsx)$/.test(name) && !/\.test\.tsx?$/.test(name)) out.push(full);
+  }
+  return out;
+}
+const code = sourceFiles(SRC).map((f) => readFileSync(f, "utf8")).join("\n");
+// `a.b.${x}` → prefix "a.b." covers every key under it.
+const prefixes = [...code.matchAll(/[`"']([\w.]+\.)\$\{/g)].map((m) => m[1]);
+const used = (full) => {
+  const base = full.replace(/_(one|other|few|many|zero|two)$/, "");
+  return code.includes(`"${full}"`) || code.includes(`"${base}"`) || code.includes(`'${base}'`) || code.includes(`\`${base}\``) || prefixes.some((p) => full.startsWith(p));
+};
+for (const ns of ALL_NAMESPACES) {
+  const { file, dict } = loadDict("en", ns);
+  for (const key of Object.keys(dict)) {
+    if (!used(`${ns}.${key}`)) problems.push(`${file}: unused key "${key}" (nothing references ${ns}.${key})`);
   }
 }
 

@@ -3,15 +3,15 @@
    and the inline script in index.html set data-theme on <html>.
    Every text/background pair below was checked for WCAG AA (>= 4.5:1).
 
-   Look: frosted-glass surfaces (`--surface` is translucent and paired with `--blur`) over a
-   soft glow painted behind the page (base.css, body::before). Use `--surface-solid` wherever
-   something must be fully opaque (chart strokes, popovers). */
+   Look: flat, calm surfaces (`--surface` is opaque) over a faint dot grid painted behind the page
+   (base.css, body::before/::after). Only the Hub and the brand cards keep some glass. Use
+   `--surface-solid` wherever something must be fully opaque (chart strokes, popovers). */
 
 :root {
   color-scheme: light;
 
   /* surfaces */
-  /* Light theme follows the landing page: cream paper, navy ink, amber signal. */
+  /* Light theme follows the landing page: cream paper, navy ink, teal accent (amber in dark). */
   --bg: oklch(96.3% 0.011 90); /* warm off-white page */
   --surface: oklch(98.4% 0.007 90); /* flat cards: opaque, so the page's dot grid doesn't show through */
   --surface-solid: oklch(99.2% 0.005 90);
@@ -23,9 +23,8 @@
   --field-bg: oklch(99% 0.006 90 / 0.8);
   --popover: oklch(99.2% 0.005 90); /* menus: opaque, since blur can't see past the header */
 
-  /* Neo-futurist drafting lines: crisper than --border, used for double frames, crop marks,
-     dotted leaders and hairline rules. Kept separate from --border so glass edges can stay soft
-     while these read as drawn ink. */
+  /* Drawn-ink lines (dotted leaders, hairline rules, control outlines): the same as --border-strong
+     here; kept as separate names so a surface (the Hub) can restore its own softer/crisper pair. */
   --line: var(--border-strong);
   --line-strong: color-mix(in srgb, var(--text-h) 52%, transparent);
 
@@ -50,6 +49,7 @@
   --focus: oklch(42% 0.09 195);
 
   /* depth */
+  --card-sheen: rgb(255 255 255 / 0.55); /* thin inner top highlight on the lightly-glassy brand cards */
   --glass-highlight: transparent; /* flat now; the Hub restores its glass edge */
   --blur: blur(18px) saturate(170%);
   /* Pencil-line shadows: a hard, offset hollow-outline frame (no blur) instead of a soft drop
@@ -238,8 +238,8 @@
   --band-light-fg: #f5f3ec;
   --band-light-dim: rgb(245 243 236 / 0.64);
   --band-light-line: rgb(236 230 215 / 0.1);
-  --signal: oklch(75% 0.155 60);
-  --signal-fg: oklch(21% 0.045 60);
+  --signal: #c8592e;
+  --signal-fg: #fff8f2;
   --detected: oklch(74% 0.13 150);
   --missing: #f2a58e;
   --bg: #20201f;
@@ -256,15 +256,16 @@
   --text: #e8e5dc;
   --text-h: #f5f3ec;
   --muted: #b5b0a3;
-  --accent: oklch(75% 0.155 60);
-  --accent-hover: oklch(80% 0.15 62);
-  --accent-soft: oklch(75% 0.155 60 / 0.16);
-  --accent-text: oklch(75% 0.155 60);
-  --accent-grad: oklch(75% 0.155 60);
-  --accent-grad-hover: oklch(80% 0.15 62);
-  --on-accent: oklch(21% 0.045 60);
-  --focus: oklch(75% 0.155 60);
+  --accent: #c8592e;
+  --accent-hover: #d96a3f;
+  --accent-soft: rgb(200 89 46 / 0.18);
+  --accent-text: #e07a52;
+  --accent-grad: #c8592e;
+  --accent-grad-hover: #d96a3f;
+  --on-accent: #fff8f2;
+  --focus: #e07a52;
   --glass-highlight: transparent;
+  --card-sheen: rgb(255 250 240 / 0.04);
   --glow-1: rgb(255 106 61 / 0.12);
   --glow-2: rgb(217 160 90 / 0.08);
   --glow-3: rgb(170 150 120 / 0.07);
@@ -295,10 +296,10 @@
   --hl-comp-line: #fb923c;
   --hl-disc: rgb(168 85 247 / 0.3);
   --hl-disc-line: #c084fc;
-  --chart-self: oklch(75% 0.155 60);
+  --chart-self: #c8592e;
   --chart-other: #8a857a;
   --chart-line: #f5f3ec;
-  --chart-band: oklch(75% 0.155 60 / 0.2);
+  --chart-band: rgb(200 89 46 / 0.22);
   --chart-grid: rgb(236 230 215 / 0.08);
   --shadow-pop: 0 18px 44px -12px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 250 240 / 0.05);
 }
@@ -324,8 +325,8 @@
     --band-light-fg: #f5f3ec;
     --band-light-dim: rgb(245 243 236 / 0.64);
     --band-light-line: rgb(236 230 215 / 0.1);
-    --signal: oklch(75% 0.155 60);
-    --signal-fg: oklch(21% 0.045 60);
+    --signal: #c8592e;
+    --signal-fg: #fff8f2;
     --detected: oklch(74% 0.13 150);
     --missing: #f2a58e;
     --bg: #20201f;
@@ -342,15 +343,16 @@
     --text: #e8e5dc;
     --text-h: #f5f3ec;
     --muted: #b5b0a3;
-    --accent: oklch(75% 0.155 60);
-    --accent-hover: oklch(80% 0.15 62);
-    --accent-soft: oklch(75% 0.155 60 / 0.16);
-    --accent-text: oklch(75% 0.155 60);
-    --accent-grad: oklch(75% 0.155 60);
-    --accent-grad-hover: oklch(80% 0.15 62);
-    --on-accent: oklch(21% 0.045 60);
-    --focus: oklch(75% 0.155 60);
+    --accent: #c8592e;
+    --accent-hover: #d96a3f;
+    --accent-soft: rgb(200 89 46 / 0.18);
+    --accent-text: #e07a52;
+    --accent-grad: #c8592e;
+    --accent-grad-hover: #d96a3f;
+    --on-accent: #fff8f2;
+    --focus: #e07a52;
     --glass-highlight: transparent;
+    --card-sheen: rgb(255 250 240 / 0.04);
     --glow-1: rgb(255 106 61 / 0.12);
     --glow-2: rgb(217 160 90 / 0.08);
     --glow-3: rgb(170 150 120 / 0.07);
@@ -381,92 +383,13 @@
     --hl-comp-line: #fb923c;
     --hl-disc: rgb(168 85 247 / 0.3);
     --hl-disc-line: #c084fc;
-    --chart-self: oklch(75% 0.155 60);
+    --chart-self: #c8592e;
   --chart-other: #8a857a;
     --chart-line: #f5f3ec;
-    --chart-band: oklch(75% 0.155 60 / 0.2);
+    --chart-band: rgb(200 89 46 / 0.22);
     --chart-grid: rgb(236 230 215 / 0.08);
     --shadow-pop: 0 18px 44px -12px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 250 240 / 0.05);
   }
-}
-
-/* On the dark band (landing header/bands, the dashboard's navy top band in light mode): remap the
-   app tokens so every shared component renders correctly without per-component overrides.
-   Derived tokens are redeclared here because custom properties resolve where they're declared.
-   .on-band always; .on-band-light only in light theme; .on-band-dark only in dark theme. */
-.on-band,
-:root[data-theme="light"] .on-band-light,
-:root[data-theme="dark"] .on-band-dark {
-  color-scheme: dark;
-  --bg: var(--band-dark);
-  --surface: color-mix(in srgb, var(--band-dark-raised) 80%, transparent);
-  --surface-solid: var(--band-dark-raised);
-  --surface-2: color-mix(in srgb, var(--band-dark-fg) 6%, var(--band-dark));
-  --surface-3: color-mix(in srgb, var(--band-dark-fg) 12%, var(--band-dark));
-  --border: var(--band-dark-line);
-  --border-strong: color-mix(in srgb, var(--band-dark-fg) 26%, transparent);
-  --line: color-mix(in srgb, var(--band-dark-fg) 26%, transparent);
-  --line-strong: color-mix(in srgb, var(--band-dark-fg) 48%, transparent);
-  --shadow-1: 4px 4px 0 -1px var(--band-dark), 4px 4px 0 0 var(--line);
-  --shadow-2: 6px 6px 0 -1px var(--band-dark), 6px 6px 0 0 var(--line-strong);
-  --shadow-accent: 4px 4px 0 -1px var(--band-dark), 4px 4px 0 0 var(--signal);
-  --shadow-accent-hover: 6px 6px 0 -1px var(--band-dark), 6px 6px 0 0 var(--signal);
-  --frame-ring: 0 0 0 calc(1px + var(--frame-gap)) var(--band-dark), 0 0 0 calc(2px + var(--frame-gap)) var(--line);
-  --frame-ring-sm: 0 0 0 calc(1px + var(--frame-gap-sm)) var(--band-dark), 0 0 0 calc(2px + var(--frame-gap-sm)) var(--line);
-  --frame-ring-accent: 0 0 0 calc(1px + var(--frame-gap-sm)) var(--band-dark), 0 0 0 calc(2px + var(--frame-gap-sm)) var(--signal);
-  --field-bg: color-mix(in srgb, var(--band-dark) 60%, transparent);
-  --popover: var(--band-dark-raised);
-  --text: color-mix(in srgb, var(--band-dark-fg) 88%, transparent);
-  --text-h: var(--band-dark-fg);
-  --muted: var(--band-dark-dim);
-  --accent: var(--signal);
-  --accent-hover: color-mix(in srgb, var(--signal) 82%, white);
-  --accent-soft: color-mix(in srgb, var(--signal) 18%, transparent);
-  --accent-text: var(--signal);
-  --accent-grad: var(--signal);
-  --accent-grad-hover: color-mix(in srgb, var(--signal) 82%, white);
-  --on-accent: var(--signal-fg);
-  --focus: var(--signal);
-  --glass-highlight: rgb(255 255 255 / 0.06);
-  --grid-line: color-mix(in srgb, var(--band-dark-fg) 6%, transparent);
-  --grid-line-major: color-mix(in srgb, var(--band-dark-fg) 13%, transparent);
-  --ok: #6ee7b7;
-  --ok-bg: #052e1f;
-  --ok-border: #14532d;
-  --ok-dot: #22c55e;
-  --warn: #fcd34d;
-  --warn-bg: #2d2305;
-  --warn-border: #713f12;
-  --err: #fca5a5;
-  --err-bg: #2c0b0b;
-  --err-border: #7f1d1d;
-  --info: #93c5fd;
-  --info-bg: #0b1a33;
-  --info-border: #1e3a8a;
-  --synthetic-bg: #3a3005;
-  --synthetic-border: #a16207;
-  --synthetic-text: #fde68a;
-  --hl-self: rgb(34 197 94 / 0.28);
-  --hl-self-line: #4ade80;
-  --hl-comp: rgb(249 115 22 / 0.28);
-  --hl-comp-line: #fb923c;
-  --hl-disc: rgb(168 85 247 / 0.3);
-  --hl-disc-line: #c084fc;
-  --chart-self: var(--signal);
-  --chart-other: color-mix(in srgb, var(--band-dark-fg) 45%, transparent);
-  --chart-line: var(--band-dark-fg);
-  --chart-band: color-mix(in srgb, var(--signal) 22%, transparent);
-  --chart-grid: var(--band-dark-line);
-  --score-glass-fill: color-mix(in srgb, var(--signal) 32%, transparent);
-  --score-glass-edge: color-mix(in srgb, var(--signal) 85%, transparent);
-  --score-outof: color-mix(in srgb, var(--signal) 65%, var(--band-dark-dim));
-  --rate-low: oklch(66% 0.15 30); /* brick */
-  --rate-low-bg: color-mix(in srgb, var(--rate-low) 16%, transparent);
-  --rate-mid: oklch(80% 0.12 88); /* gold */
-  --rate-mid-bg: color-mix(in srgb, var(--rate-mid) 16%, transparent);
-  --rate-high: oklch(76% 0.10 150); /* sage */
-  --rate-high-bg: color-mix(in srgb, var(--rate-high) 16%, transparent);
-  color: var(--text);
 }
 
 /* Score band colours: the big glass number and its "/100" pick up the same brick/gold/sage the

@@ -25,7 +25,7 @@
 }
 
 :root[data-theme="dark"] .lp {
-  --lp-accent-display: var(--signal);
+  --lp-accent-display: #e07a52;
 }
 
 .lp .card::after {
@@ -490,14 +490,12 @@
   grid-template-columns: minmax(140px, 1fr) 3fr;
   gap: 16px 48px;
   align-items: baseline;
-  padding: clamp(14px, 2.8vh, 36px) 0;
-  background: var(--rule) top center / var(--rule-w) 1px no-repeat;
+  padding: clamp(22px, 4.6vh, 56px) 0;
 }
 
-.lp-context-row:last-child {
-  background:
-    var(--rule) top center / var(--rule-w) 1px no-repeat,
-    var(--rule) bottom center / var(--rule-w) 1px no-repeat;
+/* One rule between rows — the section's own rule and the heading already frame the first and last. */
+.lp-context-row + .lp-context-row {
+  background: var(--rule) top center / var(--rule-w) 1px no-repeat;
 }
 
 .lp-context-tag {
@@ -824,7 +822,7 @@
   display: grid;
   grid-template-columns: minmax(calc(200px * var(--z)), calc(280px * var(--z))) 1fr;
   gap: clamp(32px, 6vw, 96px);
-  align-items: start;
+  align-items: stretch; /* the divider runs the full height of the row */
   margin-top: clamp(20px, 3.5vh, 44px);
 }
 
@@ -832,11 +830,18 @@
   min-width: 0;
 }
 
+/* The score block sits centred in its column, at the vertical middle of the divider beside it. */
 .lp-sample-panel {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
   gap: var(--space-4);
+  text-align: center;
+}
+
+.lp-sample-panel .score-ring {
+  width: calc(172px * var(--z));
 }
 
 .lp-sample-simulated {
