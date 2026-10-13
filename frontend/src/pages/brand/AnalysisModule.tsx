@@ -6,10 +6,11 @@ import { ModuleShell } from "../../components/module/ModuleShell";
 import { ProviderTable } from "../../components/ProviderTable";
 import { RunPanel } from "../../components/RunPanel";
 import { TrendChart } from "../../components/TrendChart";
-import { SinceCampaignCard } from "../../components/campaign/SinceCampaignCard";
 import { usePublishMarkers } from "../../components/campaign/usePublishMarkers";
 import { HonestyBanners } from "../../components/dashboard/Banners";
 import { CompetitorBars } from "../../components/dashboard/CompetitorBars";
+import { ImpactCard } from "../../components/dashboard/ImpactCard";
+import { VisibilityTables } from "../../components/dashboard/VisibilityTables";
 import { ScoreHero } from "../../components/dashboard/ScoreHero";
 import { useListFormat } from "../../components/dashboard/helpers";
 import { useFormat, useT } from "../../i18n";
@@ -77,7 +78,7 @@ export function AnalysisModule() {
         <RunPanel brandKey={brandKey} providers={providers} questions={questions} hasData={!!snapshot} onComplete={reload} />
       </div>
 
-      {snapshot && <SinceCampaignCard markers={publishMarkers} />}
+      {snapshot && <ImpactCard brandKey={brandKey} version={snapshot.run_id} entities={snapshot.entities} />}
 
       {snapshot && (
         <>
@@ -99,7 +100,12 @@ export function AnalysisModule() {
               <h2 id="analysis-who-title" className="analysis-who-title">
                 {t("dashboard.who.title")}
               </h2>
-              <CompetitorBars summary={snapshot.mention_summary} entities={snapshot.entities} selfName={brandName} />
+              <CompetitorBars
+                summary={snapshot.mention_summary}
+                entities={snapshot.entities}
+                selfName={brandName}
+                metrics={snapshot.metrics_v2}
+              />
             </section>
           </Reveal>
 
@@ -124,7 +130,17 @@ export function AnalysisModule() {
                 <Fact label={t("dashboard.details.samples")}>{fmt.number(snapshot.sampling_config?.samples_per_query ?? 0)}</Fact>
               </dl>
 
-              <h3 className="dash-sub">{t("dashboard.details.metrics")}</h3>
+              {snapshot.metrics_v2 && (
+                <VisibilityTables
+                  m={snapshot.metrics_v2}
+                  entities={snapshot.entities}
+                  labelOf={labelOf}
+                  brandKey={brandKey}
+                  runId={snapshot.run_id}
+                />
+              )}
+
+              <h3 className="dash-sub">{t(snapshot.metrics_v2 ? "dashboard.v2.legacyTitle" : "dashboard.details.metrics")}</h3>
               <MetricCards analysis={snapshot.analysis_result} />
 
               <h3 className="dash-sub">{t("dashboard.details.admission")}</h3>

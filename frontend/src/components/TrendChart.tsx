@@ -1,12 +1,13 @@
 import { useCallback, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent } from "react";
-import type { Snapshot, TrendVerdict } from "../api/types";
+import type { Snapshot, TrendVerdict, TrendVerdictV2 } from "../api/types";
 import { T, useFormat, useT } from "../i18n";
 import type { Formatter, MessageKey, Vars } from "../i18n";
 import { Details, useDetails } from "../settings/details";
 import { markerIndex, sinceDelta } from "./campaign/trendMarkers";
 import type { PublishMarker } from "./campaign/trendMarkers";
-import { toScore, useListFormat, useShortDate, useShortTime } from "./dashboard/helpers";
+import { useListFormat, useShortDate, useShortTime } from "./dashboard/helpers";
+import { CHANGE_KEY, headline, isBreak, viDigits } from "./dashboard/visibility";
 import { estimateWidth, nearestIndex, pickAxisLabels } from "./trendAxis";
 
 const MIN_W = 280;
@@ -105,6 +106,65 @@ function verdictMessage(v: TrendVerdict, fmt: Formatter): Worded & { detail?: Wo
   }
 }
 
+// Metrics v2: a matched comparison verdict for 2–3 runs, the v1 Theil–Sen wording for 4+.
+function verdictMessageV2(v: TrendVerdictV2, fmt: Formatter): Worded & { detail?: Worded } {
+  if (v.method === "theil_sen" && v.slope) {
+    const weekly = v.slope.x_unit === "day" && v.slope.per_week != null;
+    const as: TrendVerdict = {
+      status: v.status as TrendVerdict["status"],
+      method: "theil_sen",
+      direction: v.direction,
+      n_points: v.n_points,
+      n_excluded: 0,
+      comparability_key: null,
+      x_unit: v.slope.x_unit,
+      slope: v.slope.value,
+      slope_ci_low: v.slope.ci_low,
+      slope_ci_high: v.slope.ci_high,
+      slope_per_week: weekly ? v.slope.per_week : null,
+      slope_per_week_ci_low: weekly && v.slope.ci_low != null ? v.slope.ci_low * 7 : null,
+      slope_per_week_ci_high: weekly && v.slope.ci_high != null ? v.slope.ci_high * 7 : null,
+    };
+    return verdictMessage(as, fmt);
+  }
+  const c = v.comparison;
+  if (!c) return { key: "dashboard.trend.verdict.insufficient", detail: { key: "dashboard.trend.verdict.detailInsufficient" } };
+  return {
+    key: CHANGE_KEY[c.verdict],
+    detail: c.ci95
+      ? {
+          key: "dashboard.v2.changeDetail",
+          vars: {
+            delta: fmt.number(c.delta ?? 0, 1),
+            lo: fmt.number(c.ci95[0], 1),
+            hi: fmt.number(c.ci95[1], 1),
+            q: c.questions,
+            overlap: fmt.percent(c.overlap),
+            mde: fmt.number(c.mde ?? 0, 1),
+          },
+        }
+      : undefined,
+  };
+}
+
+function TrendVerdictLineV2({ verdict }: { verdict: TrendVerdictV2 }) {
+  const fmt = useFormat();
+  const { key, vars, detail } = verdictMessageV2(verdict, fmt);
+  return (
+    <p className={`trend-verdict trend-verdict-${verdict.direction ?? "flat"}`}>
+      <T k={key} vars={vars} />
+      <Details>
+        {detail && (
+          <span className="muted">
+            {" "}
+            <T k={detail.key} vars={detail.vars} />
+          </span>
+        )}
+      </Details>
+    </p>
+  );
+}
+
 function TrendVerdictLine({ verdict }: { verdict: TrendVerdict }) {
   const t = useT();
   const fmt = useFormat();
@@ -127,9 +187,10 @@ function TrendVerdictLine({ verdict }: { verdict: TrendVerdict }) {
   );
 }
 
-// The score (0–100) over checks; the Analytical view adds its likely range as a band (PRD: trend
-// claims always carry their CI). A change in comparability_key means the questions, sampling or AIs changed,
-// so points on either side aren't comparable: the line breaks there and a dashed marker shows it.
+// The score (0–100: the Visibility Index, or the v1 composite on old payloads) over checks; the
+// Analytical view adds its likely range as a band (PRD: trend claims always carry their CI). Where two
+// checks share too few questions × AIs × models (metrics v2 overlap < 70%; v1: a different
+// comparability_key), points on either side aren't comparable: the line breaks and a dashed marker shows it.
 // `events` (Campaign Studio): small "Published" flags on the x-axis where a campaign went out,
 // placed between the checks around it, with a "since then" delta in the tooltip.
 export function TrendChart({
@@ -174,9 +235,9 @@ export function TrendChart({
 
   // One analysis is a point, not a line: draw that point with its range, plus a note.
   if (snapshots.length === 1) {
-    const a = snapshots[0].analysis_result;
+    const h = headline(snapshots[0]);
     const sy = (v: number) => 12 + (1 - v / 100) * 96;
-    const score = toScore(a.composite_score);
+    const score = Number(h.value.toFixed(viDigits(h.value)));
     return (
       <div className="trend-one">
         <svg className="trend-svg" viewBox="0 0 320 124" role="img" aria-label={t("dashboard.trend.single")}>
@@ -189,7 +250,7 @@ export function TrendChart({
             </g>
           ))}
           {showDetails && (
-            <line x1={172} x2={172} y1={sy(toScore(a.ci_high))} y2={sy(toScore(a.ci_low))} className="trend-ci-whisker" />
+            <line x1={172} x2={172} y1={sy(h.hi)} y2={sy(h.lo)} className="trend-ci-whisker" />
           )}
           <circle cx={172} cy={sy(score)} r={5} className="trend-point trend-point-current" />
           <text x={184} y={sy(score) + 4} className="trend-value">
@@ -225,16 +286,16 @@ export function TrendChart({
   const innerH = H - pad.top - padBottom;
   // Scores are 0-100 points: fit the axis to the highest score (or, in the Analytical view where the
   // range band shows, the highest CI bound), at least 25, plus headroom, rounded up to the next 10.
-  const top = (s: Snapshot) => (showDetails ? (s.analysis_result.ci_high ?? 0) : s.analysis_result.composite_score);
+  const top = (s: Snapshot) => (showDetails ? headline(s).hi : headline(s).value);
   const maxVal = Math.min(100, Math.max(25, ...snapshots.map(top)) + 5);
   const yMax = Math.ceil(maxVal / 10) * 10;
   const y = (v: number) => pad.top + innerH - (Math.max(0, Math.min(yMax, v ?? 0)) / yMax) * innerH;
 
   const pts = snapshots.map((s, i) => ({
     x: x(i),
-    y: y(s.analysis_result.composite_score),
-    lo: y(s.analysis_result.ci_low),
-    hi: y(s.analysis_result.ci_high),
+    y: y(headline(s).value),
+    lo: y(headline(s).lo),
+    hi: y(headline(s).hi),
     s,
   }));
 
@@ -242,7 +303,7 @@ export function TrendChart({
   const segments: (typeof pts)[] = [];
   const breaks: number[] = [];
   pts.forEach((p, i) => {
-    if (i > 0 && p.s.comparability_key !== pts[i - 1].s.comparability_key) {
+    if (i > 0 && isBreak(pts[i - 1].s, p.s)) {
       breaks.push((pts[i - 1].x + p.x) / 2);
       segments.push([]);
     }
@@ -297,19 +358,24 @@ export function TrendChart({
   const origin = ap ? (ORIGIN_KEY[ap.s.data_origin ?? "live"] ?? "dashboard.origin.live") : null;
   // Only the newest snapshot carries the verdict (it describes the history as of that run).
   const verdict = last.trend_verdict;
+  const verdictV2 = last.trend_verdict_v2;
+  const fmtVi = (s: Snapshot) => {
+    const v = headline(s).value;
+    return fmt.number(v, viDigits(v));
+  };
 
   return (
     <div className="trend" ref={measureRef}>
-      {verdict && <TrendVerdictLine verdict={verdict} />}
+      {verdictV2 ? <TrendVerdictLineV2 verdict={verdictV2} /> : verdict && <TrendVerdictLine verdict={verdict} />}
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className="trend-svg"
         role="img"
         tabIndex={0}
         aria-label={t("dashboard.trend.aria", {
-          first: toScore(first.analysis_result.composite_score),
+          first: fmtVi(first),
           firstDate: fmt.date(first.collection_completed_at),
-          last: toScore(last.analysis_result.composite_score),
+          last: fmtVi(last),
           lastDate: fmt.date(last.collection_completed_at),
         })}
         onKeyDown={onKey}
@@ -374,7 +440,7 @@ export function TrendChart({
             />
             {i === n - 1 && (
               <text x={p.x} y={p.y - 10 * z} className="trend-value" textAnchor="end">
-                {toScore(p.s.analysis_result.composite_score)}
+                {fmtVi(p.s)}
               </text>
             )}
           </g>
@@ -427,9 +493,9 @@ export function TrendChart({
               k={showDetails ? "dashboard.trend.pointRange" : "dashboard.trend.point"}
               vars={{
                 date: fmt.date(ap.s.collection_completed_at),
-                score: toScore(ap.s.analysis_result.composite_score),
-                lo: toScore(ap.s.analysis_result.ci_low),
-                hi: toScore(ap.s.analysis_result.ci_high),
+                score: fmtVi(ap.s),
+                lo: fmt.number(headline(ap.s).lo, viDigits(headline(ap.s).lo)),
+                hi: fmt.number(headline(ap.s).hi, viDigits(headline(ap.s).hi)),
               }}
             />
             {showDetails && origin && (

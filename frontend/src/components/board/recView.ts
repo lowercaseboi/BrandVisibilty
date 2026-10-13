@@ -43,23 +43,33 @@ export function capLine(total: number | null | undefined, shown: number): { n: n
 }
 
 export type Impact =
-  | { kind: "points"; n: number }
-  | { kind: "small" }
+  | { kind: "points"; n: number; v2?: true }
+  | { kind: "small"; v2?: true }
+  /** Metrics v2: a real but small expected gain, below what a follow-up run can confirm. */
+  | { kind: "belowMde"; n: number }
   /** A scored gap whose simulated fix barely moves the score. */
   | { kind: "flat" }
   /** A gap the visibility score doesn't measure (how the brand is described / which sites AI reads). */
   | { kind: "notScored"; reason: "representation" | "source" };
 
 /**
- * What a recommendation could change, from its simulated score gain, the engine's impact sentence
- * (`assumption.unscored` = the gap type isn't in the score model) and, for older snapshots without
- * it, the gap's type.
+ * What a recommendation could change: metrics v2's expected gain in Visibility Index points when the
+ * snapshot has it (`below_mde` = too small for a follow-up run to confirm), else v1's simulated
+ * composite gain; plus the engine's impact sentence (`assumption.unscored` = the gap type isn't in the
+ * score model) and, for older snapshots without it, the gap's type.
  */
 export function impactOf(
   delta: number | null | undefined,
   gapType: string | null | undefined,
   assumptionKey?: unknown,
+  v2?: { gain: number | null | undefined; belowMde?: boolean | null },
 ): Impact {
+  if (v2 !== undefined && typeof v2.gain === "number" && Number.isFinite(v2.gain) && v2.gain > 0) {
+    // Visibility Index points: one decimal matters (a category leader sits around 30).
+    const n = Math.round(v2.gain * 10) / 10;
+    if (v2.belowMde) return { kind: "belowMde", n };
+    return n >= 0.5 ? { kind: "points", n, v2: true } : { kind: "small", v2: true };
+  }
   const d = typeof delta === "number" && Number.isFinite(delta) ? delta : 0;
   if (d > 0) {
     const n = Math.round(d);
