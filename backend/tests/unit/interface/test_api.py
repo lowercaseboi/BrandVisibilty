@@ -754,3 +754,14 @@ def test_impact_ledger_endpoint(real_client: TestClient) -> None:
     assert entry["evaluation"]["status"] != "waiting" and entry["evaluation"]["primary"]["questions"] > 0
     assert set(body["priors"]) == {"default", "calibrated"}
     assert real_client.get("/brands/nope/impact").status_code == 404
+
+
+def test_bundle_download_verifies(real_client: TestClient) -> None:
+    from app.pipeline.runner import run_pipeline
+    from app.tracking.bundle import verify_bundle
+
+    snap = run_pipeline("gajanan_vada_pav", providers="synthetic", samples=1)
+    res = real_client.get(f"/brands/gajanan_vada_pav/snapshots/{snap['run_id']}/bundle")
+    assert res.status_code == 200 and res.headers["content-type"] == "application/zip"
+    assert verify_bundle(res.content)["ok"]
+    assert real_client.get("/brands/gajanan_vada_pav/snapshots/nope/bundle").status_code == 404

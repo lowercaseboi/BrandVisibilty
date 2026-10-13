@@ -436,6 +436,32 @@ def snapshot_observations(brand_key: str, run_id: str) -> dict[str, Any]:
     }
 
 
+@app.get(
+    "/brands/{brand_key}/snapshots/{run_id}/bundle",
+    tags=["snapshots"],
+    response_class=Response,
+    responses={200: {"content": {"application/zip": {}}, "description": "Run bundle (zip)"}},
+)
+def snapshot_bundle(brand_key: str, run_id: str) -> Response:
+    """Download one run as a verifiable bundle: every AI answer, the alias table, all configs and
+    the results, with a SHA-256 manifest. `scripts/verify_bundle.py` recomputes every number from it
+    without API keys (docs/METRICS_v2.md, "Reproducing results")."""
+    from app.tracking.bundle import build_bundle
+
+    record = store.get_snapshot(brand_key, run_id, include_raw=True)
+    if record is None:
+        raise HTTPException(status_code=404, detail=f"No snapshot '{run_id}' for brand '{brand_key}'")
+    observations = record.pop("raw_observations", None) or []
+    try:
+        current = brands_registry.get_brand(brand_key).alias_table()
+    except KeyError:
+        current = ()
+    data = build_bundle(record, observations, current_alias_table=current)
+    filename = f"{brand_key}-{run_id[:8]}.zip"
+    return Response(content=data, media_type="application/zip",
+                    headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+
 @app.get("/brands/{brand_key}/compare", tags=["snapshots"], response_model=CompareResponse)
 def compare_runs(
     brand_key: str,
