@@ -459,3 +459,17 @@ def test_video_recommendation_becomes_a_script_campaign(env):
     c, _ = service.create_campaign(BRAND, "rec-video")
     assert c.status == "ready" and c.gap_id == "gap-howto" and c.suggestion_key == "video|"
     assert "video_script" in {d.kind for d in c.deliverables}
+
+
+def test_first_publish_opens_one_impact_ledger_entry(env):
+    from app.tracking import impact_ledger
+
+    c = _create()
+    c = service.approve(BRAND, c.campaign_id)
+    service.publish(BRAND, c.campaign_id, ["facebook_page"], public_base_url=None)
+    service.publish(BRAND, c.campaign_id, ["sandbox"], public_base_url=None)
+    entries = impact_ledger.entries(BRAND)
+    assert len(entries) == 1
+    entry = entries[0]
+    assert entry["source"] == "campaign" and entry["campaign_id"] == c.campaign_id
+    assert entry["suggestion_key"] == c.suggestion_key and entry["gap_ids"] == ["gap-comp"]

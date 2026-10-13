@@ -732,3 +732,25 @@ def test_metrics_v2_trend_and_compare(real_client: TestClient) -> None:
     assert set(body["competitors"]) == set(first["entities"]) - {"self"}
     assert real_client.get("/brands/gajanan_vada_pav/compare?from=nope&to=nope").status_code == 404
     assert real_client.get("/brands/nope/compare?from=a&to=b").status_code == 404
+
+
+def test_impact_ledger_endpoint(real_client: TestClient) -> None:
+    from app.pipeline.runner import run_pipeline
+
+    first = run_pipeline("gajanan_vada_pav", providers="synthetic", samples=2, round=1)
+    gaps = {g["gap_id"]: g for g in first["gaps"]}
+    rec = first["recommendations"][0]
+    key = f"{rec['action']}|{gaps[rec['gap_id']]['detail'].get('competitor_id') or ''}"
+    card = {"column": "done", "order": 0, "updated_at": "2026-10-13T10:00:00+00:00"}
+    assert real_client.put(
+        "/brands/gajanan_vada_pav/board", json={"brand_key": "gajanan_vada_pav", "cards": {key: card}}
+    ).status_code == 200
+    body = real_client.get("/brands/gajanan_vada_pav/impact").json()
+    assert [e["evaluation"]["status"] for e in body["entries"]] == ["waiting"]
+    run_pipeline("gajanan_vada_pav", providers="synthetic", samples=2, round=3)
+    body = real_client.get("/brands/gajanan_vada_pav/impact").json()
+    [entry] = body["entries"]
+    assert entry["suggestion_key"] == key and entry["source"] == "board"
+    assert entry["evaluation"]["status"] != "waiting" and entry["evaluation"]["primary"]["questions"] > 0
+    assert set(body["priors"]) == {"default", "calibrated"}
+    assert real_client.get("/brands/nope/impact").status_code == 404

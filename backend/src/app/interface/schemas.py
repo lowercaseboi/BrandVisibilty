@@ -516,6 +516,49 @@ class CompareResponse(_OpenModel):
     market_drift: float | None = Field(description="Mean change in competitors' VI on the same cells")
 
 
+class ImpactEvaluation(_OpenModel):
+    ledger_id: str | None
+    status: str = Field(
+        description="waiting (no run since) | no_baseline | insufficient_data | confounded | rose_after | "
+        "leaning_up | no_detectable_change | leaning_down | fell_after"
+    )
+    pre_run_id: str | None
+    post_run_id: str | None
+    basis: Literal["targeted", "overall"] | None = Field(
+        default=None, description="overall when the targeted questions were too few for a verdict"
+    )
+    primary: MatchedComparison | None = None
+    scope_share: float | None = None
+    measured_overall: float | None = Field(default=None, description="Scoped change x scope share, overall VI points")
+    untargeted: dict[str, Any] | None = None
+    market_drift: float | None = None
+    placebo: dict[str, Any] | None = None
+    confounded_by: list[str] | None = None
+    prediction_check: dict[str, Any] | None = None
+
+
+class ImpactEntry(_OpenModel):
+    ledger_id: str
+    suggestion_key: str
+    action: str
+    competitor_id: str | None
+    gap_ids: list[str]
+    scopes: list[dict[str, Any]]
+    done_at: str
+    closed_at: str | None
+    source: str
+    campaign_id: str | None
+    pre_run_id: str | None
+    prediction: dict[str, Any]
+    evaluation: ImpactEvaluation
+
+
+class ImpactResponse(_OpenModel):
+    brand_key: str
+    entries: list[ImpactEntry]
+    priors: dict[str, dict[str, float]]
+
+
 class Snapshot(_OpenModel):
     """One tracking run, without its raw observations (CONTRACT §5)."""
 

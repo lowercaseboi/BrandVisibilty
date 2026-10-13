@@ -176,7 +176,9 @@ def _competitor_name(gap: dict[str, Any], entities: dict[str, str], cfg: Any) ->
     return aliases[0] if aliases else cid.replace("_", " ").title()
 
 
-def _set_board_column(brand_key: str, key: str, column: str, *, keep_if: tuple[str, ...] = ()) -> None:
+def _set_board_column(
+    brand_key: str, key: str, column: str, *, keep_if: tuple[str, ...] = (), campaign_id: str | None = None
+) -> None:
     """Move the recommendation's board card (forwards only: callers pass `keep_if` for the columns
     it must never leave). The load-modify-save runs under the board's lock, so it can't drop a
     concurrent move. Never breaks the campaign flow on a board error."""
@@ -193,7 +195,7 @@ def _set_board_column(brand_key: str, key: str, column: str, *, keep_if: tuple[s
         return cards
 
     try:
-        board.update_board(brand_key, move)
+        board.update_board(brand_key, move, context={"source": "campaign", "campaign_id": campaign_id})
     except (OSError, ValueError, KeyError, TypeError, AttributeError):
         log.warning("Could not update the board card %s for %s", key, brand_key)
 
@@ -770,7 +772,7 @@ def _append_events(brand_key: str, campaign_id: str, events: list[DistributionEv
             event_id=e.event_id, outcome=e.outcome, external_url=e.external_url, error=e.error,
         )
     if any(e.outcome == "published" for e in events):
-        _set_board_column(brand_key, updated.suggestion_key, "done")
+        _set_board_column(brand_key, updated.suggestion_key, "done", campaign_id=updated.campaign_id)
     return updated
 
 

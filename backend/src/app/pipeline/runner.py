@@ -509,11 +509,14 @@ def run_pipeline(
     # A drafting failure must not lose a collected run, and must not pass for "nothing to
     # recommend" either: the snapshot records it (recommendation_status / _error).
     recommendation_status, recommendation_error = "ok", None
+    from app.tracking import impact_ledger
+
     mde_reference = reference_mde(brand, metrics_v2, run_id)
     try:
         drafted = recommend_detailed(
             gaps, observations, SELF_ENTITY_ID, competitor_ids, entity_names=brand.entity_names(),
             metrics_v2=metrics_v2, mde=mde_reference["value"], detection_config=detection_config,
+            priors=impact_ledger.current_priors(brand.brand_key),
         )
         recommendations, recommendations_total = list(drafted.passed), drafted.total
     except Exception as exc:  # noqa: BLE001 - never throw away a collected run over drafting
@@ -555,4 +558,9 @@ def run_pipeline(
     snapshot["mention_summary"] = mention_summary(observations, brand.entity_names())
     store.append_snapshot(snapshot)
     progress.note(f"Saved run {snapshot['run_id']} ({snapshot['status']})")
+    try:
+        # Completed actions: record what this run says about the change since each was done.
+        impact_ledger.record_evaluations(brand.brand_key, snapshot["run_id"])
+    except Exception as exc:  # noqa: BLE001 - the audit trail must never lose a collected run
+        progress.note(f"Impact checks not updated ({type(exc).__name__})")
     return snapshot

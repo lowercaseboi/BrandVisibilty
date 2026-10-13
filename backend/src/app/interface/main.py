@@ -36,6 +36,7 @@ from app.interface.schemas import (
     CreateCampaignResponse,
     DeliverablePatch,
     HealthResponse,
+    ImpactResponse,
     Job,
     ManualAccountRequest,
     OAuthStartRequest,
@@ -472,6 +473,28 @@ def compare_runs(
         "self": result,
         "competitors": competitors,
         "market_drift": market_drift(before, after, brand.competitor_ids()),
+    }
+
+
+@app.get("/brands/{brand_key}/impact", tags=["snapshots"], response_model=ImpactResponse)
+def get_impact(brand_key: str) -> dict[str, Any]:
+    """Did visibility change after each completed action? (Metrics v2 impact ledger.)
+
+    One entry per action moved to "done" (by hand or by a Campaign Studio publish), with the
+    prediction frozen at that moment and an evaluation recomputed from the runs: the matched
+    change in your Visibility Index on the questions the action targets, its interval, MDE and
+    a plain verdict, plus robustness checks (untargeted questions, competitors' drift, placebo
+    rate) and `confounded` when another action overlapped. Measured change after, not proof of
+    cause. Also returns the uptake priors recalibrated from settled outcomes."""
+    from app.recommendation.opportunity import UPTAKE_PRIOR, calibrated_priors
+    from app.tracking import impact_ledger
+
+    _brand_or_404(brand_key)
+    evaluated = impact_ledger.evaluate_all(brand_key)
+    return {
+        "brand_key": brand_key,
+        "entries": evaluated,
+        "priors": {"default": dict(UPTAKE_PRIOR), "calibrated": calibrated_priors(impact_ledger.outcomes(evaluated))},
     }
 
 

@@ -29,10 +29,9 @@ from __future__ import annotations
 import hashlib
 import math
 import random
+from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from typing import NamedTuple
-
-from collections.abc import Mapping
 
 from app.analysis.scorer import score
 from app.analysis.types import DetectionConfig, EntityMention, Gap, Observation
