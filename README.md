@@ -177,6 +177,13 @@ cd frontend && npx tsc -b && npm run lint && npx vitest run && npx vite build
 `RUN_LIVE_TESTS=1 make test` with `GEMINI_API_KEY` set. `npm run lint` also checks for missing hi/mr translation
 keys against the English source (`frontend/scripts/check-i18n.mjs`).
 
+## Metrics v2
+
+The headline is the **Visibility Index** (unconditional, list-position weighted); runs are compared on matched
+questions; recommendations use measured opportunity; completed actions are evaluated in an impact ledger; every run
+can be exported and re-verified without API keys (`scripts/export_bundle.py`, `scripts/verify_bundle.py`). Why and
+how: [docs/METRICS_v2.md](docs/METRICS_v2.md).
+
 ## Acceptance criteria status
 
 Read against [PRD_v3.md §16](PRD_v3.md#16-acceptance-criteria).
@@ -189,8 +196,8 @@ Read against [PRD_v3.md §16](PRD_v3.md#16-acceptance-criteria).
 | AC-4 | Raw observation storage | **Met** — observations are stored per run, separate from the derived snapshot, and retrievable via `GET /brands/{key}/snapshots/{run_id}/observations`. |
 | AC-5 | Visibility scoring | **Met** — composite per §10.6, pure function, CI and component breakdown always returned, traceable to mention-level evidence. |
 | AC-6 | Gap identification | **Met for the types that can fire** — deterministic detector, all five types implemented and tested, each with supporting evidence. Presence, prominence and competitive run in production; source and representation depend on the unbuilt web/social layer (AC-2). |
-| AC-7 | Recommendation reasoning | **Met** — every recommendation carries a non-null `gap_id`; the validation gate rejects an unknown action, a class mismatch or a missing `gap_id`; priority is a counterfactual score-impact simulation. |
-| AC-8 | Visibility tracking | **Partial** — runs on demand (UI/API/CLI) with a cluster-bootstrap/Theil–Sen trend verdict; there is no scheduler, so "runs on schedule" is not implemented. |
+| AC-7 | Recommendation reasoning | **Met** — every recommendation carries a non-null `gap_id`; the validation gate rejects an unknown action, a class mismatch or a missing `gap_id`; priority is the gap's measured opportunity × an assumed per-action uptake × the probability the gap is real ÷ effort (metrics v2, [docs/METRICS_v2.md](docs/METRICS_v2.md)); the v1 simulated delta is kept as a legacy field. |
+| AC-8 | Visibility tracking | **Partial** — runs on demand (UI/API/CLI) with a matched-comparison / Theil–Sen trend verdict on the Visibility Index, and an impact ledger that checks each completed action against the runs after it; there is no scheduler, so "runs on schedule" is not implemented. |
 | AC-9 | Failure handling | **Met** — retry with backoff honouring `Retry-After`, per-provider skip after repeated failures or a stalled rate limit, run saved `partial`, failures visible in job status and logs. |
 | AC-10 | Distribution approval gate | **Met (adapted channel set)** — publish/approve is gated by `ADMIN_TOKEN`, every attempt is logged whatever the outcome (published/exported/failed/blocked). The v1 channel is Meta + X + a Google Business Profile export + WhatsApp-share + a local sandbox, in place of the PRD's Dev.to. |
 | AC-11 | Cost/quota visibility | **Pending** — `GET /providers` and `GET /channels` show configured vs. not; there's no admin view of per-provider usage or remaining quota/credit. |

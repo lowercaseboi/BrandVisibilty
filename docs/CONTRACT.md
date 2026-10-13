@@ -197,6 +197,11 @@ questions from a customised question set (§8) are asked and stored for Evidence
 `"p<idx>"` and `observation_id` `"<provider_id>:p<idx>-s<sample>"`. They never reach the scorer, the gap detector,
 the recommendation engine or the admission counts.
 
+**Metrics v2 additions** (all additive, docs/METRICS_v2.md): `metrics_v2` (Visibility Index block incl. per-cell
+sums; served without `cells`), `alias_table` + `alias_signature`, `detection_config`, `bootstrap {seed, iterations}`,
+`mde_reference`, `uptake_priors`, `code_sha`; the newest snapshot of a list also carries `trend_verdict_v2`. Runs
+without stored v2 are rescored from their answers into `DATA_DIR/metrics/<brand>/<run_id>.json` on read.
+
 ## 6. Recommendation engine — `app/recommendation/engine.py`
 
 ```python
@@ -210,6 +215,11 @@ def recommend(gaps: list[Gap], observations: list[Observation], self_entity_id: 
               competitor_entity_ids: frozenset[str], *, entity_names: dict[str, str] | None = None,
               max_recommendations: int = 10) -> list[Recommendation]     # sorted by priority desc
 ```
+
+Metrics v2: `recommend_detailed(..., metrics_v2=, mde=, priors=, detection_config=)` values each gap by its measured
+opportunity (`recommendation/opportunity.py`) and adds `expected_gain_vi`, `opportunity_vi`, `target_vi`,
+`self_vi_scope`, `scope_share`, `uptake_prior`, `confidence_method`, `below_mde`, `mde`; `priority = expected_gain_vi ×
+confidence / effort`. `delta_composite` (the v1 simulation) is kept as a legacy field.
 
 ## 7. HTTP API — `app/interface/main.py` (`uvicorn app.interface.main:app`)
 
@@ -256,6 +266,9 @@ discarded when it finishes, and only the 100 most recent finished jobs are kept.
 The frontend's Run panel re-attaches to a brand's active job via `GET /jobs?brand_key=`.
 
 `GET /brands/{key}/runs` is a hidden alias of `/brands/{key}/snapshots` that the frontend client still uses.
+
+Metrics v2 routes: `GET /brands/{key}/compare?from=&to=` (matched comparison of two runs), `GET /brands/{key}/impact`
+(impact ledger with evaluations and calibrated priors), `GET /brands/{key}/snapshots/{run_id}/bundle` (verifiable zip).
 
 CORS is open to `http://localhost:5173` and `http://localhost:8080`. The frontend reads its API base from `VITE_API_BASE`
 (default `/api`); nginx or the Vite proxy forward `/api/*` to the backend with the `/api` prefix stripped.
