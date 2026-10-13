@@ -134,6 +134,33 @@
   color: var(--err);
 }
 
+/* Metrics v2: the change is a verdict (rose / leaning / no clear change), coloured by tone. */
+.score-change.is-ok {
+  color: var(--ok);
+}
+
+.score-change.is-err {
+  color: var(--err);
+}
+
+.score-change.is-warn {
+  color: var(--text);
+}
+
+.score-peers + .score-peers {
+  margin-top: var(--space-1);
+}
+
+/* Analytical view: how the Visibility Index breaks down. */
+.score-v2-facts {
+  margin: var(--space-3) 0 0;
+  padding-left: 1.1em;
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+
 .score-sentence {
   font-size: var(--fs-lg);
   line-height: 1.45;
@@ -896,4 +923,69 @@
 
 .collapsible-body > .section-note {
   margin-bottom: var(--space-5);
+}
+
+/* "Did it work?" — the impact ledger (metrics v2). */
+.impact-card {
+  margin-top: var(--space-4);
+}
+
+.impact-list {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.impact-row {
+  padding-top: var(--space-3);
+  background: var(--rule) top center / var(--rule-w) 1px no-repeat;
+}
+
+.impact-row:first-child {
+  padding-top: 0;
+  background: none;
+}
+
+.impact-row-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+}
+
+.impact-action {
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.impact-row p {
+  margin: var(--space-1) 0 0;
+}
+
+.impact-checks {
+  margin: var(--space-1) 0 0;
+  padding-left: 1.1em;
+}
+
+/* Analytical view: per-AI and head-to-head tables for the Visibility Index. */
+.v2-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+
+.v2-table th,
+.v2-table td {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.v2-table td.num,
+.v2-table th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }

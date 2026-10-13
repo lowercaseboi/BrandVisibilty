@@ -44,8 +44,38 @@ def test_english_is_unchanged_and_renders_from_key_and_params(case):
     assert all(isinstance(v, (str, int, float)) and not isinstance(v, bool) for v in params.values())
 
 
+V2 = {"opportunity_vi": 6.0, "target_vi": 20.0, "self_vi_scope": 2.0, "uptake_prior": 0.25, "expected_gain_vi": 1.5}
+V2_CASES = [
+    ("presence", {"scope": "overall", "coverage": 0.04}, {**V2, "below_mde": False}, "assumption.opportunity"),
+    ("competitive", {"competitor_id": "comp-a", "co_occurrence_rate": 0.4, "beat_rate": 0.8},
+     {**V2, "below_mde": False}, "assumption.opportunity_vs"),
+    ("presence", {"scope": "overall", "coverage": 0.04}, {**V2, "below_mde": True, "mde": 3.0},
+     "assumption.opportunity_small"),
+    ("competitive", {"competitor_id": "comp-a", "co_occurrence_rate": 0.4, "beat_rate": 0.8},
+     {**V2, "below_mde": True, "mde": 3.0}, "assumption.opportunity_vs_small"),
+    ("presence", {"scope": "overall", "coverage": 0.04}, {**V2, "opportunity_vi": 0.0}, "assumption.opportunity_none"),
+    ("representation", {"disagreement_rate": 0.6}, V2, "assumption.unscored"),
+]
+
+
+@pytest.mark.parametrize(("gap_type", "detail", "v2", "expected"), V2_CASES)
+def test_v2_impact_sentences(gap_type, detail, v2, expected):
+    gap = Gap(gap_type, ("o0",), detail)
+    action = "comparison_page" if gap_type == "competitive" else "clarify_category_descriptor" \
+        if gap_type == "representation" else "submit_to_directory"
+    text, key, params = reasoning.build(
+        action, gap, "Gajanan Vada Pav", NAMES, 1, 0, 0.0,
+        presence_rank=PRESENCE_CLOSURE_RANK, prominence_rank=PROMINENCE_CLOSURE_RANK, v2=v2,
+    )
+    assert params["assumption_key"] == expected
+    assert render_reasoning(key, params) == text
+    assert placeholders(expected) <= set(params)
+    if expected == "assumption.opportunity":
+        assert "about +1.5 points" in text and "25%" in text
+
+
 def test_golden_cases_cover_every_reachable_key():
-    used = set()
+    used = {expected for *_, expected in V2_CASES}
     for case in GOLDEN:
         _, key, params = _build(case)
         used |= {key, params["action_key"], params["assumption_key"]}

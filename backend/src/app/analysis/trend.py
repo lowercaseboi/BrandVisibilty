@@ -1,4 +1,4 @@
-"""Trend verdict — a pure function over a brand's tracked composite scores.
+"""Trend verdict — pure functions over a brand's tracked scores (v1 composite; v2 VI below).
 
 No I/O, no LLM calls, deterministic (seeded RNG), like `scorer.py`. Implements
 PRD_v3 §11.6 / AC-8 and DESIGN_v1 §6.4:
@@ -34,6 +34,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from itertools import pairwise
 from typing import Literal
+
+from app.analysis.matching import match, overlap
 
 TrendStatus = Literal[
     "insufficient_data",
@@ -263,3 +265,86 @@ def _percentile(sorted_values: list[float], pct: float) -> float:
     upper = min(lower + 1, len(sorted_values) - 1)
     frac = rank - lower
     return sorted_values[lower] + (sorted_values[upper] - sorted_values[lower]) * frac
+
+
+# --------------------------------------------------------------------------- metrics v2
+# The v2 trend works on the Visibility Index and does not need identical comparability keys:
+# runs are compared on their matched cells (app.analysis.matching). The "segment" is the
+# trailing run of runs whose cells overlap the latest run's by at least SEGMENT_OVERLAP.
+
+SEGMENT_OVERLAP = 0.7
+
+
+@dataclass(frozen=True)
+class RunMetrics:
+    """One run's v2 numbers, as needed for the trend."""
+
+    run_id: str
+    completed_at: datetime | None
+    vi: float
+    ci_low: float
+    ci_high: float
+    cells: tuple
+    admissible: bool = True
+
+
+def compute_trend_v2(
+    runs: Sequence[RunMetrics],
+    *,
+    entity_id: str = "self",
+    n_bootstrap: int = DEFAULT_BOOTSTRAP_ITERATIONS,
+    seed: int = DEFAULT_SEED,
+) -> dict:
+    """Trend of the Visibility Index, oldest first.
+
+    - latest vs previous admissible run: matched paired comparison (`comparison`), always
+      reported when there are two runs;
+    - 4+ runs in the overlapping segment: Theil–Sen slope on VI with the v1 bootstrap
+      (`compute_trend`), a direction only when its CI excludes 0;
+    - otherwise the status is the matched comparison's verdict.
+    """
+    usable = [r for r in runs if r.admissible and r.cells]
+    base: dict = {"n_points": 0, "segment_run_ids": [], "comparison": None, "slope": None}
+    if len(usable) < 2:
+        return {**base, "status": "insufficient_data", "method": "none", "direction": None, "n_points": len(usable)}
+
+    latest, previous = usable[-1], usable[-2]
+    segment = [latest]
+    for run in reversed(usable[:-1]):
+        if overlap(run.cells, latest.cells) < SEGMENT_OVERLAP:
+            break
+        segment.insert(0, run)
+    comparison = match(
+        previous.cells, latest.cells, entity_id,
+        seed_basis=f"{previous.run_id}|{latest.run_id}", n_bootstrap=n_bootstrap,
+    )
+    out = {
+        **base,
+        "n_points": len(segment),
+        "segment_run_ids": [r.run_id for r in segment],
+        "comparison": {k: v for k, v in comparison.items() if k != "per_question"},
+        "previous_run_id": previous.run_id,
+        "latest_run_id": latest.run_id,
+    }
+    if len(segment) >= MIN_THEIL_SEN_POINTS:
+        points = [
+            TrendPoint(
+                run_id=r.run_id, completed_at=r.completed_at, composite_score=r.vi,
+                ci_low=r.ci_low, ci_high=r.ci_high, comparability_key="v2-segment",
+            )
+            for r in segment
+        ]
+        v1 = compute_trend(points, n_bootstrap=n_bootstrap, seed=seed)
+        return {
+            **out,
+            "status": v1.status,
+            "method": "theil_sen",
+            "direction": v1.direction,
+            "slope": {
+                "x_unit": v1.x_unit, "value": v1.slope, "ci_low": v1.slope_ci_low, "ci_high": v1.slope_ci_high,
+                "per_week": v1.slope_per_week,
+            },
+        }
+    status = comparison["verdict"]
+    direction = "up" if status == "rose_after" else "down" if status == "fell_after" else None
+    return {**out, "status": status, "method": "matched", "direction": direction}

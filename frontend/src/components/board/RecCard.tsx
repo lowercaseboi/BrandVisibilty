@@ -227,7 +227,13 @@ function LiveCardBody({ card, title, brandKey, runId, entities, labelOf, observa
     () => reasoningMessages(rec, (p) => localizeReasoningParams(p, t, fmt, labelOf)),
     [rec, t, fmt, labelOf],
   );
-  const impact = impactOf(rec.delta_composite, leadGap?.gap_type, rec.reasoning_params?.assumption_key);
+  const impact = impactOf(
+    rec.delta_composite,
+    leadGap?.gap_type,
+    rec.reasoning_params?.assumption_key,
+    rec.expected_gain_vi != null ? { gain: rec.expected_gain_vi, belowMde: rec.below_mde } : undefined,
+  );
+  const isV2 = rec.expected_gain_vi != null;
   const evidence = evidenceCount(rec);
   const evidenceHref =
     s.gaps.length > 1 || !leadGap
@@ -244,10 +250,20 @@ function LiveCardBody({ card, title, brandKey, runId, entities, labelOf, observa
   let impactText: string;
   let impactTip: { text: string; label: string };
   if (impact.kind === "points") {
+    // v2 gains are Visibility Index points (the leader in a category sits around 30), so the plain
+    // words use smaller steps than the v1 composite did.
+    const [lot, some] = impact.v2 ? [5, 2] : [10, 3];
     impactText = showDetails
-      ? t.n("board.card.gain", impact.n, { n: fmt.number(impact.n) })
-      : t(impact.n >= 10 ? "board.card.gainLot" : impact.n >= 3 ? "board.card.gainSome" : "board.card.gainLittle");
-    impactTip = { text: t("board.card.gainTip"), label: t("board.card.gainTipLabel") };
+      ? impact.v2
+        ? t("board.card.gainVi", { n: fmt.number(impact.n, 1) })
+        : t.n("board.card.gain", impact.n, { n: fmt.number(impact.n) })
+      : t(impact.n >= lot ? "board.card.gainLot" : impact.n >= some ? "board.card.gainSome" : "board.card.gainLittle");
+    impactTip = { text: t(impact.v2 ? "board.card.gainTipVi" : "board.card.gainTip"), label: t("board.card.gainTipLabel") };
+  } else if (impact.kind === "belowMde") {
+    impactText = showDetails
+      ? t("board.card.gainBelowMdeDetail", { n: fmt.number(impact.n, 1), mde: fmt.number(rec.mde ?? 0, 1) })
+      : t("board.card.gainBelowMde");
+    impactTip = { text: t("board.card.gainBelowMdeTip"), label: t("board.card.gainTipLabel") };
   } else if (impact.kind === "small") {
     impactText = t(showDetails ? "board.card.gainSmall" : "board.card.gainLittle");
     impactTip = { text: t("board.card.gainTip"), label: t("board.card.gainTipLabel") };
@@ -434,18 +450,44 @@ function LiveCardBody({ card, title, brandKey, runId, entities, labelOf, observa
                     <div>
                       <dt>{t("board.card.tech.priority")}</dt>
                       <dd>
-                        {t("board.card.tech.formula", {
-                          p: fmt.number(rec.priority ?? 0, 3),
-                          delta: fmt.number(rec.delta_composite ?? 0, 2),
-                          conf: fmt.number(rec.confidence ?? 0, 2),
-                          effort: fmt.number(rec.effort ?? 0),
-                        })}
+                        {isV2
+                          ? t("board.card.tech.formulaVi", {
+                              p: fmt.number(rec.priority ?? 0, 3),
+                              gain: fmt.number(rec.expected_gain_vi ?? 0, 2),
+                              conf: fmt.number(rec.confidence ?? 0, 2),
+                              effort: fmt.number(rec.effort ?? 0),
+                            })
+                          : t("board.card.tech.formula", {
+                              p: fmt.number(rec.priority ?? 0, 3),
+                              delta: fmt.number(rec.delta_composite ?? 0, 2),
+                              conf: fmt.number(rec.confidence ?? 0, 2),
+                              effort: fmt.number(rec.effort ?? 0),
+                            })}
                       </dd>
                     </div>
+                    {isV2 && (
+                      <div>
+                        <dt>{t("board.card.tech.opportunity")}</dt>
+                        <dd>
+                          {t("board.card.tech.opportunityValue", {
+                            opp: fmt.number(rec.opportunity_vi ?? 0, 1),
+                            target: fmt.number(rec.target_vi ?? 0, 1),
+                            self: fmt.number(rec.self_vi_scope ?? 0, 1),
+                            uptake: fmt.percent(rec.uptake_prior ?? 0),
+                          })}
+                        </dd>
+                      </div>
+                    )}
                     <div>
-                      <dt>{t("board.card.tech.confidence")}</dt>
+                      <dt>{t(isV2 && rec.confidence_method === "bootstrap_gap_holds" ? "board.card.tech.confidenceVi" : "board.card.tech.confidence")}</dt>
                       <dd>{fmt.percent(rec.confidence ?? 0)}</dd>
                     </div>
+                    {isV2 && rec.mde != null && (
+                      <div>
+                        <dt>{t("board.card.tech.mde")}</dt>
+                        <dd>{t("board.card.tech.mdeValue", { mde: fmt.number(rec.mde, 1) })}</dd>
+                      </div>
+                    )}
                   </dl>
                 </div>
               </Details>

@@ -11,6 +11,7 @@ simple field constraints on a dict, so they're checked here instead.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import tempfile
 import threading
@@ -74,14 +75,30 @@ def validate_cards(cards: dict) -> None:
             raise ValueError(f"Card key is too long (at most {MAX_KEY_LEN} characters): {key[:40]!r}…")
 
 
-def save_board(brand_key: str, cards: dict) -> dict:
+def _notify_ledger(brand_key: str, before: dict, after: dict, context: dict | None) -> None:
+    """Cards entering / leaving "done" open / close impact-ledger entries. Best-effort: the
+    board save has already succeeded and must never fail because of the ledger."""
+    try:
+        from app.tracking import impact_ledger
+
+        impact_ledger.on_board_change(brand_key, before, after, context)
+    except Exception:
+        logging.getLogger(__name__).warning("Impact ledger not updated for %s", brand_key, exc_info=True)
+
+
+def save_board(brand_key: str, cards: dict, *, context: dict | None = None) -> dict:
     """Validate and persist atomically (a unique tempfile in the same directory + `os.replace`,
-    so two writers never share a temp file). Returns the stored state, same shape as `load_board`."""
+    so two writers never share a temp file). Returns the stored state, same shape as `load_board`.
+
+    Every save also tells the impact ledger which cards entered or left "done" (`context`:
+    {"source": "board" | "campaign", "campaign_id"?}); this is the single choke point both the
+    board API and Campaign Studio's automatic moves go through."""
     validate_cards(cards)
     path = _path_for(brand_key)
     payload = {"brand_key": brand_key, "cards": cards}
     text = json.dumps(payload, indent=2, ensure_ascii=False)
     with _LOCK:
+        before = load_board(brand_key)["cards"]
         path.parent.mkdir(parents=True, exist_ok=True)
         fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
         try:
@@ -91,10 +108,11 @@ def save_board(brand_key: str, cards: dict) -> dict:
         finally:
             if os.path.exists(tmp):  # only left behind when the write or replace failed
                 os.unlink(tmp)
+        _notify_ledger(brand_key, before, cards, context)
     return payload
 
 
-def update_board(brand_key: str, fn: Callable[[dict], dict | None]) -> dict:
+def update_board(brand_key: str, fn: Callable[[dict], dict | None], *, context: dict | None = None) -> dict:
     """Load, change and save the board as one step with respect to other board writes in this
     process. `fn` gets a copy of the cards and returns the new cards, or None for no change.
     Returns the stored state."""
@@ -103,7 +121,7 @@ def update_board(brand_key: str, fn: Callable[[dict], dict | None]) -> dict:
         cards = fn(dict(state["cards"]))
         if cards is None:
             return state
-        return save_board(brand_key, cards)
+        return save_board(brand_key, cards, context=context)
 
 
 def delete_board(brand_key: str) -> None:

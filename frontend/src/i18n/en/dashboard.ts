@@ -6,7 +6,11 @@
 //   its answers"), no jargon. "AI assistants" means apps like ChatGPT or Google Gemini.
 // - Technical wording (confidence intervals, coverage, run IDs, API calls, model names) belongs only
 //   to the keys shown in the Analytical view: "details.", "metrics.", "admission.", "providers.",
-//   "run.math.", "run.tech.", "recs.", "trend.verdict.detail*", "gaps.num.", "strip.".
+//   "run.math.", "run.tech.", "recs.", "trend.verdict.detail*", "gaps.num.", "strip.", and from metrics v2
+//   "v2.changeDetail", "v2.decomp", "v2.sor", "v2.mde", "v2.answerRate", "v2.legacy*", "v2.rescored",
+//   "v2.whoVi", "v2.table.", "v2.h2h.", "v2.config", "v2.bundle", "impact.detail", "impact.untargeted",
+//   "impact.drift", "impact.placebo", "impact.prediction", "impact.confoundedBy".
+// - "Visibility index" (VI) is the 0–100 score: how often AND how high in the AI's list the brand is named.
 // - "Question" = a question a customer might ask; "answer"/"response" = the AI's answer; "analysis" = one run.
 // - {placeholders} are filled in by the app; keep them exactly. **text** is shown in bold.
 // - {ai} / {ais} are AI product names such as "Google Gemini" or "Google Gemini and Groq" (already joined).
@@ -520,4 +524,80 @@ export const dashboard = {
   "recs.why.assumption.prominence": "If this moved it up to position {closure_rank} in the {changed_count} answers where it ranks lower, the visibility score would rise by about {delta} points (simulated).",
   "recs.why.assumption.competitive": "If it ranked ahead of {competitor} in the {changed_count} answers where it currently trails, the visibility score would rise by about {delta} points (simulated).",
   "recs.why.assumption.unscored": "This gap isn't measured by the visibility score (it comes from brand-named questions or from websites), so no score change is simulated; it is ranked on evidence alone.",
+  "recs.why.assumption.opportunity": "In these answers the typical competitor scores {target_vi} on the visibility index and {brand} scores {self_vi}; matching it would add up to {opportunity} points to {brand}'s overall index. Assuming this action closes about {uptake_pct}% of that gap, expect about +{expected_gain} points (an estimate, not a measurement).",
+  "recs.why.assumption.opportunity_vs": "{competitor} scores {target_vi} on the visibility index in these answers and {brand} scores {self_vi}; matching it would add up to {opportunity} points to {brand}'s overall index. Assuming this action closes about {uptake_pct}% of that gap, expect about +{expected_gain} points (an estimate, not a measurement).",
+  "recs.why.assumption.opportunity_small": "In these answers the typical competitor scores {target_vi} on the visibility index and {brand} scores {self_vi}. Assuming this action closes about {uptake_pct}% of the gap, expect about +{expected_gain} points: less than the {mde} points a follow-up check can reliably detect, so a later check may not confirm it even if it worked.",
+  "recs.why.assumption.opportunity_vs_small": "{competitor} scores {target_vi} on the visibility index in these answers and {brand} scores {self_vi}. Assuming this action closes about {uptake_pct}% of the gap, expect about +{expected_gain} points: less than the {mde} points a follow-up check can reliably detect, so a later check may not confirm it even if it worked.",
+  "recs.why.assumption.opportunity_none": "Competitors don't score higher than {brand} in these answers, so no gain is estimated; it is ranked on evidence alone.",
+
+  // ================================================================ metrics v2: visibility index
+  // Score card. {rank}/{of} are whole numbers: "#5 of 6".
+  "v2.position": "You're **#{rank} of {of}** among the places you track.",
+  "v2.positionRange": "You're around **#{low}–#{high} of {of}** among the places you track; the order isn't settled yet.",
+  // {named} of {of} questions; "reliably" = in at least half of the answers to that question.
+  "v2.reach": "You came up for **{named} of {of}** questions customers ask, and reliably for {reliable}.",
+  "v2.reachNever": "You came up for **{named} of {of}** questions customers ask, but never reliably.",
+  "v2.reachZero": "You didn't come up for any of the **{of}** questions customers ask.",
+  // {name} is a competitor; counts of answers.
+  "v2.leader": "{name} is named in {named} answers, you in {you}.",
+  "v2.lowInfo": "With this few mentions the score is a rough reading; it can move a lot between checks.",
+  // Change since the previous check, as a verdict that never claims a cause.
+  "v2.change.rose_after": "Up since the last check.",
+  "v2.change.leaning_up": "Probably up a little since the last check.",
+  "v2.change.no_detectable_change": "No clear change since the last check.",
+  "v2.change.leaning_down": "Probably down a little since the last check.",
+  "v2.change.fell_after": "Down since the last check.",
+  "v2.change.insufficient_data": "The last check asked too few of the same questions to compare.",
+  // Short labels for status pills (Did it work?).
+  "v2.verdict.rose_after": "Rose after",
+  "v2.verdict.leaning_up": "Probably rose a little",
+  "v2.verdict.no_detectable_change": "No clear change yet",
+  "v2.verdict.leaning_down": "Probably dipped a little",
+  "v2.verdict.fell_after": "Fell after",
+  "v2.verdict.insufficient_data": "Too little to compare",
+  // Analytical view.
+  "v2.changeDetail": "Change {delta} points (95% range {lo} to {hi}) over {q} matched questions, {overlap} of answers comparable; changes under {mde} points can't be told from noise.",
+  "v2.decomp": "Named in {presence} of answers × average list-position weight {weight} when named (1 = first place).",
+  "v2.sor": "Share of recommendations among tracked places: {sor} (95% range {lo}–{hi}).",
+  "v2.mde": "One more check can reliably detect changes of about {mde} points or more.",
+  "v2.answerRate": "{pct} of answers named options; the rest asked for a city or declined.",
+  "v2.rescored": "Recalculated from this check's stored answers with today's competitor list.",
+  "v2.legacy": "Old composite score (v1, kept for comparison): {score} (range {lo}–{hi}). It overstated small brands, see docs/METRICS_v2.md.",
+  "v2.legacyTitle": "Old composite score (v1)",
+  "v2.whoVi": "Visibility index {vi}",
+  "v2.table.title": "Visibility index by AI and by question type",
+  "v2.table.intro": "100 = named first in every answer. Answered = the AI gave options instead of asking for a city or declining.",
+  "v2.table.ai": "AI",
+  "v2.table.intent": "Question type",
+  "v2.table.vi": "Index",
+  "v2.table.named": "Named",
+  "v2.table.answered": "Answered",
+  "v2.table.questions": "Questions",
+  "v2.table.ofN": "{m} of {n}",
+  "v2.h2h.competitor": "Head to head",
+  "v2.h2h.vi": "Their index",
+  "v2.h2h.ahead": "You ahead",
+  "v2.h2h.behind": "They ahead",
+  "v2.config": "Method {version}, settings {hash}.",
+  "v2.bundle": "Download this check to re-verify every number",
+
+  // ================================================================ did it work? (impact ledger)
+  "impact.eyebrow": "Did it work?",
+  "impact.title": "What changed after the things you did",
+  "impact.intro": "Each finished action is compared with the checks before and after it, on the questions it was meant to help. A rise after an action is a good sign, not proof: other things change too.",
+  "impact.status.waiting": "Waiting for the next check",
+  "impact.status.no_baseline": "No check before it to compare with",
+  "impact.status.confounded": "Mixed with another action",
+  // {date} is when the card was marked done / the campaign first went out.
+  "impact.done": "Marked done {date}",
+  "impact.doneCampaign": "Published {date}",
+  "impact.reopened": "moved back out of Done",
+  "impact.basisOverall": "Too few of its questions to judge them alone, so your overall score is compared.",
+  "impact.detail": "Index {before} → {after} ({delta} points, 95% range {lo} to {hi}) over {q} matched questions; smallest detectable change {mde}.",
+  "impact.untargeted": "Your other questions moved {delta} points, so this action's questions moved {did} points more.",
+  "impact.drift": "Competitors moved {drift} points on average over the same answers.",
+  "impact.placebo": "Between earlier checks with nothing done, this test fired {fired} of {pairs} times.",
+  "impact.prediction": "Expected about +{expected} points overall; measured {measured}.",
+  "impact.confoundedBy_one": "Another finished action overlaps this one.",
+  "impact.confoundedBy_other": "{n} other finished actions overlap this one.",
 } as const;

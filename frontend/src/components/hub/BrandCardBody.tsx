@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { Snapshot } from "../../api/types";
-import { RATING_KEY, ratingFromRange, scoreOutOf100, scoreRange } from "../../format";
+import { RATING_KEY } from "../../format";
+import { headlineRating, headlineValue } from "../dashboard/visibility";
 import { useFormat, useT } from "../../i18n";
 import { Details, useDetails } from "../../settings/details";
 import { MeasuredNote } from "../MeasuredNote";
@@ -67,9 +68,9 @@ export function BrandCardBody({
   let extra: ReactNode = null;
   let label: string | undefined;
   if (snap) {
-    const score = scoreOutOf100(snap.analysis_result.composite_score);
+    const score = headlineValue(snap);
     // Rating word from the low end of the likely range, so a lucky point estimate can't overclaim.
-    const r = ratingFromRange(...scoreRange(snap.analysis_result));
+    const r = headlineRating(snap);
     const when = fmt.relativeTime(snap.collection_completed_at);
     label = t("pages.brands.scoreLabel", { score: fmt.number(score) });
     ring = <ScoreRing score={score} band={r.band} play={play} instant={instantRing} />;

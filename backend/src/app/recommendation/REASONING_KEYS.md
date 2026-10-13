@@ -7,7 +7,9 @@ Every recommendation carries its English `reasoning` string (unchanged, for the 
 - `reasoning_params: dict[str, str | int | float]` — every value the sentences need, plus two
   more keys that name the other two sentences:
   - `reasoning_params.action_key` — the *recommended action* sentence.
-  - `reasoning_params.assumption_key` — the *simulated impact* sentence.
+  - `reasoning_params.assumption_key` — the *impact* sentence: the measured opportunity times an
+    assumed uptake (metrics v2, `assumption.opportunity*`), or on older snapshots the v1
+    simulation (`assumption.presence` / `prominence` / `competitive`).
 
 The English `reasoning` is exactly:
 
@@ -45,7 +47,13 @@ English `reasoning` string.
 | `gap_type` | str | Raw gap type (only for `finding.generic`) |
 | `changed_count` | int | Answers changed in the simulation |
 | `closure_rank` | int | Rank the simulation assumes (3 for presence, 2 for prominence) |
-| `delta` | str | Simulated score change in points, one decimal, e.g. `1.3` |
+| `delta` | str | Simulated score change in points, one decimal, e.g. `1.3` (v1 snapshots) |
+| `target_vi` | str | Typical competitor's (or the named competitor's) Visibility Index in the gap's answers, one decimal |
+| `self_vi` | str | The brand's Visibility Index in the gap's answers, one decimal |
+| `opportunity` | str | VI points the brand's overall index would gain by matching that target, one decimal |
+| `uptake_pct` | int | Assumed share of the opportunity this action captures, whole percent |
+| `expected_gain` | str | opportunity × uptake, VI points, one decimal |
+| `mde` | str | Smallest change a follow-up run can reliably detect, VI points, one decimal |
 | `action` | str | The action id (closed vocabulary) |
 | `action_key` | str | Key of the action sentence (see "Action sentences") |
 | `assumption_key` | str | Key of the impact sentence (see "Impact sentences") |
@@ -112,6 +120,14 @@ uses the `_generic` finding keys.
 | `assumption.prominence` | `If this moved it up to position {closure_rank} in the {changed_count} answers where it ranks lower, the visibility score would rise by ~{delta} points (simulated).` | closure_rank, changed_count, delta |
 | `assumption.competitive` | `If it ranked ahead of {competitor} in the {changed_count} answers where it currently trails, the visibility score would rise by ~{delta} points (simulated).` | competitor, changed_count, delta |
 | `assumption.unscored` | `This gap isn't measured by the visibility score (it comes from brand-named questions or the web layer), so no score change is simulated; it is ranked on evidence alone.` | (none) |
+| `assumption.opportunity` | `In these answers the typical competitor scores {target_vi} on the visibility index and {brand} scores {self_vi}; matching it would add up to {opportunity} points to {brand}'s overall index. Assuming this action captures about {uptake_pct}% of that, expect about +{expected_gain} points (an estimate, not a measurement).` | target_vi, brand, self_vi, opportunity, uptake_pct, expected_gain |
+| `assumption.opportunity_vs` | `{competitor} scores {target_vi} on the visibility index in these answers and {brand} scores {self_vi}; matching it would add up to {opportunity} points to {brand}'s overall index. Assuming this action captures about {uptake_pct}% of that, expect about +{expected_gain} points (an estimate, not a measurement).` | competitor, target_vi, brand, self_vi, opportunity, uptake_pct, expected_gain |
+| `assumption.opportunity_small` | `In these answers the typical competitor scores {target_vi} on the visibility index and {brand} scores {self_vi}. Assuming this action captures about {uptake_pct}% of the gap, expect about +{expected_gain} points: less than the {mde} points a follow-up run can reliably detect, so a later check may not confirm it even if it worked.` | target_vi, brand, self_vi, uptake_pct, expected_gain, mde |
+| `assumption.opportunity_vs_small` | `{competitor} scores {target_vi} on the visibility index in these answers and {brand} scores {self_vi}. Assuming this action captures about {uptake_pct}% of the gap, expect about +{expected_gain} points: less than the {mde} points a follow-up run can reliably detect, so a later check may not confirm it even if it worked.` | competitor, target_vi, brand, self_vi, uptake_pct, expected_gain, mde |
+| `assumption.opportunity_none` | `Competitors don't score higher than {brand} in these answers, so no gain is estimated; it is ranked on evidence alone.` | brand |
+
+The `assumption.opportunity*` keys are written by metrics v2 (docs/METRICS_v2.md §6); the three
+simulation keys above them only appear on snapshots recorded before it.
 
 `assumption.unscored` is what the UI's "Impact not scored" state corresponds to
 (`delta_composite == 0` because the gap type isn't in the score model). A scored gap type can

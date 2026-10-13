@@ -4,7 +4,8 @@ import { getLatestSnapshot, getObservations, listBrands } from "../../api/client
 import type { Mention } from "../../api/types";
 import { useAsync } from "../../api/useAsync";
 import { KIND_KEY, pickSample } from "../dashboard/answerHighlight";
-import { RATING_KEY, ratingFromRange, scoreOutOf100, scoreRange } from "../../format";
+import { RATING_KEY } from "../../format";
+import { headlineRating, headlineValue } from "../dashboard/visibility";
 import { useT } from "../../i18n";
 import { ScoreRing } from "../ScoreRing";
 import { ReadMoreCut } from "../ui/ReadMore";
@@ -42,8 +43,8 @@ export function Sample() {
   };
 
   const kindLabel = (k: Mention["entity_kind"]) => t(KIND_KEY[k] ?? "dashboard.sample.markOther");
-  const score = snap ? scoreOutOf100(snap.analysis_result.composite_score) : null;
-  const rating = snap ? ratingFromRange(...scoreRange(snap.analysis_result)) : null;
+  const score = snap ? headlineValue(snap) : null;
+  const rating = snap ? headlineRating(snap) : null;
 
   const loading = brandsState.status === "loading" || (activeKey !== null && (snapState.status === "loading" || obsState.status === "loading"));
   const failed = brandsState.status === "error" || snapState.status === "error" || obsState.status === "error";

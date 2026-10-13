@@ -12,6 +12,7 @@ import type {
   BrandProfile,
   BrandSummary,
   CreateBrandRequest,
+  ImpactResponse,
   Job,
   Observation,
   ObservationsResponse,
@@ -189,6 +190,16 @@ export function getSnapshots(brandKey: string): Promise<Snapshot[]> {
  * already carries the same object as `trend_verdict`. */
 export function getTrend(brandKey: string): Promise<TrendVerdict> {
   return getJson(`/brands/${b(brandKey)}/trend`);
+}
+
+/** Metrics v2 impact ledger: each completed action and the measured change after it. */
+export function getImpact(brandKey: string): Promise<ImpactResponse> {
+  return getJson<ImpactResponse>(`/brands/${b(brandKey)}/impact`);
+}
+
+/** Download URL of a run's verifiable bundle (zip; scripts/verify_bundle.py re-checks it). */
+export function bundleUrl(brandKey: string, runId: string): string {
+  return `${API_BASE}/brands/${b(brandKey)}/snapshots/${b(runId)}/bundle`;
 }
 
 export async function getObservations(brandKey: string, runId: string): Promise<ObservationsResponse> {

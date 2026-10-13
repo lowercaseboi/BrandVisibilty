@@ -17,8 +17,9 @@ from dataclasses import asdict
 from datetime import UTC, datetime
 from typing import Any
 
+from app.analysis.matching import overlap
 from app.analysis.summary import mention_summary
-from app.analysis.trend import TrendPoint, compute_trend
+from app.analysis.trend import RunMetrics, TrendPoint, compute_trend, compute_trend_v2
 from app.tracking.snapshot import legacy_run_id
 
 _LEGACY_OBS_ID = re.compile(r"^(?:(?P<provider>[^:]+):)?(?P<query>[qp]\d+)-s\d+$")
@@ -197,3 +198,58 @@ def with_trend_verdict(snapshots: list[dict[str, Any]]) -> list[dict[str, Any]]:
     if snapshots:
         snapshots[-1] = {**snapshots[-1], "trend_verdict": trend_verdict(snapshots)}
     return snapshots
+
+
+# --------------------------------------------------------------------------- metrics v2
+
+
+def _cells(snapshot: dict[str, Any]) -> tuple:
+    metrics = snapshot.get("metrics_v2")
+    return tuple(metrics.get("cells") or ()) if isinstance(metrics, dict) else ()
+
+
+def trend_verdict_v2(snapshots: list[dict[str, Any]]) -> dict[str, Any]:
+    """Visibility Index trend over snapshots carrying full `metrics_v2` (cells included)."""
+    runs = []
+    for s in snapshots:
+        metrics = s.get("metrics_v2")
+        if not isinstance(metrics, dict):
+            continue
+        own = (metrics.get("entities") or {}).get(metrics.get("self_id", "self")) or {}
+        ci = own.get("ci") or [own.get("vi", 0.0), own.get("vi", 0.0)]
+        runs.append(
+            RunMetrics(
+                run_id=s["run_id"],
+                completed_at=_parse_time(s.get("collection_completed_at")),
+                vi=float(own.get("vi", 0.0)),
+                ci_low=float(ci[0]),
+                ci_high=float(ci[1]),
+                cells=_cells(s),
+                admissible=bool(s["admission"].get("admissible", True)),
+            )
+        )
+    return compute_trend_v2(runs)
+
+
+def with_metrics_v2(snapshots: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Prepare v2 fields for the API: the newest snapshot gets `trend_verdict_v2`; every
+    snapshot gets `overlap_with_previous` (share of matched cells, for breaking the trend
+    line) and its `metrics_v2` without the per-cell sums."""
+    if not snapshots:
+        return snapshots
+    out = []
+    previous_cells: tuple = ()
+    for i, snap in enumerate(snapshots):
+        cells = _cells(snap)
+        copy = dict(snap)
+        metrics = copy.get("metrics_v2")
+        if isinstance(metrics, dict):
+            public = {k: v for k, v in metrics.items() if k != "cells"}
+            public["overlap_with_previous"] = round(overlap(previous_cells, cells), 6) if i and previous_cells else None
+            copy["metrics_v2"] = public
+            previous_cells = cells
+        else:
+            copy.pop("metrics_v2", None)
+        out.append(copy)
+    out[-1] = {**out[-1], "trend_verdict_v2": trend_verdict_v2(snapshots)}
+    return out

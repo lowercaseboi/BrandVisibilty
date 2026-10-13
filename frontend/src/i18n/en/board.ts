@@ -72,6 +72,12 @@ export const board = {
   // The tips below show only in the Analytical view.
   "card.gainTipLabel": "About this estimate",
   "card.gainTip": "An estimate from re-scoring this analysis as if the gap were fixed. Your visibility score is out of 100.",
+  // Metrics v2: gains measured from what competitors get in these answers.
+  "card.gainVi": "Expected to raise your visibility index by about {n} points",
+  "card.gainTipVi": "Measured from how much more visible the typical competitor is in these answers, times a cautious guess of how much of that gap this action closes. An estimate, not a promise.",
+  "card.gainBelowMde": "A small gain, too small to confirm with one more check",
+  "card.gainBelowMdeDetail": "Expected about +{n} points, below the {mde} points a follow-up check can confirm",
+  "card.gainBelowMdeTip": "Worth doing if it is cheap, but a later check may show no clear change even if it worked. Asking the AI more times per question makes small changes easier to confirm.",
   "card.notScored": "Improves how AI describes you",
   "card.notScoredSource": "Improves where AI reads about you",
   "card.notScoredTipLabel": "Why the impact isn't scored",
@@ -111,6 +117,12 @@ export const board = {
   "card.tech.priority": "Priority",
   // {p} priority, {delta} points, {conf} confidence (0–1), {effort} the 1/3/5/8 effort number.
   "card.tech.formula": "{p} = {delta} pts × {conf} ÷ {effort}",
+  "card.tech.formulaVi": "{p} = {gain} expected VI points × {conf} ÷ effort {effort}",
+  "card.tech.opportunity": "Opportunity",
+  "card.tech.opportunityValue": "{opp} VI points (typical competitor {target} vs you {self} here) · assumed uptake {uptake}",
+  "card.tech.confidenceVi": "Chance the gap is real",
+  "card.tech.mde": "Smallest detectable change",
+  "card.tech.mdeValue": "{mde} VI points",
   // The card's "Why" when no real customer question is available: the gap in plain words.
   // {n} is "about 1 in N" (the N), {ai} an AI assistant, {example} a question style, {rank} a position.
   "finding.presenceNone": "AI assistants don't mention you when people ask about your kind of business.",
@@ -508,23 +520,4 @@ export const board = {
   "campaigns.open": "Open",
   "campaigns.openLabel": "Open the campaign “{title}”",
 
-  // "Since your campaign" (Analysis). {date} the first publish date, {delta} signed points.
-  "since.eyebrow": "Did it work?",
-  "since.title": "Since your campaign on {date}",
-  "since.before": "Before",
-  "since.latest": "Latest",
-  "since.delta": "{delta} points",
-  "since.noAfter": "Run another analysis to see the effect.",
-  "since.noAfterBody": "Your newest analysis is from before this campaign went out. AI answers take a few days to change, so wait a little, then run one.",
-  "since.noBefore": "There was no analysis before this campaign, so there's nothing to compare with yet.",
-  "since.notComparable": "Your questions or AI sources changed, so before and after can't be compared.",
-  "since.open": "Open the campaign",
-  "since.verdictLabel": "Overall trend",
-  "since.verdict.insufficient_data": "Too few comparable analyses to call a trend yet.",
-  "since.verdict.no_change_detected": "No clear change yet — the difference is within normal variation.",
-  "since.verdict.change_detected_up": "Change detected: up since the previous analysis.",
-  "since.verdict.change_detected_down": "Change detected: down since the previous analysis.",
-  "since.verdict.no_clear_trend": "No clear trend yet.",
-  "since.verdict.improving": "Improving over time.",
-  "since.verdict.declining": "Declining over time.",
 };

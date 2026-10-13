@@ -28,7 +28,7 @@ OFFLINE_PROVIDERS = {"synthetic", "replay"}
 OBSERVATIONS_SUFFIX = ".observations.jsonl"
 
 
-def _alias_table_signature(entity_alias_table: Sequence[EntityAlias]) -> str:
+def alias_table_signature(entity_alias_table: Sequence[EntityAlias]) -> str:
     """Order-independent fingerprint of the tracked entity/alias table (self + competitors)
     the mention detector used for this run. Sorting entities and, within each entity, its
     aliases means only a genuine membership change (a competitor or alias added/removed)
@@ -65,7 +65,7 @@ def comparability_key(
             query_set_content_hash,
             json.dumps(sampling_config, sort_keys=True),
             ",".join(sorted(set(model_versions))),
-            _alias_table_signature(entity_alias_table),
+            alias_table_signature(entity_alias_table),
         ]
     )
     return hashlib.sha256(material.encode("utf-8")).hexdigest()[:16]
@@ -103,6 +103,9 @@ def build_snapshot(
     recommendation_status: str = "ok",
     recommendation_error: str | None = None,
     recommendations_total: int | None = None,
+    metrics_v2: dict | None = None,
+    detection_config: dict | None = None,
+    bootstrap: dict | None = None,
 ) -> dict:
     """Build the CONTRACT §5 record.
 
@@ -119,6 +122,11 @@ def build_snapshot(
     `recommendations` list is never mistaken for "nothing to recommend".
     `recommendations_total` is how many valid recommendations existed before the engine's cap
     (defaults to `len(recommendations)`).
+
+    Reproducibility (metrics v2): `metrics_v2` is the Visibility Index block
+    (`app.analysis.visibility.compute_visibility`), and the record also keeps everything needed
+    to recompute every number from the stored answers: the alias table the detector matched,
+    the gap `detection_config` and the v1 `bootstrap` seed / iterations. All additive fields.
     """
     planned_calls = len(providers) * len(query_ids) * samples_per_query
     successful_calls = len(raw_observations)
@@ -196,6 +204,20 @@ def build_snapshot(
             "policy_version": ADMISSION_POLICY_VERSION,
         },
         "entities": dict(entities),
+        **({"metrics_v2": metrics_v2} if metrics_v2 is not None else {}),
+        **({"detection_config": dict(detection_config)} if detection_config is not None else {}),
+        **({"bootstrap": dict(bootstrap)} if bootstrap is not None else {}),
+        **(
+            {
+                "alias_table": [
+                    {"entity_id": ea.entity_id, "entity_kind": ea.entity_kind, "aliases": list(ea.aliases)}
+                    for ea in entity_alias_table
+                ],
+                "alias_signature": alias_table_signature(entity_alias_table),
+            }
+            if entity_alias_table
+            else {}
+        ),
         "raw_observations": raw_observations,
     }
 

@@ -24,6 +24,9 @@ PROMINENCE_WEIGHT = 0.3
 SOV_WEIGHT = 0.3
 
 _BOOTSTRAP_ITERATIONS = 1000
+# Seed used when the caller passes no RNG, so a recompute from stored answers gives the same CI
+# (the pipeline passes random.Random(42) explicitly and records the seed in the snapshot).
+DEFAULT_BOOTSTRAP_SEED = 42
 _CI_LOW_PERCENTILE = 2.5
 _CI_HIGH_PERCENTILE = 97.5
 
@@ -131,7 +134,7 @@ def score(
     query_ids = list(by_query.keys())
 
     if query_ids:
-        rng = rng or random.Random()
+        rng = rng or random.Random(DEFAULT_BOOTSTRAP_SEED)
         bootstrap_composites = []
         for _ in range(n_bootstrap):
             resampled_query_ids = rng.choices(query_ids, k=len(query_ids))

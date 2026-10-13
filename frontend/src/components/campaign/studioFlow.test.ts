@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Campaign, ChannelId, ChannelStatus, DistributionEvent, Snapshot, Variant } from "../../api/types";
+import type { Campaign, ChannelId, ChannelStatus, DistributionEvent, Variant } from "../../api/types";
 import {
   currentStep,
   defaultPicks,
@@ -26,7 +26,6 @@ import {
   sendList,
   stepForCampaign,
 } from "./studioFlow";
-import { sinceCampaign } from "./trendMarkers";
 
 const variant = (over: Partial<Variant> = {}): Variant => ({
   channel: "x",
@@ -301,41 +300,6 @@ describe("drafting progress", () => {
     });
     expect(generationStage({ message: "Saving", done: 4, total: 5 }).stage).toBe("saving");
     expect(generationStage({ message: "Campaign ready", done: 5, total: 5 }).stage).toBe("done");
-  });
-});
-
-describe("since your campaign", () => {
-  const snap = (at: string, score: number, key = "k"): Snapshot =>
-    ({
-      run_id: at,
-      comparability_key: key,
-      collection_completed_at: at,
-      collection_started_at: at,
-      analysis_result: { composite_score: score },
-    }) as unknown as Snapshot;
-  const marker = (at: string) => ({ at, headline: "h", campaignId: "c1" });
-
-  it("compares the last run before the first publish with the newest run after it", () => {
-    const snaps = [snap("2026-09-01T00:00:00Z", 20), snap("2026-09-03T00:00:00Z", 24), snap("2026-09-06T00:00:00Z", 31), snap("2026-09-08T00:00:00Z", 35)];
-    const s = sinceCampaign(snaps, [marker("2026-08-20T00:00:00Z"), marker("2026-09-04T00:00:00Z")]);
-    expect(s?.before?.run_id).toBe("2026-09-03T00:00:00Z");
-    expect(s?.after?.run_id).toBe("2026-09-08T00:00:00Z");
-    expect(s?.delta).toBe(11);
-    expect(s?.comparable).toBe(true);
-  });
-
-  it("is honest when no analysis ran after the campaign, or the method changed", () => {
-    const snaps = [snap("2026-09-01T00:00:00Z", 20)];
-    const s = sinceCampaign(snaps, [marker("2026-09-04T00:00:00Z")]);
-    expect(s?.before?.run_id).toBe("2026-09-01T00:00:00Z");
-    expect(s?.after).toBeNull();
-    expect(s?.delta).toBeNull();
-    const changed = sinceCampaign([snap("2026-09-01T00:00:00Z", 20), snap("2026-09-06T00:00:00Z", 30, "other")], [marker("2026-09-04T00:00:00Z")]);
-    expect(changed?.comparable).toBe(false);
-    expect(changed?.delta).toBeNull();
-    // Published before any analysis: no "before" score.
-    expect(sinceCampaign([snap("2026-09-06T00:00:00Z", 30)], [marker("2026-09-04T00:00:00Z")])?.before).toBeNull();
-    expect(sinceCampaign(snaps, [])).toBeNull();
   });
 });
 

@@ -74,6 +74,20 @@ describe("capLine", () => {
   });
 });
 
+describe("impactOf (metrics v2)", () => {
+  it("uses the measured expected gain in VI points, one decimal", () => {
+    expect(impactOf(44.4, "presence", "assumption.opportunity", { gain: 4.58, belowMde: false })).toEqual({ kind: "points", n: 4.6, v2: true });
+    expect(impactOf(44.4, "presence", "assumption.opportunity", { gain: 0.3 })).toEqual({ kind: "small", v2: true });
+  });
+  it("flags gains a follow-up check can't confirm", () => {
+    expect(impactOf(30, "presence", "assumption.opportunity_small", { gain: 2.02, belowMde: true })).toEqual({ kind: "belowMde", n: 2 });
+  });
+  it("falls back to v1 when there is no measured gain", () => {
+    expect(impactOf(4.4, "presence", undefined, { gain: null })).toEqual({ kind: "points", n: 4 });
+    expect(impactOf(0, "presence", "assumption.opportunity_none", { gain: 0 })).toEqual({ kind: "flat" });
+  });
+});
+
 describe("impactOf", () => {
   it("rounds a positive gain to points, with a 'less than a point' case", () => {
     expect(impactOf(4.4, "presence")).toEqual({ kind: "points", n: 4 });

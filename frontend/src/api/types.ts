@@ -175,6 +175,19 @@ export interface Recommendation {
   reasoning_key?: string;
   /** Values for the reasoning_key placeholders. */
   reasoning_params?: Record<string, string | number>;
+  // Metrics v2 (docs/METRICS_v2.md §6), absent on older snapshots: the gap's measured opportunity
+  // in Visibility Index points, the assumed share an action captures, and the resulting expected
+  // gain; confidence is then the bootstrap probability that the gap is real.
+  expected_gain_vi?: number | null;
+  opportunity_vi?: number | null;
+  target_vi?: number | null;
+  self_vi_scope?: number | null;
+  scope_share?: number | null;
+  uptake_prior?: number | null;
+  confidence_method?: "evidence_count" | "bootstrap_gap_holds";
+  /** True when the expected gain is smaller than what a follow-up run can detect. */
+  below_mde?: boolean | null;
+  mde?: number | null;
 }
 
 export interface SnapshotAdmission {
@@ -259,6 +272,136 @@ export interface Snapshot {
   recommendation_error?: string | null;
   /** Recommendations that passed validation before the display cap (≥ recommendations.length). */
   recommendations_total?: number;
+  /** Metrics v2: the Visibility Index and friends. Absent when the run has no stored answers. */
+  metrics_v2?: MetricsV2;
+  /** Metrics v2 trend, only on the newest snapshot. */
+  trend_verdict_v2?: TrendVerdictV2;
+  /** The smallest VI change a follow-up run can detect, used for this run's recommendations. */
+  mde_reference?: { value: number | null; method: "previous_run" | "design"; run_id: string | null };
+}
+
+// ---------------------------------------------------------------------------
+// Metrics v2 (docs/METRICS_v2.md)
+// ---------------------------------------------------------------------------
+
+/** One entity's Visibility Index: 100 × mean position weight over the answers (0–100). */
+export interface EntityVisibility {
+  vi: number;
+  /** 95% cluster-bootstrap interval over questions, VI points. */
+  ci: [number, number] | null;
+  answers: number;
+  named: number;
+  first: number;
+  /** 0–1 */
+  presence: number;
+  /** 0–1, mean position weight when named. */
+  mean_weight_named: number | null;
+}
+
+export interface GroupVisibility {
+  vi: number;
+  answers: number;
+  named: number;
+  answered: number;
+  questions: number;
+}
+
+export interface MetricsV2 {
+  metric_version: string;
+  metric_config_hash: string;
+  answers: number;
+  questions: number;
+  /** 0–1: answers that offered options (not a clarifying question or refusal). */
+  answer_rate: number;
+  self_id: string;
+  entities: Record<string, EntityVisibility>;
+  /** Named in fewer than 3 questions: the interval is wide by necessity. */
+  low_information: boolean;
+  market_position: { rank: number; of: number; rank_low: number; rank_high: number; agreement: number | null };
+  share_of_recommendations: { value: number; ci: [number, number] | null } | null;
+  head_to_head: Record<string, { wins: number; losses: number; win_rate: number | null; ci: [number, number] | null }>;
+  question_reach: { named: number; reliable: number; of: number };
+  per_question: Record<string, { text: string; intent: string; answers: number; named: number; vi: number; best_competitor_vi: number }>;
+  per_provider: Record<string, GroupVisibility>;
+  per_intent: Record<string, GroupVisibility>;
+  /** Optimistic smallest detectable change for a rerun, VI points. */
+  mde_design: number | null;
+  /** Recomputed from stored answers with today's competitor list. */
+  rescored?: boolean;
+  /** Share of matched cells with the previous run (0–1); null for the first run. */
+  overlap_with_previous?: number | null;
+}
+
+export type MatchedVerdict =
+  | "rose_after"
+  | "leaning_up"
+  | "no_detectable_change"
+  | "leaning_down"
+  | "fell_after"
+  | "insufficient_data";
+
+/** Paired comparison of two runs on their shared question × AI × model cells (VI points). */
+export interface MatchedComparison {
+  entity_id: string;
+  matched_cells: number;
+  /** 0–1 */
+  overlap: number;
+  questions: number;
+  vi_before: number | null;
+  vi_after: number | null;
+  delta: number | null;
+  ci95: [number, number] | null;
+  ci80: [number, number] | null;
+  mde: number | null;
+  verdict: MatchedVerdict;
+}
+
+export interface TrendVerdictV2 {
+  status: MatchedVerdict | "improving" | "declining" | "no_clear_trend";
+  method: "none" | "matched" | "theil_sen";
+  direction: "up" | "down" | null;
+  n_points: number;
+  segment_run_ids: string[];
+  comparison: MatchedComparison | null;
+  slope: { x_unit: "day" | "run" | null; value: number | null; ci_low: number | null; ci_high: number | null; per_week: number | null } | null;
+}
+
+export type ImpactStatus = MatchedVerdict | "waiting" | "no_baseline" | "confounded";
+
+/** GET /brands/{key}/impact — one completed action and what was measured after it. */
+export interface ImpactEntry {
+  ledger_id: string;
+  suggestion_key: string;
+  action: string;
+  competitor_id: string | null;
+  gap_ids: string[];
+  scopes: Record<string, unknown>[];
+  done_at: string;
+  closed_at: string | null;
+  source: "board" | "campaign" | string;
+  campaign_id: string | null;
+  pre_run_id: string | null;
+  prediction: { expected_gain_vi?: number | null; opportunity_vi?: number | null; confidence?: number | null; mde?: number | null };
+  evaluation: {
+    status: ImpactStatus;
+    basis?: "targeted" | "overall" | null;
+    pre_run_id: string | null;
+    post_run_id: string | null;
+    primary?: MatchedComparison | null;
+    scope_share?: number | null;
+    measured_overall?: number | null;
+    untargeted?: { questions: number; delta: number | null; ci95: [number, number] | null; verdict: MatchedVerdict; difference_in_differences?: number | null } | null;
+    market_drift?: number | null;
+    placebo?: { pairs: number; fired: number; rate: number | null } | null;
+    confounded_by?: string[] | null;
+    prediction_check?: { expected_gain_vi: number | null; measured_overall: number | null; error: number | null } | null;
+  };
+}
+
+export interface ImpactResponse {
+  brand_key: string;
+  entries: ImpactEntry[];
+  priors: { default: Record<string, number>; calibrated: Record<string, number> };
 }
 
 export type TrendStatus =

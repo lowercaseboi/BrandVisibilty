@@ -1,6 +1,7 @@
 // Pure helpers for the "Published" markers on the trend chart. The chart's x-axis is by check
 // (index), not by time, so an event is placed between the two checks around it, proportionally.
 import type { Campaign, Snapshot } from "../../api/types";
+import { headline, isBreak } from "../dashboard/visibility";
 import { eventsNewestFirst } from "./campaignModel";
 
 /** One published campaign, as the trend chart draws it. */
@@ -39,47 +40,20 @@ export function markerIndex(times: number[], at: number): { index: number; after
 }
 
 /**
- * "Since this campaign": newest score minus the last score at or before the event, within the same
- * comparability segment. null when no check came after it or the segment changed in between.
+ * "Since this campaign" (chart flag tooltip): newest headline score (Visibility Index, or v1 composite)
+ * minus the last one at or before the event, when no trend-line break separates them. The proper,
+ * noise-aware answer is the impact ledger (ImpactCard); this is only the point difference on the chart.
  */
 export function sinceDelta(snapshots: Snapshot[], at: string): number | null {
   const t = Date.parse(at);
   if (!Number.isFinite(t) || snapshots.length < 2) return null;
   const time = (s: Snapshot) => Date.parse(s.collection_completed_at || s.collection_started_at);
-  let before: Snapshot | null = null;
-  for (const s of snapshots) if (time(s) <= t) before = s;
-  const last = snapshots[snapshots.length - 1];
-  if (!before || before === last || time(last) <= t) return null;
-  if (before.comparability_key !== last.comparability_key) return null;
-  return last.analysis_result.composite_score - before.analysis_result.composite_score;
-}
-
-/** "Since your campaign on <date>": the score before it (the last analysis finished before its first
- * publish) against the newest analysis, when that one came after. */
-export interface SinceCampaign {
-  marker: PublishMarker;
-  before: Snapshot | null;
-  /** The newest analysis, only when it finished after the publish; null = run another one. */
-  after: Snapshot | null;
-  /** Both runs are in the same comparable segment (same questions and AI sources). */
-  comparable: boolean;
-  /** after − before (0–100 points), when both exist and are comparable. */
-  delta: number | null;
-}
-
-const finishedAt = (s: Snapshot) => Date.parse(s.collection_completed_at || s.collection_started_at);
-
-/** For the newest published campaign (markers are oldest first); null when nothing was published. */
-export function sinceCampaign(snapshots: Snapshot[], markers: PublishMarker[]): SinceCampaign | null {
-  const marker = markers[markers.length - 1];
-  if (!marker) return null;
-  const at = Date.parse(marker.at);
-  if (!Number.isFinite(at)) return null;
-  const sorted = [...snapshots].filter((s) => Number.isFinite(finishedAt(s))).sort((a, b) => finishedAt(a) - finishedAt(b));
-  const before = [...sorted].reverse().find((s) => finishedAt(s) < at) ?? null;
-  const newest = sorted[sorted.length - 1];
-  const after = newest && finishedAt(newest) > at ? newest : null;
-  const comparable = !!before && !!after && before.comparability_key === after.comparability_key;
-  const delta = before && after && comparable ? after.analysis_result.composite_score - before.analysis_result.composite_score : null;
-  return { marker, before, after, comparable, delta };
+  let from = -1;
+  snapshots.forEach((s, i) => {
+    if (time(s) <= t) from = i;
+  });
+  const last = snapshots.length - 1;
+  if (from < 0 || from === last || time(snapshots[last]) <= t) return null;
+  for (let i = from + 1; i <= last; i++) if (isBreak(snapshots[i - 1], snapshots[i])) return null;
+  return headline(snapshots[last]).value - headline(snapshots[from]).value;
 }
