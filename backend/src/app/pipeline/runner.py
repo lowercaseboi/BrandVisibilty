@@ -368,6 +368,28 @@ def _collect_provider(
     return records
 
 
+def reference_mde(brand: BrandConfig, metrics_v2: dict, run_id: str) -> dict:
+    """The smallest VI change a follow-up run can be expected to detect, for this run's
+    recommendations: the MDE of the matched comparison with the previous admissible run when
+    there is one (it includes real run-to-run drift), else the optimistic within-run value."""
+    from app.analysis.matching import match
+    from app.tracking.rescore import metrics_for
+
+    for light in reversed(store.load_snapshots(brand.brand_key)):
+        if not (light.get("admission") or {}).get("admissible", True):
+            continue
+        previous = metrics_for(brand.brand_key, light, brand=brand)
+        if not previous:
+            continue
+        comparison = match(
+            previous["cells"], metrics_v2["cells"], SELF_ENTITY_ID, seed_basis=f"{light.get('run_id')}|{run_id}"
+        )
+        if comparison["verdict"] != "insufficient_data" and comparison["mde"] is not None:
+            return {"value": comparison["mde"], "method": "previous_run", "run_id": light.get("run_id")}
+        break
+    return {"value": metrics_v2.get("mde_design"), "method": "design", "run_id": None}
+
+
 def _auto_round(brand_key: str) -> int:
     """Next synthetic round: each synthetic run simulates a later week of demo data."""
     return sum(1 for r in store.load_snapshots(brand_key) if r.get("data_origin") == "synthetic") + 1
@@ -487,9 +509,11 @@ def run_pipeline(
     # A drafting failure must not lose a collected run, and must not pass for "nothing to
     # recommend" either: the snapshot records it (recommendation_status / _error).
     recommendation_status, recommendation_error = "ok", None
+    mde_reference = reference_mde(brand, metrics_v2, run_id)
     try:
         drafted = recommend_detailed(
-            gaps, observations, SELF_ENTITY_ID, competitor_ids, entity_names=brand.entity_names()
+            gaps, observations, SELF_ENTITY_ID, competitor_ids, entity_names=brand.entity_names(),
+            metrics_v2=metrics_v2, mde=mde_reference["value"], detection_config=detection_config,
         )
         recommendations, recommendations_total = list(drafted.passed), drafted.total
     except Exception as exc:  # noqa: BLE001 - never throw away a collected run over drafting
@@ -526,6 +550,7 @@ def run_pipeline(
     )
     snapshot["raw_observations"] = [*snapshot["raw_observations"], *unscored_raws]
     snapshot["unscored_observation_count"] = len(unscored_raws)
+    snapshot["mde_reference"] = mde_reference
     # Who the AI named, per tracked entity — scored (unprompted) answers only (PRD §10.1).
     snapshot["mention_summary"] = mention_summary(observations, brand.entity_names())
     store.append_snapshot(snapshot)
