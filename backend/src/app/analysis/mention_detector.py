@@ -59,18 +59,19 @@ def _is_passing_mention(text: str, start: int, end: int) -> bool:
     return True
 
 
-def detect_mentions(text: str, alias_table: tuple[EntityAlias, ...]) -> tuple[EntityMention, ...]:
-    """Find every tracked entity's earliest mention in `text`, ranked by first-mention
-    position. One `EntityMention` per entity — matching what Scorer/GapDetector already
-    assume via `Observation.mention_of` — even if an entity has multiple aliases or
-    multiple occurrences.
+def is_passing_mention(text: str, start: int, end: int) -> bool:
+    """Public name for the parenthetical-mention rule (used by the v2 list placement)."""
+    return _is_passing_mention(text, start, end)
+
+
+def _matches(text: str, alias_table: tuple[EntityAlias, ...]) -> list[tuple[int, int, str, str]]:
+    """Every non-shadowed alias match as (start, end, entity_id, entity_kind), in alias-table
+    order so ties stay deterministic.
 
     Overlapping aliases of different entities follow the longest-match rule: a match whose
     span lies inside a strictly longer match of a *different* entity is dropped, so a brand
     aliased "Nova" is not credited for "Nova Cafe" when "Nova Cafe" is a tracked competitor.
-    Overlaps within one entity are harmless (it still yields one mention).
     """
-    # (start, end, entity_id, entity_kind), in alias-table order so ties stay deterministic.
     matches: list[tuple[int, int, str, str]] = []
     for entry in alias_table:
         for alias in entry.aliases:
@@ -86,12 +87,32 @@ def detect_mentions(text: str, alias_table: tuple[EntityAlias, ...]) -> tuple[En
             for o_start, o_end, o_id, _ in matches
         )
 
+    return [m for m in matches if not _shadowed(m)]
+
+
+def find_spans(text: str, alias_table: tuple[EntityAlias, ...]) -> dict[str, list[tuple[int, int]]]:
+    """Every occurrence of every tracked entity: {entity_id: [(start, end), ...]} sorted by
+    start, same matching and longest-match rule as `detect_mentions`. The v2 list placement
+    needs all occurrences, not only the earliest, to find an entity's best list slot."""
+    # Aliases of one entity can match at the same start ("Gajanan Vada Pav" / "Gajanan"):
+    # keep the longest, so each occurrence is one span.
+    longest: dict[str, dict[int, int]] = {}
+    for start, end, entity_id, _ in _matches(text, alias_table):
+        ends = longest.setdefault(entity_id, {})
+        ends[start] = max(end, ends.get(start, end))
+    return {eid: sorted(ends.items()) for eid, ends in longest.items()}
+
+
+def detect_mentions(text: str, alias_table: tuple[EntityAlias, ...]) -> tuple[EntityMention, ...]:
+    """Find every tracked entity's earliest mention in `text`, ranked by first-mention
+    position. One `EntityMention` per entity — matching what Scorer/GapDetector already
+    assume via `Observation.mention_of` — even if an entity has multiple aliases or
+    multiple occurrences. Overlaps follow the longest-match rule (see `_matches`); overlaps
+    within one entity are harmless (it still yields one mention).
+    """
     earliest: dict[str, tuple[int, int]] = {}
     kind_of: dict[str, str] = {}
-    for m in matches:
-        if _shadowed(m):
-            continue
-        start, end, entity_id, entity_kind = m
+    for start, end, entity_id, entity_kind in _matches(text, alias_table):
         current = earliest.get(entity_id)
         if current is None or start < current[0]:
             earliest[entity_id] = (start, end)

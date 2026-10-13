@@ -708,3 +708,27 @@ def test_trend_verdict_single_run_is_insufficient(client: TestClient) -> None:
     assert client.get("/brands/gajanan_vada_pav/snapshots/latest").json()["trend_verdict"]["status"] == (
         "insufficient_data"
     )
+
+
+def test_metrics_v2_trend_and_compare(real_client: TestClient) -> None:
+    from app.pipeline.runner import run_pipeline
+
+    first = run_pipeline("gajanan_vada_pav", providers="synthetic", samples=2)
+    second = run_pipeline("gajanan_vada_pav", providers="synthetic", samples=2)
+    history = real_client.get("/brands/gajanan_vada_pav/snapshots").json()
+    assert all("cells" not in s["metrics_v2"] for s in history)
+    assert history[0]["metrics_v2"]["overlap_with_previous"] is None
+    assert history[1]["metrics_v2"]["overlap_with_previous"] == 1.0
+    assert "trend_verdict_v2" not in history[0]
+    trend = history[-1]["trend_verdict_v2"]
+    assert trend["method"] == "matched" and trend["comparison"]["questions"] > 0
+
+    url = f"/brands/gajanan_vada_pav/compare?from={first['run_id']}&to={second['run_id']}"
+    body = real_client.get(url).json()
+    assert body["self"]["overlap"] == 1.0
+    assert body["self"]["verdict"] in {
+        "rose_after", "leaning_up", "no_detectable_change", "leaning_down", "fell_after", "insufficient_data",
+    }
+    assert set(body["competitors"]) == set(first["entities"]) - {"self"}
+    assert real_client.get("/brands/gajanan_vada_pav/compare?from=nope&to=nope").status_code == 404
+    assert real_client.get("/brands/nope/compare?from=a&to=b").status_code == 404

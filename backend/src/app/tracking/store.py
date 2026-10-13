@@ -63,6 +63,12 @@ def observations_path(brand_key: str, run_id: str) -> Path:
     return observations_dir(brand_key) / f"{_safe_name(run_id, 'run_id')}{OBSERVATIONS_SUFFIX}"
 
 
+def metrics_cache_path(brand_key: str, run_id: str) -> Path:
+    """DATA_DIR/metrics/<brand_key>/<run_id>.json — derived metrics_v2 for runs rescored from
+    their stored answers (app.tracking.rescore). Safe to delete: it is rebuilt on read."""
+    return paths.DATA_DIR / "metrics" / _safe_name(brand_key, "brand_key") / f"{_safe_name(run_id, 'run_id')}.json"
+
+
 def write_atomic(path: Path, text: str) -> None:
     """Write via a temp file + rename, so readers never see a half-written file."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -191,6 +197,7 @@ def delete_brand_data(brand_key: str) -> None:
     shutil.rmtree(observations_dir(brand_key), ignore_errors=True)
     (paths.DATA_DIR / "questions" / f"{brand_key}.json").unlink(missing_ok=True)
     (paths.DATA_DIR / "boards" / f"{brand_key}.json").unlink(missing_ok=True)
+    shutil.rmtree(paths.DATA_DIR / "metrics" / _safe_name(brand_key, "brand_key"), ignore_errors=True)
     # Campaign Studio data: campaigns, their media and the brand's audit log. Imported here, not
     # at module level: app.distribution.store depends only on app.paths + types, but keeping the
     # import local means this module never pulls in the distribution package for plain reads.

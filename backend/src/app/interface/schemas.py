@@ -440,6 +440,82 @@ class MentionSummaryOut(_OpenModel):
     entities: dict[str, MentionCounts]
 
 
+class EntityVisibility(_OpenModel):
+    vi: float = Field(description="Visibility Index, 0–100: 100 × mean position weight over the answers")
+    ci: list[float] | None = Field(default=None, description="95% cluster-bootstrap interval over questions")
+    answers: int
+    named: int = Field(description="Answers that named it")
+    first: int = Field(description="Answers that put it first")
+    presence: float = Field(description="0–1, named / answers")
+    mean_weight_named: float | None = Field(description="0–1, mean position weight when named")
+
+
+class MarketPosition(_OpenModel):
+    rank: int
+    of: int
+    rank_low: int
+    rank_high: int
+    agreement: float | None = Field(description="Share of bootstrap resamples giving the same rank")
+
+
+class SnapshotMetricsV2(_OpenModel):
+    """Metrics v2 (docs/METRICS_v2.md), served without the per-cell sums."""
+
+    metric_version: str
+    metric_config_hash: str
+    answers: int
+    questions: int
+    answer_rate: float = Field(description="0–1, answers that named an option (not a clarifying question / refusal)")
+    self_id: str
+    entities: dict[str, EntityVisibility]
+    low_information: bool
+    market_position: MarketPosition
+    share_of_recommendations: dict[str, Any] | None
+    head_to_head: dict[str, dict[str, Any]]
+    question_reach: dict[str, int]
+    per_question: dict[str, dict[str, Any]]
+    per_provider: dict[str, dict[str, Any]]
+    per_intent: dict[str, dict[str, Any]]
+    mde_design: float | None = Field(description="Optimistic smallest detectable change for a rerun, VI points")
+    rescored: bool | None = Field(default=None, description="Recomputed from stored answers with today's competitors")
+    overlap_with_previous: float | None = None
+
+
+class MatchedComparison(_OpenModel):
+    entity_id: str
+    matched_cells: int
+    overlap: float
+    questions: int
+    vi_before: float | None
+    vi_after: float | None
+    delta: float | None
+    ci95: list[float] | None
+    ci80: list[float] | None
+    mde: float | None
+    verdict: Literal[
+        "rose_after", "leaning_up", "no_detectable_change", "leaning_down", "fell_after", "insufficient_data"
+    ]
+
+
+class TrendVerdictV2(_OpenModel):
+    status: str = Field(description="A matched verdict (2–3 runs) or improving / declining / no_clear_trend")
+    method: Literal["none", "matched", "theil_sen"]
+    direction: Literal["up", "down"] | None
+    n_points: int
+    segment_run_ids: list[str]
+    comparison: MatchedComparison | None = None
+    slope: dict[str, Any] | None = None
+
+
+class CompareResponse(_OpenModel):
+    brand_key: str
+    from_run: str
+    to_run: str
+    self: MatchedComparison
+    competitors: dict[str, dict[str, Any]]
+    market_drift: float | None = Field(description="Mean change in competitors' VI on the same cells")
+
+
 class Snapshot(_OpenModel):
     """One tracking run, without its raw observations (CONTRACT §5)."""
 
@@ -481,6 +557,10 @@ class Snapshot(_OpenModel):
     trend_verdict: TrendVerdict | None = Field(
         default=None, description="Only on the newest snapshot of a list (and on /snapshots/latest)"
     )
+    metrics_v2: SnapshotMetricsV2 | None = Field(
+        default=None, description="Visibility Index metrics; absent when the run has no stored answers"
+    )
+    trend_verdict_v2: TrendVerdictV2 | None = Field(default=None, description="Only on the newest snapshot")
 
 
 class ObservationMention(_OpenModel):

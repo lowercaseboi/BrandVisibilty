@@ -3,8 +3,10 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from app.analysis.trend import (
+    RunMetrics,
     TrendPoint,
     compute_trend,
+    compute_trend_v2,
     latest_comparable_segment,
     theil_sen_slope,
 )
@@ -166,3 +168,47 @@ def test_same_input_gives_the_same_verdict():
     points = series([42, 47, 39, 45, 51, 44, 48], half_width=9)
     assert compute_trend(points) == compute_trend(points)
     assert compute_trend(points, seed=7) == compute_trend(points, seed=7)
+
+
+# --------------------------------------------------------------------------- metrics v2
+
+
+def _v2_cells(named: int, *, model: str = "m", questions: int = 6) -> tuple:
+    return tuple(
+        {
+            "q": f"q{i}", "provider": "p", "model": model, "intent": "x", "n": 3, "answered": 3, "excluded": [],
+            "e": {"self": [0.5 * named, 0.25 * named, named, 0]}, "h2h": {},
+        }
+        for i in range(questions)
+    )
+
+
+def _v2_run(i: int, named: int, **kw) -> RunMetrics:
+    vi = 100 * 0.5 * named / 3
+    return RunMetrics(
+        run_id=f"r{i}", completed_at=datetime(2026, 10, 1 + i, tzinfo=UTC), vi=vi,
+        ci_low=max(0.0, vi - 3), ci_high=vi + 3, cells=_v2_cells(named, **kw),
+    )
+
+
+def test_v2_one_run_is_insufficient():
+    assert compute_trend_v2([_v2_run(0, 1)])["status"] == "insufficient_data"
+
+
+def test_v2_two_runs_use_the_matched_comparison():
+    out = compute_trend_v2([_v2_run(0, 0), _v2_run(1, 3)])
+    assert out["method"] == "matched"
+    assert out["status"] == "rose_after" and out["direction"] == "up"
+    assert out["comparison"]["questions"] == 6
+
+
+def test_v2_four_overlapping_runs_use_theil_sen():
+    out = compute_trend_v2([_v2_run(i, i) for i in range(4)], n_bootstrap=200)
+    assert out["method"] == "theil_sen" and out["n_points"] == 4
+    assert out["slope"]["value"] > 0
+
+
+def test_v2_segment_stops_at_a_model_change():
+    runs = [_v2_run(0, 1, model="old"), _v2_run(1, 1, model="old"), _v2_run(2, 1), _v2_run(3, 2)]
+    out = compute_trend_v2(runs)
+    assert out["segment_run_ids"] == ["r2", "r3"] and out["method"] == "matched"

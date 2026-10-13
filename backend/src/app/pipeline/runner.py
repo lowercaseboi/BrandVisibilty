@@ -15,6 +15,7 @@ import random
 import re
 import threading
 import time
+import uuid
 from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
@@ -25,9 +26,9 @@ import httpx
 from app import paths
 from app.analysis.gap_detector import detect_gaps
 from app.analysis.mention_detector import detect_mentions
-from app.analysis.scorer import score
+from app.analysis.scorer import DEFAULT_BOOTSTRAP_SEED, score
 from app.analysis.summary import mention_summary
-from app.analysis.types import Observation
+from app.analysis.types import DetectionConfig, Observation
 from app.brands.registry import SELF_ENTITY_ID, BrandConfig, get_brand
 from app.collection.types import QuotaExhausted, SamplingParams
 from app.querysets import custom as question_sets
@@ -39,7 +40,8 @@ ProgressFn = Callable[[str, int, int], None]  # (message, done, total)
 ProviderFn = Callable[[dict], None]  # {provider_id, label, done, total, succeeded, failed, state, note, wait_seconds}
 SkipFn = Callable[[str], bool]  # provider_id -> True when that provider (or everything) should be skipped
 
-_BOOTSTRAP_SEED = 42
+_BOOTSTRAP_SEED = DEFAULT_BOOTSTRAP_SEED
+_BOOTSTRAP_ITERATIONS = 1000
 
 
 GIVE_UP_AFTER_CONSECUTIVE_FAILURES = 3
@@ -470,10 +472,18 @@ def run_pipeline(
         )
 
     # 5. Pure analysis — scored (unprompted) observations only.
+    from app.tracking.rescore import compute_for_answers
+
     competitor_ids = brand.competitor_ids()
+    run_id = str(uuid.uuid4())
+    detection_config = DetectionConfig()
     progress.note("Scoring answers…")
-    analysis_result = score(observations, SELF_ENTITY_ID, competitor_ids, rng=random.Random(_BOOTSTRAP_SEED))
-    gaps = detect_gaps(observations, SELF_ENTITY_ID, competitor_ids)
+    analysis_result = score(
+        observations, SELF_ENTITY_ID, competitor_ids,
+        n_bootstrap=_BOOTSTRAP_ITERATIONS, rng=random.Random(_BOOTSTRAP_SEED),
+    )
+    metrics_v2 = compute_for_answers(raw_observations, brand.alias_table(), competitor_ids, run_id=run_id)
+    gaps = detect_gaps(observations, SELF_ENTITY_ID, competitor_ids, detection_config)
     # A drafting failure must not lose a collected run, and must not pass for "nothing to
     # recommend" either: the snapshot records it (recommendation_status / _error).
     recommendation_status, recommendation_error = "ok", None
@@ -508,7 +518,11 @@ def run_pipeline(
         recommendations_total=recommendations_total,
         started_at=started_at,
         completed_at=completed_at,
+        run_id=run_id,
         entity_alias_table=brand.alias_table(),
+        metrics_v2=metrics_v2,
+        detection_config=asdict(detection_config),
+        bootstrap={"seed": _BOOTSTRAP_SEED, "iterations": _BOOTSTRAP_ITERATIONS},
     )
     snapshot["raw_observations"] = [*snapshot["raw_observations"], *unscored_raws]
     snapshot["unscored_observation_count"] = len(unscored_raws)
