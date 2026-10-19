@@ -30,7 +30,9 @@ function AiCard({ p }: { p: ProviderInfo }) {
           <span className="badge badge-muted">{t("pages.ais.notSetUp")}</span>
         )}
       </div>
-      {p.model && <p className="muted small pg-ai-model">{t("pages.ais.model", { model: p.model })}</p>}
+      <Details>
+        {p.model && <p className="muted small pg-ai-model">{t("pages.ais.model", { model: p.model })}</p>}
+      </Details>
       {!p.configured && <p className="small pg-ai-help">{t("pages.ais.askToSetUp")}</p>}
     </li>
   );

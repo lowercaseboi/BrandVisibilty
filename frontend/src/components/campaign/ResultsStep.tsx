@@ -4,10 +4,13 @@ import { CHANNEL_IDS } from "../../api/types";
 import type { ChannelId, ChannelStatus, DistributionEvent } from "../../api/types";
 import { useFormat, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n";
+import { Details } from "../../settings/details";
 import { ChannelIcon } from "../accounts/ChannelIcon";
 import { EmptyState } from "../EmptyState";
 import { brandHref } from "../module/modules";
 import { TransitionLink } from "../module/transition";
+import { Collapse } from "../ui/Collapse";
+import { DisclosureMark } from "../ui/DisclosureMark";
 import { channelName, latestEventByChannel } from "./campaignModel";
 import { PublishLog } from "./PublishLog";
 import { blockReason, canRetry, eventNote, resultKind } from "./studioFlow";
@@ -44,9 +47,9 @@ const BLOCK_LINE: Record<BlockReason, MessageKey> = {
 
 /**
  * Step 4: the newest attempt per channel, saying exactly what happened — Posted (with its link),
- * a practice run, ready / opened in WhatsApp, exported, Failed with the reason and "Try again", or
- * Blocked with the reason (e.g. no ADMIN_TOKEN) — then the download, the "did it work?" next step
- * and the full attempt log (AC-10) folded away.
+ * a practice run, ready / opened in WhatsApp, exported, a plain "Couldn't post — try again", or
+ * Not sent with the reason in plain words (the server's own message is Analytical-view only) —
+ * then the download, the "did it work?" next step and the full attempt log (AC-10) folded away.
  */
 export function ResultsStep({
   events,
@@ -68,6 +71,8 @@ export function ResultsStep({
   const t = useT();
   const fmt = useFormat();
   const nextId = useId();
+  const logId = useId();
+  const [logOpen, setLogOpen] = useState(false);
   // WhatsApp can't be posted to: the user opens it and taps send. Remember that they opened it.
   const [opened, setOpened] = useState<Set<string>>(() => new Set());
   const latest = latestEventByChannel(events);
@@ -90,8 +95,8 @@ export function ResultsStep({
             if (kind === "posted") line = href ? t("board.campaign.result.line.posted", { channel: name }) : t("board.campaign.result.line.postedNoLink");
             else if (kind === "whatsapp") line = waOpened ? t("board.campaign.result.line.whatsappOpened") : t("board.campaign.result.line.whatsapp");
             else if (kind === "unconnected") line = t("board.campaign.result.line.unconnected", { channel: name });
-            else if (kind === "failed") line = t("board.campaign.result.line.failed", { error: e.error || "—" });
-            else if (reason) line = t(BLOCK_LINE[reason], { channel: name, error: e.error || "—" });
+            else if (kind === "failed") line = t("board.campaign.result.line.failed");
+            else if (reason) line = t(BLOCK_LINE[reason], { channel: name });
             else line = t(kind === "practice" ? "board.campaign.result.line.practice" : "board.campaign.result.line.exported");
             const retry = canRetry(e);
             return (
@@ -108,8 +113,13 @@ export function ResultsStep({
                 <p className={kind === "failed" || kind === "blocked" ? "cs-result-line is-bad" : "cs-result-line"} role={kind === "failed" || kind === "blocked" ? "alert" : undefined}>
                   {line}
                 </p>
-                {/* The server's note, unless the line above already says the same in plain words. */}
-                {kind !== "unconnected" && kind !== "whatsapp" && eventNote(e) && eventNote(e) !== e.error && <p className="muted small">{eventNote(e)}</p>}
+                <Details>
+                  {e.error && (kind === "failed" || (kind === "blocked" && reason === "other")) && (
+                    <p className="muted small">{t("board.campaign.result.why", { error: e.error })}</p>
+                  )}
+                  {/* The server's note, unless the line above already says the same in plain words. */}
+                  {kind !== "unconnected" && kind !== "whatsapp" && eventNote(e) && eventNote(e) !== e.error && <p className="muted small">{eventNote(e)}</p>}
+                </Details>
                 <p className="muted small">
                   <time dateTime={e.at} title={e.at}>
                     {fmt.relativeTime(e.at) || e.at}
@@ -166,10 +176,15 @@ export function ResultsStep({
         </TransitionLink>
       </section>
 
-      <details className="cs-log-wrap">
-        <summary>{t("board.campaign.log.title")}</summary>
-        <PublishLog events={events} statuses={statuses} busy={busy} canRetry={false} onRetry={onRetry} />
-      </details>
+      <div className="cs-log-wrap">
+        <button type="button" className="link-quiet cs-log-toggle" aria-expanded={logOpen} aria-controls={logId} onClick={() => setLogOpen((o) => !o)}>
+          <DisclosureMark open={logOpen} />
+          {t("board.campaign.log.title")}
+        </button>
+        <Collapse open={logOpen} id={logId}>
+          <PublishLog events={events} statuses={statuses} busy={busy} canRetry={false} onRetry={onRetry} />
+        </Collapse>
+      </div>
     </div>
   );
 }

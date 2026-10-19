@@ -29,12 +29,14 @@ from app.interface.schemas import (
     BrandSummary,
     CampaignDeleteResponse,
     CampaignOut,
+    CompareResponse,
     ChannelStatusOut,
     CreateBrandRequest,
     CreateCampaignRequest,
     CreateCampaignResponse,
     DeliverablePatch,
     HealthResponse,
+    ImpactResponse,
     Job,
     ManualAccountRequest,
     OAuthStartRequest,
@@ -56,9 +58,10 @@ from app.interface.schemas import (
 from app.interface.snapshots import (
     normalize_snapshot,
     trend_verdict,
+    with_metrics_v2,
     with_trend_verdict,
 )
-from app.tracking import store
+from app.tracking import rescore, store
 
 DESCRIPTION = """
 Measures how visible a brand is inside AI assistants (Gemini, GPT, Claude, Llama via Groq/OpenRouter,
@@ -70,8 +73,10 @@ local Ollama models, ...) and turns that into traceable, prioritised recommendat
    query set. Only the **unprompted** queries (the ones that don't name the brand) are used for scoring.
 2. Each query is sent to every selected provider several times (sampling), with retry/backoff; a failing
    provider marks the run *partial* instead of killing it.
-3. Brand and competitor mentions are detected deterministically, then a pure scorer computes
-   **Coverage**, **Prominence**, **Share of Voice** and a 0-100 **composite score** with a bootstrap CI.
+3. Brand and competitor mentions are detected deterministically and placed in each answer's list of
+   options; a pure scorer computes the 0-100 **Visibility Index** (metrics v2: unconditional, position-
+   weighted, with a seeded cluster-bootstrap CI, market position, question reach and head-to-head) and
+   the legacy v1 **composite** (Coverage, Prominence, Share of Voice). See docs/METRICS_v2.md.
 4. Deterministic gap detection finds where the brand is missing or outranked, and every
    recommendation is linked to the `gap_id` that justifies it.
 
@@ -191,8 +196,15 @@ def _brand_summary(cfg: Any, data_keys: set[str]) -> BrandSummary:
 
 
 def _normalized_snapshots(brand_key: str) -> list[dict[str, Any]]:
-    """Light history (no raw observations are read) — see app.tracking.store."""
-    return [normalize_snapshot(r) for r in store.load_snapshots(brand_key)]
+    """Light history (no raw observations are read) — see app.tracking.store — with each run's
+    metrics v2 attached (computed at run time, or rescored once from its stored answers)."""
+    records = rescore.attach_metrics(brand_key, store.load_snapshots(brand_key))
+    return [normalize_snapshot(r) for r in records]
+
+
+def _served_history(brand_key: str) -> list[dict[str, Any]]:
+    """What the snapshot routes return: v1 trend verdict + v2 fields on the newest run."""
+    return with_metrics_v2(with_trend_verdict(_normalized_snapshots(brand_key)))
 
 
 def _warn_legacy_snapshot_layout() -> None:
@@ -366,11 +378,11 @@ def reset_questions(brand_key: str) -> dict[str, Any]:
 )
 def latest_snapshot(brand_key: str) -> dict[str, Any]:
     """Most recent snapshot (without raw observations). 404 if the brand has no data yet."""
-    snapshots = _normalized_snapshots(brand_key)
+    snapshots = _served_history(brand_key)
     if not snapshots:
         raise HTTPException(status_code=404, detail=f"No snapshots for brand '{brand_key}'")
-    # `trend_verdict` (AC-8) is additive: the history's verdict as of this run.
-    return with_trend_verdict(snapshots)[-1]
+    # `trend_verdict` (AC-8) and `trend_verdict_v2` are additive: the history's verdict as of this run.
+    return snapshots[-1]
 
 
 @app.get(
@@ -378,8 +390,8 @@ def latest_snapshot(brand_key: str) -> dict[str, Any]:
 )
 def list_snapshots(brand_key: str) -> list[dict[str, Any]]:
     """All snapshots, oldest first, without raw observations (for trend charts). The newest one
-    also carries `trend_verdict` (AC-8, see `GET /brands/{brand_key}/trend`)."""
-    return with_trend_verdict(_normalized_snapshots(brand_key))
+    also carries `trend_verdict` (AC-8, see `GET /brands/{brand_key}/trend`) and `trend_verdict_v2`."""
+    return _served_history(brand_key)
 
 
 @app.get("/brands/{brand_key}/trend", tags=["snapshots"], response_model=TrendVerdict)
@@ -399,7 +411,7 @@ def get_trend(brand_key: str) -> dict[str, Any]:
 )
 def list_runs_alias(brand_key: str) -> list[dict[str, Any]]:
     # Alias kept for frontend/src/api/client.ts `getRuns`.
-    return with_trend_verdict(_normalized_snapshots(brand_key))
+    return _served_history(brand_key)
 
 
 @app.get(
@@ -421,6 +433,94 @@ def snapshot_observations(brand_key: str, run_id: str) -> dict[str, Any]:
         "run_id": snap["run_id"],
         "entities": snap["entities"],
         "raw_observations": snap["raw_observations"],
+    }
+
+
+@app.get(
+    "/brands/{brand_key}/snapshots/{run_id}/bundle",
+    tags=["snapshots"],
+    response_class=Response,
+    responses={200: {"content": {"application/zip": {}}, "description": "Run bundle (zip)"}},
+)
+def snapshot_bundle(brand_key: str, run_id: str) -> Response:
+    """Download one run as a verifiable bundle: every AI answer, the alias table, all configs and
+    the results, with a SHA-256 manifest. `scripts/verify_bundle.py` recomputes every number from it
+    without API keys (docs/METRICS_v2.md, "Reproducing results")."""
+    from app.tracking.bundle import build_bundle
+
+    record = store.get_snapshot(brand_key, run_id, include_raw=True)
+    if record is None:
+        raise HTTPException(status_code=404, detail=f"No snapshot '{run_id}' for brand '{brand_key}'")
+    observations = record.pop("raw_observations", None) or []
+    try:
+        current = brands_registry.get_brand(brand_key).alias_table()
+    except KeyError:
+        current = ()
+    data = build_bundle(record, observations, current_alias_table=current)
+    filename = f"{brand_key}-{run_id[:8]}.zip"
+    return Response(content=data, media_type="application/zip",
+                    headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+
+@app.get("/brands/{brand_key}/compare", tags=["snapshots"], response_model=CompareResponse)
+def compare_runs(
+    brand_key: str,
+    from_run: str = Query(alias="from", description="Earlier run id"),
+    to_run: str = Query(alias="to", description="Later run id"),
+) -> dict[str, Any]:
+    """Matched comparison of two runs (metrics v2): only questions × AIs × model versions both
+    runs share are compared, so runs with different comparability keys can still be compared.
+    Returns the paired change in your Visibility Index with its interval, the smallest change
+    this comparison could have detected (MDE), a plain verdict, and the competitors' drift."""
+    from app.analysis.matching import market_drift, match
+
+    try:
+        brand = brands_registry.get_brand(brand_key)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Unknown brand '{brand_key}'") from exc
+    runs = {r.get("run_id"): r for r in store.load_snapshots(brand_key)}
+    metrics = {}
+    for run_id in (from_run, to_run):
+        record = runs.get(run_id)
+        m = rescore.metrics_for(brand_key, record, brand=brand) if record else None
+        if not m:
+            raise HTTPException(status_code=404, detail=f"No scored answers for run '{run_id}'")
+        metrics[run_id] = m
+    before, after = metrics[from_run]["cells"], metrics[to_run]["cells"]
+    result = match(before, after, "self", seed_basis=f"{from_run}|{to_run}")
+    competitors = {}
+    for cid in sorted(brand.competitor_ids()):
+        c = match(before, after, cid, seed_basis=f"{from_run}|{to_run}")
+        competitors[cid] = {k: c[k] for k in ("vi_before", "vi_after", "delta", "verdict")}
+    return {
+        "brand_key": brand_key,
+        "from_run": from_run,
+        "to_run": to_run,
+        "self": result,
+        "competitors": competitors,
+        "market_drift": market_drift(before, after, brand.competitor_ids()),
+    }
+
+
+@app.get("/brands/{brand_key}/impact", tags=["snapshots"], response_model=ImpactResponse)
+def get_impact(brand_key: str) -> dict[str, Any]:
+    """Did visibility change after each completed action? (Metrics v2 impact ledger.)
+
+    One entry per action moved to "done" (by hand or by a Campaign Studio publish), with the
+    prediction frozen at that moment and an evaluation recomputed from the runs: the matched
+    change in your Visibility Index on the questions the action targets, its interval, MDE and
+    a plain verdict, plus robustness checks (untargeted questions, competitors' drift, placebo
+    rate) and `confounded` when another action overlapped. Measured change after, not proof of
+    cause. Also returns the uptake priors recalibrated from settled outcomes."""
+    from app.recommendation.opportunity import UPTAKE_PRIOR, calibrated_priors
+    from app.tracking import impact_ledger
+
+    _brand_or_404(brand_key)
+    evaluated = impact_ledger.evaluate_all(brand_key)
+    return {
+        "brand_key": brand_key,
+        "entries": evaluated,
+        "priors": {"default": dict(UPTAKE_PRIOR), "calibrated": calibrated_priors(impact_ledger.outcomes(evaluated))},
     }
 
 

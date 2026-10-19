@@ -1,6 +1,7 @@
 import type { Observation } from "../../api/types";
 import { useT } from "../../i18n";
 import { Details } from "../../settings/details";
+import { ReadMore } from "../ui/ReadMore";
 import { mentionsBrand } from "./filter";
 import { highlightMentions, mentionLabel, rankedEntities } from "./mentions";
 
@@ -26,7 +27,7 @@ export function ObservationCard({
         </div>
         <div className="obs-meta">
           <span className="badge badge-live">{aiName}</span>
-          {obs.scored === false && <span className="badge badge-job-partial">{t("pages.answers.notCounted")}</span>}
+          {obs.scored === false && <span className="badge badge-job-partial">{t("dashboard.evidence.notCounted")}</span>}
           <span className={`badge ${named ? "badge-ok" : "badge-muted"}`}>
             {named ? t("pages.answers.named") : t("pages.answers.notNamed")}
           </span>
@@ -59,7 +60,9 @@ export function ObservationCard({
           })}
         </div>
       )}
-      <div className="obs-response">{highlightMentions(obs.response_text ?? "", obs.mentions ?? [], entities, t)}</div>
+      <div className="obs-response">
+        <ReadMore lines={6}>{highlightMentions(obs.response_text ?? "", obs.mentions ?? [], entities, t)}</ReadMore>
+      </div>
     </article>
   );
 }

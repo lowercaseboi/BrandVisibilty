@@ -1,34 +1,43 @@
 import { useCallback, useRef, useState } from "react";
-import type { KeyboardEvent } from "react";
-import type { Snapshot, TrendVerdict } from "../api/types";
+import type { KeyboardEvent, PointerEvent } from "react";
+import type { Snapshot, TrendVerdict, TrendVerdictV2 } from "../api/types";
 import { T, useFormat, useT } from "../i18n";
 import type { Formatter, MessageKey, Vars } from "../i18n";
-import { useDetails } from "../settings/details";
+import { Details, useDetails } from "../settings/details";
 import { markerIndex, sinceDelta } from "./campaign/trendMarkers";
 import type { PublishMarker } from "./campaign/trendMarkers";
-import { toScore, useListFormat, useShortDate, useShortTime } from "./dashboard/helpers";
-import { estimateWidth, pickAxisLabels } from "./trendAxis";
+import { useListFormat, useShortDate, useShortTime } from "./dashboard/helpers";
+import { CHANGE_KEY, headline, isBreak, viDigits } from "./dashboard/visibility";
+import { estimateWidth, nearestIndex, pickAxisLabels } from "./trendAxis";
 
 const MIN_W = 280;
+// Base sizes in CSS px at scale 1; everything is multiplied by the live --z (1, or 1.2 on desktop).
 const PAD = { top: 18, right: 28, bottom: 34, left: 40 };
-const AXIS_FONT_PX = 11; // .trend-axis font-size
+const AXIS_FONT_PX = 11; // .trend-axis font-size (before --z)
 const ROW_H = 15; // second label row, only when the first and last labels cannot share one
+const FLAG_HIT = 32; // publish flags: a finger-sized invisible hit area around the 10px marker
+
+/** The UI scale (--z) as a number: 1, or 1.2 on desktop. */
+function readScale(): number {
+  if (typeof document === "undefined") return 1;
+  return parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--z")) || 1;
+}
 
 // Measure axis labels with the real UI font (canvas), falling back to an estimate.
 let measureCtx: CanvasRenderingContext2D | null | undefined;
-function measureLabel(text: string): number {
+let measureFamily = "monospace";
+function measureLabel(text: string, fontPx: number): number {
   if (measureCtx === undefined) {
     try {
       measureCtx = typeof document !== "undefined" ? document.createElement("canvas").getContext("2d") : null;
-      if (measureCtx) {
-        const family = getComputedStyle(document.documentElement).getPropertyValue("--sans").trim() || "monospace";
-        measureCtx.font = `${AXIS_FONT_PX}px ${family}`;
-      }
+      measureFamily = getComputedStyle(document.documentElement).getPropertyValue("--sans").trim() || "monospace";
     } catch {
       measureCtx = null;
     }
   }
-  return measureCtx ? Math.ceil(measureCtx.measureText(text).width) : estimateWidth(text, AXIS_FONT_PX);
+  if (!measureCtx) return estimateWidth(text, fontPx);
+  measureCtx.font = `${fontPx}px ${measureFamily}`;
+  return Math.ceil(measureCtx.measureText(text).width);
 }
 
 /** Local calendar day, so checks that share a day share a key. */
@@ -45,18 +54,27 @@ const ORIGIN_KEY: Record<string, MessageKey> = {
 
 // AC-8 (PRD §11.6): which plain-language sentence the backend's verdict maps to. Slopes and
 // deltas are already in points (0–100); the backend decides significance, the UI only words it.
-function verdictMessage(v: TrendVerdict, fmt: Formatter): { key: MessageKey; vars?: Vars } {
+// The sentence is plain ("Your score is going up, about +2 a week"); `detail` carries the
+// technical half (95% range, sample count) for the Analytical view.
+type Worded = { key: MessageKey; vars?: Vars };
+function verdictMessage(v: TrendVerdict, fmt: Formatter): Worded & { detail?: Worded } {
   const signed = (x: number | null | undefined) => {
     const s = fmt.number(x ?? 0, 1);
     return (x ?? 0) > 0 ? `+${s}` : s;
   };
+  // A rate in words: a decimal only when it is under a point, else a whole number.
+  const plain = (x: number | null | undefined) => {
+    const a = Math.abs(x ?? 0);
+    return fmt.number(a, a < 1 ? 1 : 0);
+  };
   switch (v.status) {
     case "no_change_detected":
-      return { key: "dashboard.trend.verdict.noChange" };
+      return { key: "dashboard.trend.verdict.noChange", detail: { key: "dashboard.trend.verdict.detailNoChange" } };
     case "change_detected":
       return {
         key: v.direction === "down" ? "dashboard.trend.verdict.changeDown" : "dashboard.trend.verdict.changeUp",
         vars: { delta: fmt.number(Math.abs(v.delta ?? 0), 0) },
+        detail: { key: "dashboard.trend.verdict.detailChange" },
       };
     case "improving":
     case "declining": {
@@ -67,38 +85,112 @@ function verdictMessage(v: TrendVerdict, fmt: Formatter): { key: MessageKey; var
         : up ? "dashboard.trend.verdict.improvingRun" : "dashboard.trend.verdict.decliningRun";
       return {
         key,
-        vars: {
-          slope: signed(weekly ? v.slope_per_week : v.slope),
-          lo: signed(weekly ? v.slope_per_week_ci_low : v.slope_ci_low),
-          hi: signed(weekly ? v.slope_per_week_ci_high : v.slope_ci_high),
-          n: v.n_points,
+        vars: { slope: plain(weekly ? v.slope_per_week : v.slope) },
+        detail: {
+          key: "dashboard.trend.verdict.detail",
+          vars: {
+            lo: signed(weekly ? v.slope_per_week_ci_low : v.slope_ci_low),
+            hi: signed(weekly ? v.slope_per_week_ci_high : v.slope_ci_high),
+            n: v.n_points,
+          },
         },
       };
     }
     case "no_clear_trend":
-      return { key: "dashboard.trend.verdict.noTrend", vars: { n: v.n_points } };
+      return {
+        key: "dashboard.trend.verdict.noTrend",
+        detail: { key: "dashboard.trend.verdict.detailNoTrend", vars: { n: v.n_points } },
+      };
     default:
-      return { key: "dashboard.trend.verdict.insufficient" };
+      return { key: "dashboard.trend.verdict.insufficient", detail: { key: "dashboard.trend.verdict.detailInsufficient" } };
   }
+}
+
+// Metrics v2: a matched comparison verdict for 2–3 runs, the v1 Theil–Sen wording for 4+.
+function verdictMessageV2(v: TrendVerdictV2, fmt: Formatter): Worded & { detail?: Worded } {
+  if (v.method === "theil_sen" && v.slope) {
+    const weekly = v.slope.x_unit === "day" && v.slope.per_week != null;
+    const as: TrendVerdict = {
+      status: v.status as TrendVerdict["status"],
+      method: "theil_sen",
+      direction: v.direction,
+      n_points: v.n_points,
+      n_excluded: 0,
+      comparability_key: null,
+      x_unit: v.slope.x_unit,
+      slope: v.slope.value,
+      slope_ci_low: v.slope.ci_low,
+      slope_ci_high: v.slope.ci_high,
+      slope_per_week: weekly ? v.slope.per_week : null,
+      slope_per_week_ci_low: weekly && v.slope.ci_low != null ? v.slope.ci_low * 7 : null,
+      slope_per_week_ci_high: weekly && v.slope.ci_high != null ? v.slope.ci_high * 7 : null,
+    };
+    return verdictMessage(as, fmt);
+  }
+  const c = v.comparison;
+  if (!c) return { key: "dashboard.trend.verdict.insufficient", detail: { key: "dashboard.trend.verdict.detailInsufficient" } };
+  return {
+    key: CHANGE_KEY[c.verdict],
+    detail: c.ci95
+      ? {
+          key: "dashboard.v2.changeDetail",
+          vars: {
+            delta: fmt.number(c.delta ?? 0, 1),
+            lo: fmt.number(c.ci95[0], 1),
+            hi: fmt.number(c.ci95[1], 1),
+            q: c.questions,
+            overlap: fmt.percent(c.overlap),
+            mde: fmt.number(c.mde ?? 0, 1),
+          },
+        }
+      : undefined,
+  };
+}
+
+function TrendVerdictLineV2({ verdict }: { verdict: TrendVerdictV2 }) {
+  const fmt = useFormat();
+  const { key, vars, detail } = verdictMessageV2(verdict, fmt);
+  return (
+    <p className={`trend-verdict trend-verdict-${verdict.direction ?? "flat"}`}>
+      <T k={key} vars={vars} />
+      <Details>
+        {detail && (
+          <span className="muted">
+            {" "}
+            <T k={detail.key} vars={detail.vars} />
+          </span>
+        )}
+      </Details>
+    </p>
+  );
 }
 
 function TrendVerdictLine({ verdict }: { verdict: TrendVerdict }) {
   const t = useT();
   const fmt = useFormat();
-  const { key, vars } = verdictMessage(verdict, fmt);
+  const { key, vars, detail } = verdictMessage(verdict, fmt);
   return (
     <p className={`trend-verdict trend-verdict-${verdict.direction ?? "flat"}`}>
       <T k={key} vars={vars} />
-      {verdict.n_excluded > 0 && (
-        <span className="muted"> {t.n("dashboard.trend.verdict.excluded", verdict.n_excluded)}</span>
-      )}
+      <Details>
+        {detail && (
+          <span className="muted">
+            {" "}
+            <T k={detail.key} vars={detail.vars} />
+          </span>
+        )}
+        {verdict.n_excluded > 0 && (
+          <span className="muted"> {t.n("dashboard.trend.verdict.excluded", verdict.n_excluded)}</span>
+        )}
+      </Details>
     </p>
   );
 }
 
-// The score (0–100) over checks, with its likely range as a band (PRD: trend claims always
-// carry their CI). A change in comparability_key means the questions, sampling or AIs changed,
-// so points on either side aren't comparable: the line breaks there and a dashed marker shows it.
+// The score (0–100: the Visibility Index, or the v1 composite on old payloads) over checks; the
+// Analytical view adds its likely range as a band (PRD: trend claims always carry their CI). Where two
+// checks share too few questions × AIs × models (metrics v2 overlap < 70%; v1: a different
+// comparability_key), points on either side aren't comparable: the line breaks and a dashed marker shows it.
 // `events` (Campaign Studio): small "Published" flags on the x-axis where a campaign went out,
 // placed between the checks around it, with a "since then" delta in the tooltip.
 export function TrendChart({
@@ -120,9 +212,11 @@ export function TrendChart({
   const { showDetails } = useDetails();
   const [active, setActive] = useState<number | null>(null);
   const [activeMarker, setActiveMarker] = useState<number | null>(null);
-  // Draw at the container's real width, 1:1, so the 11px labels are 11px at every width (a fixed
+  // Draw at the container's real width, 1:1, so the labels keep their size at every width (a fixed
   // viewBox shrank them on phones and blew them up on desktops) and label widths can be measured.
+  // `z` is the UI scale (--z), re-read whenever the container resizes (crossing 900px changes it).
   const [width, setWidth] = useState(720);
+  const [z, setZ] = useState(readScale);
   const observer = useRef<ResizeObserver | null>(null);
   const measureRef = useCallback((el: HTMLDivElement | null) => {
     observer.current?.disconnect();
@@ -131,6 +225,7 @@ export function TrendChart({
     const ro = new ResizeObserver((entries) => {
       const w = entries[0]?.contentRect.width;
       if (w) setWidth(Math.round(w));
+      setZ(readScale());
     });
     ro.observe(el);
     observer.current = ro;
@@ -140,9 +235,9 @@ export function TrendChart({
 
   // One analysis is a point, not a line: draw that point with its range, plus a note.
   if (snapshots.length === 1) {
-    const a = snapshots[0].analysis_result;
+    const h = headline(snapshots[0]);
     const sy = (v: number) => 12 + (1 - v / 100) * 96;
-    const score = toScore(a.composite_score);
+    const score = Number(h.value.toFixed(viDigits(h.value)));
     return (
       <div className="trend-one">
         <svg className="trend-svg" viewBox="0 0 320 124" role="img" aria-label={t("dashboard.trend.single")}>
@@ -154,7 +249,9 @@ export function TrendChart({
               </text>
             </g>
           ))}
-          <line x1={172} x2={172} y1={sy(toScore(a.ci_high))} y2={sy(toScore(a.ci_low))} className="trend-ci-whisker" />
+          {showDetails && (
+            <line x1={172} x2={172} y1={sy(h.hi)} y2={sy(h.lo)} className="trend-ci-whisker" />
+          )}
           <circle cx={172} cy={sy(score)} r={5} className="trend-point trend-point-current" />
           <text x={184} y={sy(score) + 4} className="trend-value">
             {score}
@@ -167,8 +264,11 @@ export function TrendChart({
 
   const n = snapshots.length;
   const W = Math.max(MIN_W, width);
-  const innerW = W - PAD.left - PAD.right;
-  const x = (i: number) => PAD.left + (i / (n - 1)) * innerW;
+  const pad = { top: PAD.top * z, right: PAD.right * z, bottom: PAD.bottom * z, left: PAD.left * z };
+  const axisFontPx = AXIS_FONT_PX * z;
+  const rowH = ROW_H * z;
+  const innerW = W - pad.left - pad.right;
+  const x = (i: number) => pad.left + (i / (n - 1)) * innerW;
   const when = (s: Snapshot) => s.collection_completed_at || s.collection_started_at;
   // X-axis labels: measured, thinned so none collide, first + last always kept (see trendAxis.ts).
   const axisLabels = pickAxisLabels({
@@ -176,25 +276,26 @@ export function TrendChart({
     dayKeys: snapshots.map((s) => dayKey(when(s))),
     dateText: snapshots.map((s) => shortDate(when(s))),
     timeText: snapshots.map((s) => shortTime(when(s))),
-    measure: measureLabel,
+    measure: (text) => measureLabel(text, axisFontPx),
     minX: 2,
     maxX: W - 2,
   });
   const twoRows = axisLabels.some((l) => l.row === 1);
-  const padBottom = PAD.bottom + (twoRows ? ROW_H : 0);
-  const H = (W < 500 ? 200 : W < 900 ? 240 : 260) + (twoRows ? ROW_H : 0);
-  const innerH = H - PAD.top - padBottom;
-  // Scores are 0-100 points: fit the axis to the highest CI bound (at least 25) plus headroom,
-  // rounded up to the next 10.
-  const maxVal = Math.min(100, Math.max(25, ...snapshots.map((s) => s.analysis_result.ci_high ?? 0)) + 5);
+  const padBottom = pad.bottom + (twoRows ? rowH : 0);
+  const H = (W < 500 ? 180 : W < 900 ? 240 : 260) * z + (twoRows ? rowH : 0);
+  const innerH = H - pad.top - padBottom;
+  // Scores are 0-100 points: fit the axis to the highest score (or, in the Analytical view where the
+  // range band shows, the highest CI bound), at least 25, plus headroom, rounded up to the next 10.
+  const top = (s: Snapshot) => (showDetails ? headline(s).hi : headline(s).value);
+  const maxVal = Math.min(100, Math.max(25, ...snapshots.map(top)) + 5);
   const yMax = Math.ceil(maxVal / 10) * 10;
-  const y = (v: number) => PAD.top + innerH - (Math.max(0, Math.min(yMax, v ?? 0)) / yMax) * innerH;
+  const y = (v: number) => pad.top + innerH - (Math.max(0, Math.min(yMax, v ?? 0)) / yMax) * innerH;
 
   const pts = snapshots.map((s, i) => ({
     x: x(i),
-    y: y(s.analysis_result.composite_score),
-    lo: y(s.analysis_result.ci_low),
-    hi: y(s.analysis_result.ci_high),
+    y: y(headline(s).value),
+    lo: y(headline(s).lo),
+    hi: y(headline(s).hi),
     s,
   }));
 
@@ -202,7 +303,7 @@ export function TrendChart({
   const segments: (typeof pts)[] = [];
   const breaks: number[] = [];
   pts.forEach((p, i) => {
-    if (i > 0 && p.s.comparability_key !== pts[i - 1].s.comparability_key) {
+    if (i > 0 && isBreak(pts[i - 1].s, p.s)) {
       breaks.push((pts[i - 1].x + p.x) / 2);
       segments.push([]);
     }
@@ -218,13 +319,33 @@ export function TrendChart({
   const markers = (events ?? []).flatMap((ev) => {
     const at = markerIndex(times, Date.parse(ev.at));
     if (!at) return [];
-    const mx = at.after ? x(n - 1) + Math.min(PAD.right - 8, 14) : PAD.left + (at.index / (n - 1)) * innerW;
+    const mx = at.after ? x(n - 1) + Math.min(pad.right - 8, 14 * z) : pad.left + (at.index / (n - 1)) * innerW;
     return [{ ev, x: mx, delta: sinceDelta(snapshots, ev.at) }];
   });
   const am = activeMarker !== null ? (markers[activeMarker] ?? null) : null;
-  const hitHalf = Math.max(10, innerW / (n - 1) / 2);
   const first = snapshots[0];
   const last = snapshots[n - 1];
+
+  // Scrubbing: a pointer (mouse, pen or finger) anywhere over the chart picks the nearest check.
+  // touch-action: pan-y on the svg keeps vertical page scroll; a sideways drag scrubs. A finger's
+  // pick stays after it lifts (like a tap); a mouse leaving the plot clears it, as hover did.
+  const xs = pts.map((p) => p.x);
+  const scrub = (e: PointerEvent<SVGSVGElement>) => {
+    if (e.target instanceof Element && e.target.closest(".trend-pub")) return;
+    const box = e.currentTarget.getBoundingClientRect();
+    if (!box.width || !box.height) return;
+    const sy = ((e.clientY - box.top) / box.height) * H;
+    if (e.pointerType === "mouse" && (sy < pad.top - 8 || sy > pad.top + innerH + 8)) {
+      setActive(null);
+      return;
+    }
+    const i = nearestIndex(((e.clientX - box.left) / box.width) * W, xs);
+    setActiveMarker(null);
+    setActive(i < 0 ? null : i);
+  };
+  const onPointerLeave = (e: PointerEvent<SVGSVGElement>) => {
+    if (e.pointerType === "mouse") setActive(null);
+  };
 
   const onKey = (e: KeyboardEvent<SVGSVGElement>) => {
     if (e.key === "ArrowLeft") setActive((i) => Math.max(0, (i ?? n) - 1));
@@ -237,28 +358,36 @@ export function TrendChart({
   const origin = ap ? (ORIGIN_KEY[ap.s.data_origin ?? "live"] ?? "dashboard.origin.live") : null;
   // Only the newest snapshot carries the verdict (it describes the history as of that run).
   const verdict = last.trend_verdict;
+  const verdictV2 = last.trend_verdict_v2;
+  const fmtVi = (s: Snapshot) => {
+    const v = headline(s).value;
+    return fmt.number(v, viDigits(v));
+  };
 
   return (
     <div className="trend" ref={measureRef}>
-      {verdict && <TrendVerdictLine verdict={verdict} />}
+      {verdictV2 ? <TrendVerdictLineV2 verdict={verdictV2} /> : verdict && <TrendVerdictLine verdict={verdict} />}
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className="trend-svg"
         role="img"
         tabIndex={0}
         aria-label={t("dashboard.trend.aria", {
-          first: toScore(first.analysis_result.composite_score),
+          first: fmtVi(first),
           firstDate: fmt.date(first.collection_completed_at),
-          last: toScore(last.analysis_result.composite_score),
+          last: fmtVi(last),
           lastDate: fmt.date(last.collection_completed_at),
         })}
         onKeyDown={onKey}
         onBlur={() => setActive(null)}
+        onPointerDown={scrub}
+        onPointerMove={scrub}
+        onPointerLeave={onPointerLeave}
       >
         {ticks.map((v) => (
           <g key={v}>
-            <line x1={PAD.left} x2={W - PAD.right} y1={y(v)} y2={y(v)} className="trend-grid" />
-            <text x={PAD.left - 8} y={y(v) + 4} className="trend-axis" textAnchor="end">
+            <line x1={pad.left} x2={W - pad.right} y1={y(v)} y2={y(v)} className="trend-grid" />
+            <text x={pad.left - 8 * z} y={y(v) + 4 * z} className="trend-axis" textAnchor="end">
               {fmt.number(v)}
             </text>
           </g>
@@ -268,17 +397,19 @@ export function TrendChart({
           <g key={si}>
             {seg.length > 1 && (
               <>
-                <path
-                  className="trend-band"
-                  d={`M${seg.map((p) => `${p.x},${p.hi}`).join(" L")} L${[...seg]
-                    .reverse()
-                    .map((p) => `${p.x},${p.lo}`)
-                    .join(" L")} Z`}
-                />
+                {showDetails && (
+                  <path
+                    className="trend-band"
+                    d={`M${seg.map((p) => `${p.x},${p.hi}`).join(" L")} L${[...seg]
+                      .reverse()
+                      .map((p) => `${p.x},${p.lo}`)
+                      .join(" L")} Z`}
+                  />
+                )}
                 <path className="trend-line" d={`M${seg.map((p) => `${p.x},${p.y}`).join(" L")}`} />
               </>
             )}
-            {seg.length === 1 && (
+            {seg.length === 1 && showDetails && (
               <line className="trend-ci-whisker" x1={seg[0].x} x2={seg[0].x} y1={seg[0].hi} y2={seg[0].lo} />
             )}
           </g>
@@ -288,15 +419,15 @@ export function TrendChart({
             a small marker on top + one legend entry explain them instead. */}
         {breaks.map((bx, i) => (
           <g key={i}>
-            <line x1={bx} x2={bx} y1={PAD.top} y2={PAD.top + innerH} className="trend-break" />
-            <circle cx={bx} cy={PAD.top - 6} r={4} className="trend-break-dot" />
+            <line x1={bx} x2={bx} y1={pad.top} y2={pad.top + innerH} className="trend-break" />
+            <circle cx={bx} cy={pad.top - 6 * z} r={4 * z} className="trend-break-dot" />
           </g>
         ))}
 
-        {ap && <line x1={ap.x} x2={ap.x} y1={PAD.top} y2={PAD.top + innerH} className="trend-crosshair" />}
+        {ap && <line x1={ap.x} x2={ap.x} y1={pad.top} y2={pad.top + innerH} className="trend-crosshair" />}
 
         {markers.map((m, i) => (
-          <line key={`ml${i}`} x1={m.x} x2={m.x} y1={PAD.top} y2={PAD.top + innerH} className={`trend-pub-line${activeMarker === i ? " is-active" : ""}`} />
+          <line key={`ml${i}`} x1={m.x} x2={m.x} y1={pad.top} y2={pad.top + innerH} className={`trend-pub-line${activeMarker === i ? " is-active" : ""}`} />
         ))}
 
         {pts.map((p, i) => (
@@ -304,36 +435,28 @@ export function TrendChart({
             <circle
               cx={p.x}
               cy={p.y}
-              r={p.s.run_id === currentRunId || i === active ? 5.5 : 4}
+              r={(p.s.run_id === currentRunId || i === active ? 5.5 : 4) * z}
               className={`trend-point ${p.s.run_id === currentRunId ? "trend-point-current" : ""}`}
             />
             {i === n - 1 && (
-              <text x={p.x} y={p.y - 10} className="trend-value" textAnchor="end">
-                {toScore(p.s.analysis_result.composite_score)}
+              <text x={p.x} y={p.y - 10 * z} className="trend-value" textAnchor="end">
+                {fmtVi(p.s)}
               </text>
             )}
-            <rect
-              x={p.x - hitHalf}
-              y={PAD.top}
-              width={hitHalf * 2}
-              height={innerH}
-              fill="transparent"
-              onMouseEnter={() => setActive(i)}
-              onMouseLeave={() => setActive(null)}
-              onClick={() => setActive(i)}
-            />
           </g>
         ))}
 
         {/* Labels sit below the publish flags (axis +1..+9), so the two never overlap. */}
         {axisLabels.map((l) => (
-          <text key={`x${l.index}`} x={l.x} y={PAD.top + innerH + 24 + l.row * ROW_H} className="trend-axis" textAnchor="middle">
+          <text key={`x${l.index}`} x={l.x} y={pad.top + innerH + 24 * z + l.row * rowH} className="trend-axis" textAnchor="middle">
             {l.text}
           </text>
         ))}
 
         {markers.map((m, i) => {
-          const by = PAD.top + innerH;
+          const by = pad.top + innerH;
+          const hit = FLAG_HIT * z;
+          const w = 5 * z;
           const label = t("board.campaign.trend.marker", { headline: m.ev.headline, date: fmt.date(m.ev.at) });
           return (
             <g
@@ -344,8 +467,8 @@ export function TrendChart({
               onClick={() => setActiveMarker(i)}
             >
               <title>{label}</title>
-              <rect x={m.x - 8} y={by - 4} width={16} height={16} fill="transparent" />
-              <path d={`M${m.x},${by + 1} L${m.x + 5},${by + 9} L${m.x - 5},${by + 9} Z`} className="trend-pub-flag" />
+              <rect x={m.x - hit / 2} y={by + w - hit / 2} width={hit} height={hit} fill="transparent" />
+              <path d={`M${m.x},${by + z} L${m.x + w},${by + 9 * z} L${m.x - w},${by + 9 * z} Z`} className="trend-pub-flag" />
             </g>
           );
         })}
@@ -367,12 +490,12 @@ export function TrendChart({
         ) : ap ? (
           <>
             <T
-              k="dashboard.trend.point"
+              k={showDetails ? "dashboard.trend.pointRange" : "dashboard.trend.point"}
               vars={{
                 date: fmt.date(ap.s.collection_completed_at),
-                score: toScore(ap.s.analysis_result.composite_score),
-                lo: toScore(ap.s.analysis_result.ci_low),
-                hi: toScore(ap.s.analysis_result.ci_high),
+                score: fmtVi(ap.s),
+                lo: fmt.number(headline(ap.s).lo, viDigits(headline(ap.s).lo)),
+                hi: fmt.number(headline(ap.s).hi, viDigits(headline(ap.s).hi)),
               }}
             />
             {showDetails && origin && (
@@ -390,24 +513,29 @@ export function TrendChart({
         )}
       </p>
 
-      <div className="trend-legend small muted">
-        <span>
-          <i className="swatch swatch-line" /> {t("dashboard.trend.legendScore")}
-        </span>
-        <span>
-          <i className="swatch swatch-band" /> {t("dashboard.trend.legendBand")}
-        </span>
-        {breaks.length > 0 && (
+      {/* A lone "Score" key explains nothing, so the legend only appears when there is more to key. */}
+      {(showDetails || breaks.length > 0 || markers.length > 0) && (
+        <div className="trend-legend small muted">
           <span>
-            <i className="swatch swatch-break" /> {t("dashboard.trend.legendBreak")}
+            <i className="swatch swatch-line" /> {t("dashboard.trend.legendScore")}
           </span>
-        )}
-        {markers.length > 0 && (
-          <span>
-            <i className="swatch swatch-pub" /> {t("board.campaign.trend.legend")}
-          </span>
-        )}
-      </div>
+          {showDetails && (
+            <span>
+              <i className="swatch swatch-band" /> {t("dashboard.trend.legendBand")}
+            </span>
+          )}
+          {breaks.length > 0 && (
+            <span>
+              <i className="swatch swatch-break" /> {t("dashboard.trend.legendBreak")}
+            </span>
+          )}
+          {markers.length > 0 && (
+            <span>
+              <i className="swatch swatch-pub" /> {t("board.campaign.trend.legend")}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

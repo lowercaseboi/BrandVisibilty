@@ -57,7 +57,7 @@ export interface AccountView {
   usesName: boolean;
   /** One-click sign-in button (OAuth). */
   primary: "connect" | "reconnect" | null;
-  /** Manual-entry button, and whether it reads "Enter details manually" or "Update details". */
+  /** Manual-entry button, and whether it reads "Add" or "Update details". */
   manual: "enter" | "update" | null;
   test: boolean;
   disconnect: boolean;

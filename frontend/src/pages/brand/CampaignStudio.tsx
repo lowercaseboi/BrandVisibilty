@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useParams, useSearchParams } from "react-router-dom";
 import {
   ApiError,
@@ -68,6 +68,7 @@ import { toast } from "../../components/Toaster";
 import { useFormat, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n";
 import { useReducedMotion } from "../../settings/motion";
+import { Details, useDetails } from "../../settings/details";
 import { useBrandData } from "./BrandContext";
 
 const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err));
@@ -147,9 +148,14 @@ export function CampaignStudio() {
 
   return (
     <ModuleShell id="recommendations">
-      <p className="cs-back">
-        <TransitionLink to={brandHref(brandKey, "recommendations")}>← {t("board.campaign.back")}</TransitionLink>
-      </p>
+      {/* The open studio carries its own back link in its trace row. */}
+      {!campaign && (
+        <p className="cs-back">
+          <TransitionLink to={brandHref(brandKey, "recommendations")} direction="back">
+            ← {t("board.campaign.back")}
+          </TransitionLink>
+        </p>
+      )}
       {body}
     </ModuleShell>
   );
@@ -173,6 +179,7 @@ function Studio({
   const reduced = useReducedMotion();
   const { brandKey, brandName, latest, history } = useBrandData();
   const { runAdmin, dialog } = useAdminGate();
+  const { showDetails } = useDetails();
   const cid = campaign.campaign_id;
 
   // The newest campaign, also between renders (the publish loop reads it after each await).
@@ -261,6 +268,7 @@ function Studio({
 
   // Focus the new step's heading and bring the studio's top into view (not on first load).
   const rootRef = useRef<HTMLDivElement>(null);
+  const topRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const shownStep = useRef(step);
   useEffect(() => {
@@ -268,8 +276,24 @@ function Studio({
     shownStep.current = step;
     headingRef.current?.focus({ preventScroll: true });
     const top = rootRef.current?.getBoundingClientRect().top ?? 0;
-    if (top < 0) window.scrollTo({ top: window.scrollY + top - 88, behavior: reduced ? "auto" : "smooth" });
+    // Land just under the sticky header (its measured height — it varies with scale and wrapping).
+    const below = (document.querySelector(".app-header")?.getBoundingClientRect().height ?? 78) + 10;
+    if (top < 0) window.scrollTo({ top: window.scrollY + top - below, behavior: reduced ? "auto" : "smooth" });
   }, [step, reduced]);
+
+  // The sticky progress header's height (it wraps on narrow screens and scales with the zoom), so the
+  // sticky preview column can sit right under it.
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    const top = topRef.current;
+    if (!root || !top) return;
+    const sync = () => root.style.setProperty("--cs-top-h", `${top.offsetHeight}px`);
+    sync();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(sync);
+    ro.observe(top);
+    return () => ro.disconnect();
+  }, []);
 
   // ---- where to post (step 2) ----
   // Back from Details with ?connected=<channel>: that channel is ticked (read once, then dropped
@@ -345,7 +369,9 @@ function Studio({
         const fresh = c.assets.find((a) => !before.has(a.asset_id) && a.format === req.format);
         if (fresh) editVariant(channel, { asset_id: fresh.asset_id });
       })
-      .catch((err: unknown) => toast(t("board.campaign.toast.regenFailed", { error: errorText(err) })))
+      .catch((err: unknown) =>
+        toast(showDetails ? t("board.campaign.toast.regenFailedWhy", { error: errorText(err) }) : t("board.campaign.toast.regenFailed")),
+      )
       .finally(() => setRegenerating(false));
   };
 
@@ -434,7 +460,7 @@ function Studio({
       }
     } catch (err) {
       if (isTokenUnsetError(err)) setTokenUnset(true);
-      else toast(errorText(err));
+      else toast(showDetails ? errorText(err) : t("board.campaign.error.generic"));
     }
   };
   const [redrafting, setRedrafting] = useState(false);
@@ -442,7 +468,9 @@ function Studio({
     setRedrafting(true);
     createCampaign(brandKey, campaign.recommendation_id)
       .then(({ campaign: c }) => go(campaignHref(brandKey, c.campaign_id)))
-      .catch((err: unknown) => toast(t("board.campaign.toast.createFailed", { error: errorText(err) })))
+      .catch((err: unknown) =>
+        toast(showDetails ? t("board.campaign.toast.createFailedWhy", { error: errorText(err) }) : t("board.campaign.toast.createFailed")),
+      )
       .finally(() => setRedrafting(false));
   };
 
@@ -490,7 +518,7 @@ function Studio({
         tone="error"
         role="alert"
         title={t("board.campaign.failedBody")}
-        body={job?.error ?? undefined}
+        body={showDetails ? (job?.error ?? undefined) : undefined}
         primary={
           <button type="button" className="btn btn-primary" disabled={redrafting} onClick={redraft}>
             {t("board.campaign.retryCreate")}
@@ -624,7 +652,7 @@ function Studio({
   return (
     <div className="cs-studio" ref={rootRef}>
       {dialog}
-      <div className="cs-top">
+      <div className="cs-top" ref={topRef}>
         <div className="cs-top-row">
           <span className="status-pill" data-tone={sv.tone}>
             {generating && <span className="cs-spinner" aria-hidden="true" />}
@@ -639,34 +667,39 @@ function Studio({
       </div>
 
       <div className="cs-trace">
-        <span className="muted">{t("board.campaign.fromRec")}</span>
-        <TransitionLink to={brandHref(brandKey, "recommendations")} className="cs-trace-rec">
-          {recTitle}
+        <TransitionLink to={brandHref(brandKey, "recommendations")} direction="back" className="cs-trace-back">
+          ← {t("board.campaign.back")}
         </TransitionLink>
-        <TransitionLink
-          to={gapsHref(brandKey, { gapId: campaign.gap_id, runId: gapSnap?.run_id })}
-          className="rec-trace"
-          title={t("board.card.traceTitle", { id: campaign.gap_id })}
-        >
-          <span aria-hidden="true">↳ </span>
-          {t("board.card.trace", { type: gapType })}
-        </TransitionLink>
-        <span className="muted">· {t("board.campaign.created", { when: fmt.relativeTime(campaign.created_at) || campaign.created_at })}</span>
-        <span className="cs-badges">
-          <span className="cs-badge">
-            {!campaign.drafted_by || campaign.drafted_by === "template"
-              ? t("board.campaign.badge.templateCopy")
-              : t("board.campaign.badge.draftedBy", { by: campaign.drafted_by })}
-          </span>
-          {usesTemplateImages(campaign.assets) && <span className="cs-badge is-honest">{t("board.campaign.badge.templateImage")}</span>}
-          {imageProviders.length > 0 && <span className="cs-badge">{t("board.campaign.badge.images", { by: imageProviders.join(", ") })}</span>}
-        </span>
+        <span className="cs-trace-rec">{recTitle}</span>
+        <span className="muted">{t("board.campaign.created", { when: fmt.relativeTime(campaign.created_at) || campaign.created_at })}</span>
         {!generating && (
-          <button type="button" className="btn-link cs-delete" disabled={busy} onClick={() => void remove()}>
+          <button type="button" className="link-quiet cs-delete" disabled={busy} onClick={() => void remove()}>
             {t("board.campaign.delete")}
           </button>
         )}
       </div>
+
+      <Details block>
+        <div className="cs-trace cs-tech">
+          <TransitionLink
+            to={gapsHref(brandKey, { gapId: campaign.gap_id, runId: gapSnap?.run_id })}
+            className="rec-trace"
+            title={t("board.card.traceTitle", { id: campaign.gap_id })}
+          >
+            <span aria-hidden="true">↳ </span>
+            {t("board.card.trace", { type: gapType })}
+          </TransitionLink>
+          <span className="cs-badges">
+            <span className="cs-badge">
+              {!campaign.drafted_by || campaign.drafted_by === "template"
+                ? t("board.campaign.badge.templateCopy")
+                : t("board.campaign.badge.draftedBy", { by: campaign.drafted_by })}
+            </span>
+            {usesTemplateImages(campaign.assets) && <span className="cs-badge is-honest">{t("board.campaign.badge.templateImage")}</span>}
+            {imageProviders.length > 0 && <span className="cs-badge">{t("board.campaign.badge.images", { by: imageProviders.join(", ") })}</span>}
+          </span>
+        </div>
+      </Details>
 
       <section className="cs-step" aria-labelledby={showHead ? stepHeadingId : undefined}>
         {showHead && (
@@ -681,11 +714,17 @@ function Studio({
         {tokenUnset && (
           <div className="alert alert-warn" role="alert">
             {t("board.campaign.token.unset")}
+            <Details>
+              <span className="cs-tech-note"> {t("board.campaign.token.unsetDetail")}</span>
+            </Details>
           </div>
         )}
         {actionError && (
           <div className="alert alert-error" role="alert">
-            {actionError}
+            {t("board.campaign.error.generic")}
+            <Details>
+              <span className="cs-tech-note"> {actionError}</span>
+            </Details>
           </div>
         )}
         {content}

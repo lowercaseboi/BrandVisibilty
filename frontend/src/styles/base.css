@@ -1,5 +1,13 @@
 /* Reset, typography, page layout, focus rings, motion, reduced motion. */
 
+/* The sticky app header's height (components.css `.app-header`): --header-bar is its row (20px
+   padding + 38px buttons on desktop; 10px + 40px on phones, set below), --header-h adds the notch
+   inset above it. Anything that sticks under the header uses `top: var(--header-h)`. */
+:root {
+  --header-bar: 78px;
+  --header-h: calc(var(--header-bar) + env(safe-area-inset-top));
+}
+
 *,
 *::before,
 *::after {
@@ -19,6 +27,8 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
+  overscroll-behavior-y: contain;
   /* Transparent so the glow below shows; <html> paints --bg. */
   background: transparent;
   color: var(--text);
@@ -42,44 +52,66 @@ html:lang(mr) * {
   letter-spacing: 0 !important;
 }
 
-/* Soft glow behind the whole app: gives the glass surfaces something to frost.
-   Static on purpose — moving it would force every blurred card to re-render. */
+/* Page backdrop: a faint dot grid, fixed and static (no scroll cost), fading toward the edges. The
+   grid pitch scales with --z (scale.css). `html` paints --bg; these sit above it, behind content. */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background:
-    radial-gradient(42% 38% at 8% 0%, var(--glow-1), transparent 70%),
-    radial-gradient(38% 34% at 96% 6%, var(--glow-2), transparent 70%),
-    radial-gradient(50% 44% at 78% 100%, var(--glow-3), transparent 72%);
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--text-h) 17.8%, transparent) 1px, transparent 1.4px);
+  background-size: calc(30px * var(--z)) calc(30px * var(--z));
+  -webkit-mask-image: radial-gradient(ellipse 85% 75% at 50% 35%, #000 25%, transparent 100%);
+  mask-image: radial-gradient(ellipse 85% 75% at 50% 35%, #000 25%, transparent 100%);
 }
 
-/* Faint blueprint grid on top of the glow, fading out towards the bottom and sides: minor lines
-   every 48px, a stronger major line every 4th (192px) — a drafting-table grid, not a checkerboard. */
+/* Near a real mouse cursor the same dots (same grid, drawn again on top) brighten and grow, fading
+   out with distance. useDotSpotlight (settings/) only sets --spot-x/--spot-y and toggles
+   `html.is-pointing`. */
 body::after {
   content: "";
   position: fixed;
-  inset: 0 -12%; /* wider than the viewport so the tilted plane still covers the edges */
+  inset: 0;
   z-index: -1;
   pointer-events: none;
-  /* A gentle backwards tilt: lines converge towards the bottom for a sense of depth. */
-  transform: perspective(1100px) rotateX(10deg);
-  transform-origin: 50% 0;
-  background:
-    linear-gradient(to right, var(--grid-line-major) 1px, transparent 1px) 0 0 / 192px 192px,
-    linear-gradient(to bottom, var(--grid-line-major) 1px, transparent 1px) 0 0 / 192px 192px,
-    linear-gradient(to right, var(--grid-line) 1px, transparent 1px) 0 0 / 48px 48px,
-    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px) 0 0 / 48px 48px;
-  mask-image: radial-gradient(ellipse 90% 75% at 50% 0%, #000 35%, transparent 100%);
-  -webkit-mask-image: radial-gradient(ellipse 90% 75% at 50% 0%, #000 35%, transparent 100%);
+  opacity: 0;
+  transition: opacity var(--dur-slow) var(--ease);
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--text-h) 49.5%, transparent) 1.3px, transparent 1.9px);
+  background-size: calc(30px * var(--z)) calc(30px * var(--z));
+  -webkit-mask-image: radial-gradient(circle calc(190px * var(--z)) at var(--spot-x, 50%) var(--spot-y, 50%), #000, transparent);
+  mask-image: radial-gradient(circle calc(190px * var(--z)) at var(--spot-x, 50%) var(--spot-y, 50%), #000, transparent);
+}
+
+:root.is-pointing body::after {
+  opacity: 1;
+}
+
+@media print {
+  body::before,
+  body::after {
+    display: none;
+  }
 }
 
 #root {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Touch: no grey flash on tap, and no double-tap-zoom delay on anything you can press. */
+a,
+button,
+input,
+select,
+textarea,
+label,
+summary,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 img,
@@ -125,7 +157,7 @@ h2 {
 }
 
 h3 {
-  font-size: 15px;
+  font-size: calc(15px * var(--z));
   font-weight: 600;
   margin: 0;
 }
@@ -151,8 +183,10 @@ a {
   transition: color var(--dur);
 }
 
-a:hover {
-  color: var(--accent-hover);
+@media (hover: hover) and (pointer: fine) {
+  a:hover {
+    color: var(--accent-hover);
+  }
 }
 
 strong,
@@ -184,7 +218,7 @@ pre {
 
 kbd {
   display: inline-block;
-  font-size: 11px;
+  font-size: calc(11px * var(--z));
   line-height: 1.4;
   padding: 0 5px;
   border: 1px solid var(--border-strong);
@@ -262,7 +296,7 @@ textarea {
 input,
 select,
 textarea {
-  font-size: 13.5px;
+  font-size: calc(13.5px * var(--z));
   padding: 8px 12px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-strong);
@@ -284,10 +318,12 @@ textarea {
   line-height: 1.5;
 }
 
-input:hover,
-select:hover,
-textarea:hover {
-  border-color: color-mix(in srgb, var(--muted) 60%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  input:hover,
+  select:hover,
+  textarea:hover {
+    border-color: color-mix(in srgb, var(--muted) 60%, transparent);
+  }
 }
 
 input:focus,
@@ -376,6 +412,8 @@ h1[tabindex="-1"]:focus {
   font-size: var(--fs-sm);
   text-align: center;
   padding: var(--space-4) var(--gutter);
+  /* Clear of the home indicator on notched phones (viewport-fit=cover). */
+  padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
 }
 
 section > .card,
@@ -426,13 +464,32 @@ section > .metric-cards {
 
 @media (max-width: 640px) {
   :root {
+    --header-bar: 60px;
     --gutter: 16px;
+    --fs-xl: 18px;
     --fs-2xl: 24px;
     --fs-hero: 52px;
+    --card-pad-y: 12px;
+    --card-pad-x: 14px;
+    --card-gap: 10px;
+  }
+
+  /* 16px or more, or iOS Safari zooms the page in when a field takes focus. */
+  input,
+  select,
+  textarea {
+    font-size: calc(16px * var(--z));
   }
 
   .app {
     padding-top: var(--space-4);
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --card-pad-y: 10px;
+    --card-pad-x: 12px;
   }
 }
 
@@ -441,7 +498,7 @@ section > .metric-cards {
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(8px);
   }
 }
 
@@ -467,34 +524,34 @@ section > .metric-cards {
 
 /* Each route fades up as it opens (App.tsx keys this wrapper on the path). */
 .page-enter {
-  animation: rise var(--dur-slow) var(--ease) backwards;
+  animation: rise var(--dur-med) var(--ease-out) backwards;
 }
 
 /* Children arrive one after another. */
 .stagger > * {
-  animation: rise 0.55s var(--ease) backwards;
+  animation: rise var(--dur-med) var(--ease-out) backwards;
 }
 
 .stagger > :nth-child(2) {
-  animation-delay: 70ms;
+  animation-delay: 40ms;
 }
 
 .stagger > :nth-child(3) {
-  animation-delay: 140ms;
+  animation-delay: 80ms;
 }
 
 .stagger > :nth-child(4) {
-  animation-delay: 210ms;
+  animation-delay: 120ms;
 }
 
 .stagger > :nth-child(n + 5) {
-  animation-delay: 280ms;
+  animation-delay: 160ms;
 }
 
 /* Theme switch: a quick cross-fade (theme.tsx uses the View Transitions API where available). */
 ::view-transition-old(root),
 ::view-transition-new(root) {
-  animation-duration: 0.35s;
+  animation-duration: var(--dur-slow);
   animation-timing-function: var(--ease);
 }
 
@@ -505,6 +562,7 @@ section > .metric-cards {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;

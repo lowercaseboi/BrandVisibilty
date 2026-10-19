@@ -67,7 +67,7 @@ def test_real_synthetic_run_validates_and_is_unchanged(main) -> None:
     client = TestClient(main.app)
 
     # What the routes returned before they had response models: the normalised dicts.
-    expected = _roundtrip(main.with_trend_verdict(main._normalized_snapshots(BRAND)))
+    expected = _roundtrip(main._served_history(BRAND))
     assert len(expected) == 2
 
     latest = client.get(f"/brands/{BRAND}/snapshots/latest")

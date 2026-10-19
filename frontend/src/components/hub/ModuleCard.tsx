@@ -1,6 +1,7 @@
 import { useId } from "react";
 import type { CSSProperties, ReactNode, Ref } from "react";
 import { useFormat, useT } from "../../i18n";
+import { Details } from "../../settings/details";
 import { ModuleIcon, brandHref, moduleVtName } from "../module/modules";
 import type { ModuleDef } from "../module/modules";
 import { TiltCard } from "../module/tilt";
@@ -17,11 +18,14 @@ import { CORNER_OF } from "./wireGeometry";
  *
  * A small numbered socket (`.hub-module-conn`) sits on the card's inner edge just under where its
  * wire plugs in, so the card ↔ wire pairing reads without any motion (and on phones, where the
- * "Module 0n" eyebrow is hidden). It lives outside the tilt, on the wire's measured box.
+ * "Module 0n" eyebrow is hidden or off). It lives outside the tilt, on the wire's measured box.
  *
  * `named` drops the view-transition-name while the list → hub morph is still running: as a named
  * element the card would be a separate snapshot clipped to its own box, so it couldn't emerge from
  * the centre card (it sits in the page layer, under the morphing card, instead).
+ *
+ * On phones (hub.css) the same markup lays out as a compact list row: icon, title, a one-line
+ * glance at the preview, and a chevron.
  */
 export function ModuleCard({
   def,
@@ -70,8 +74,9 @@ export function ModuleCard({
             <span className="hub-module-icon">
               <ModuleIcon id={def.id} size={22} />
             </span>
+            {/* The "Module 01" index is Analytical-view only; the empty span keeps the arrow at the right. */}
             <span className="eyebrow hub-module-index">
-              {t("hub.card.index", { n: fmt.number(index + 1).padStart(2, "0") })}
+              <Details>{t("hub.card.index", { n: fmt.number(index + 1).padStart(2, "0") })}</Details>
             </span>
             <span className="hub-module-go" aria-hidden="true">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -88,6 +93,10 @@ export function ModuleCard({
           <span className="hub-module-preview" id={descId}>
             {children}
           </span>
+          {/* Phones (hub.css): the card is a list row, and a row ends in a chevron. */}
+          <svg className="hub-module-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M9 5l7 7-7 7" />
+          </svg>
         </TransitionLink>
       </TiltCard>
       <span className="hub-module-conn" aria-hidden="true">

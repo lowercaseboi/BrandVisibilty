@@ -15,6 +15,7 @@ import random
 import re
 import threading
 import time
+import uuid
 from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
@@ -25,9 +26,9 @@ import httpx
 from app import paths
 from app.analysis.gap_detector import detect_gaps
 from app.analysis.mention_detector import detect_mentions
-from app.analysis.scorer import score
+from app.analysis.scorer import DEFAULT_BOOTSTRAP_SEED, score
 from app.analysis.summary import mention_summary
-from app.analysis.types import Observation
+from app.analysis.types import DetectionConfig, Observation
 from app.brands.registry import SELF_ENTITY_ID, BrandConfig, get_brand
 from app.collection.types import QuotaExhausted, SamplingParams
 from app.querysets import custom as question_sets
@@ -39,7 +40,8 @@ ProgressFn = Callable[[str, int, int], None]  # (message, done, total)
 ProviderFn = Callable[[dict], None]  # {provider_id, label, done, total, succeeded, failed, state, note, wait_seconds}
 SkipFn = Callable[[str], bool]  # provider_id -> True when that provider (or everything) should be skipped
 
-_BOOTSTRAP_SEED = 42
+_BOOTSTRAP_SEED = DEFAULT_BOOTSTRAP_SEED
+_BOOTSTRAP_ITERATIONS = 1000
 
 
 GIVE_UP_AFTER_CONSECUTIVE_FAILURES = 3
@@ -366,6 +368,28 @@ def _collect_provider(
     return records
 
 
+def reference_mde(brand: BrandConfig, metrics_v2: dict, run_id: str) -> dict:
+    """The smallest VI change a follow-up run can be expected to detect, for this run's
+    recommendations: the MDE of the matched comparison with the previous admissible run when
+    there is one (it includes real run-to-run drift), else the optimistic within-run value."""
+    from app.analysis.matching import match
+    from app.tracking.rescore import metrics_for
+
+    for light in reversed(store.load_snapshots(brand.brand_key)):
+        if not (light.get("admission") or {}).get("admissible", True):
+            continue
+        previous = metrics_for(brand.brand_key, light, brand=brand)
+        if not previous:
+            continue
+        comparison = match(
+            previous["cells"], metrics_v2["cells"], SELF_ENTITY_ID, seed_basis=f"{light.get('run_id')}|{run_id}"
+        )
+        if comparison["verdict"] != "insufficient_data" and comparison["mde"] is not None:
+            return {"value": comparison["mde"], "method": "previous_run", "run_id": light.get("run_id")}
+        break
+    return {"value": metrics_v2.get("mde_design"), "method": "design", "run_id": None}
+
+
 def _auto_round(brand_key: str) -> int:
     """Next synthetic round: each synthetic run simulates a later week of demo data."""
     return sum(1 for r in store.load_snapshots(brand_key) if r.get("data_origin") == "synthetic") + 1
@@ -470,16 +494,30 @@ def run_pipeline(
         )
 
     # 5. Pure analysis — scored (unprompted) observations only.
+    from app.tracking.rescore import compute_for_answers
+
     competitor_ids = brand.competitor_ids()
+    run_id = str(uuid.uuid4())
+    detection_config = DetectionConfig()
     progress.note("Scoring answers…")
-    analysis_result = score(observations, SELF_ENTITY_ID, competitor_ids, rng=random.Random(_BOOTSTRAP_SEED))
-    gaps = detect_gaps(observations, SELF_ENTITY_ID, competitor_ids)
+    analysis_result = score(
+        observations, SELF_ENTITY_ID, competitor_ids,
+        n_bootstrap=_BOOTSTRAP_ITERATIONS, rng=random.Random(_BOOTSTRAP_SEED),
+    )
+    metrics_v2 = compute_for_answers(raw_observations, brand.alias_table(), competitor_ids, run_id=run_id)
+    gaps = detect_gaps(observations, SELF_ENTITY_ID, competitor_ids, detection_config)
     # A drafting failure must not lose a collected run, and must not pass for "nothing to
     # recommend" either: the snapshot records it (recommendation_status / _error).
     recommendation_status, recommendation_error = "ok", None
+    from app.tracking import impact_ledger
+
+    mde_reference = reference_mde(brand, metrics_v2, run_id)
+    uptake_priors = impact_ledger.current_priors(brand.brand_key)
     try:
         drafted = recommend_detailed(
-            gaps, observations, SELF_ENTITY_ID, competitor_ids, entity_names=brand.entity_names()
+            gaps, observations, SELF_ENTITY_ID, competitor_ids, entity_names=brand.entity_names(),
+            metrics_v2=metrics_v2, mde=mde_reference["value"], detection_config=detection_config,
+            priors=uptake_priors,
         )
         recommendations, recommendations_total = list(drafted.passed), drafted.total
     except Exception as exc:  # noqa: BLE001 - never throw away a collected run over drafting
@@ -508,12 +546,28 @@ def run_pipeline(
         recommendations_total=recommendations_total,
         started_at=started_at,
         completed_at=completed_at,
+        run_id=run_id,
         entity_alias_table=brand.alias_table(),
+        metrics_v2=metrics_v2,
+        detection_config=asdict(detection_config),
+        bootstrap={"seed": _BOOTSTRAP_SEED, "iterations": _BOOTSTRAP_ITERATIONS},
     )
     snapshot["raw_observations"] = [*snapshot["raw_observations"], *unscored_raws]
     snapshot["unscored_observation_count"] = len(unscored_raws)
+    # Inputs of the recommendation ranking that come from history, kept so the run's
+    # recommendations can be recomputed from this record alone (scripts/verify_bundle.py).
+    snapshot["mde_reference"] = mde_reference
+    snapshot["uptake_priors"] = uptake_priors
+    from app.tracking.bundle import code_sha
+
+    snapshot["code_sha"] = code_sha()  # which code produced these numbers (None outside a git checkout)
     # Who the AI named, per tracked entity — scored (unprompted) answers only (PRD §10.1).
     snapshot["mention_summary"] = mention_summary(observations, brand.entity_names())
     store.append_snapshot(snapshot)
     progress.note(f"Saved run {snapshot['run_id']} ({snapshot['status']})")
+    try:
+        # Completed actions: record what this run says about the change since each was done.
+        impact_ledger.record_evaluations(brand.brand_key, snapshot["run_id"])
+    except Exception as exc:  # noqa: BLE001 - the audit trail must never lose a collected run
+        progress.note(f"Impact checks not updated ({type(exc).__name__})")
     return snapshot

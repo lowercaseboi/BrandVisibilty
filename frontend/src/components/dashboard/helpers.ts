@@ -3,6 +3,7 @@ import { useCallback, useMemo } from "react";
 import type { Gap, MentionSummary, ProviderInfo, Recommendation } from "../../api/types";
 import { useLang, useT } from "../../i18n";
 import type { Formatter, Lang, MessageKey, TFunction, Vars } from "../../i18n";
+import { oneIn, wholeRank } from "../ui/plain";
 
 const LOCALES: Record<Lang, string> = { en: "en-IN", hi: "hi-IN", mr: "mr-IN" };
 
@@ -156,19 +157,28 @@ const INTENT_EXAMPLE: Record<string, MessageKey> = {
 
 type Msg = { key: MessageKey; vars?: Vars };
 
+/** "about 1 in 10 of its answers" / "about half…" / "most…": a share (0–1) in words, never a percentage. */
+function freq(share: number | undefined, t: TFunction): string {
+  const x = share ?? 0;
+  const n = oneIn(x);
+  if (n !== null) return t("dashboard.why.share.oneIn", { n });
+  return t(x >= 0.75 ? "dashboard.why.share.most" : "dashboard.why.share.half");
+}
+
 /**
  * The plain "why" sentence for a gap, built from its structured detail (the same facts
  * as engine.py `_finding`), so it can be translated. Pass the result to <T k vars />.
+ * Shares come out as "about 1 in 10" and ranks as whole places; the exact numbers stay in the
+ * Analytical view (`gapNumberPairs`). `_fmt` is kept so existing callers needn't change.
  */
 export function gapFinding(
   gap: Gap,
   t: TFunction,
-  fmt: Formatter,
+  _fmt: Formatter,
   entities: Record<string, string> | undefined,
   labelOf: (providerId: string) => string,
 ): Msg {
   const d = gap.detail ?? {};
-  const pct = (x: number | undefined) => fmt.percent(x ?? 0);
   switch (gap.gap_type) {
     case "presence": {
       const cov = num(d, "coverage") ?? 0;
@@ -176,32 +186,32 @@ export function gapFinding(
         const ai = labelOf(String(d.provider_id ?? ""));
         return cov === 0
           ? { key: "dashboard.why.presence.providerNone", vars: { ai } }
-          : { key: "dashboard.why.presence.provider", vars: { ai, pct: pct(cov) } };
+          : { key: "dashboard.why.presence.provider", vars: { ai, freq: freq(cov, t) } };
       }
       if (d.scope === "intent") {
         const exampleKey = INTENT_EXAMPLE[String(d.intent_type ?? "")];
-        if (!exampleKey) return { key: "dashboard.why.presence.intentGeneric", vars: { pct: pct(cov) } };
+        if (!exampleKey) return { key: "dashboard.why.presence.intentGeneric", vars: { freq: freq(cov, t) } };
         const example = t(exampleKey);
         return cov === 0
           ? { key: "dashboard.why.presence.intentNone", vars: { example } }
-          : { key: "dashboard.why.presence.intent", vars: { example, pct: pct(cov) } };
+          : { key: "dashboard.why.presence.intent", vars: { example, freq: freq(cov, t) } };
       }
       return cov === 0
         ? { key: "dashboard.why.presence.overallNone" }
-        : { key: "dashboard.why.presence.overall", vars: { pct: pct(cov) } };
+        : { key: "dashboard.why.presence.overall", vars: { freq: freq(cov, t) } };
     }
     case "prominence":
-      return { key: "dashboard.why.prominence", vars: { rank: fmt.number(num(d, "mean_rank") ?? 0, 1) } };
+      return { key: "dashboard.why.prominence", vars: { rank: wholeRank(num(d, "mean_rank") ?? 1) } };
     case "competitive": {
       const id = String(d.competitor_id ?? "");
       const competitor = entities?.[id] ?? humanizeId(id);
-      return { key: "dashboard.why.competitive", vars: { competitor, pct: pct(num(d, "beat_rate")) } };
+      return { key: (num(d, "beat_rate") ?? 0) >= 0.5 ? "dashboard.why.competitive" : "dashboard.why.competitiveSome", vars: { competitor } };
     }
     case "representation": {
       const rate = num(d, "disagreement_rate") ?? 0;
       const mixed = d.disagree_with_each_other === true;
-      if (rate > 0 && mixed) return { key: "dashboard.why.representationBoth", vars: { pct: pct(rate) } };
-      if (rate > 0) return { key: "dashboard.why.representation", vars: { pct: pct(rate) } };
+      if (rate > 0 && mixed) return { key: "dashboard.why.representationBoth", vars: { freq: freq(rate, t) } };
+      if (rate > 0) return { key: "dashboard.why.representation", vars: { freq: freq(rate, t) } };
       return { key: "dashboard.why.representationMixed" };
     }
     case "source":
@@ -214,7 +224,7 @@ export function gapFinding(
   }
 }
 
-/** Where a gap applies (details view). */
+/** Where a gap applies. The raw question-type code never shows here (it is in `gapNumberPairs`). */
 export function gapScopeText(
   gap: Gap,
   t: TFunction,
@@ -227,16 +237,22 @@ export function gapScopeText(
   }
   if (d.scope === "overall") return t("dashboard.gaps.scope.overall");
   if (d.scope === "provider") return t("dashboard.gaps.scope.provider", { ai: labelOf(String(d.provider_id ?? "")) });
-  if (d.scope === "intent") return t("dashboard.gaps.scope.intent", { intent: String(d.intent_type ?? "") });
+  if (d.scope === "intent") {
+    const exampleKey = INTENT_EXAMPLE[String(d.intent_type ?? "")];
+    return exampleKey ? t("dashboard.gaps.scope.intent", { intent: t(exampleKey) }) : t("dashboard.gaps.scope.overall");
+  }
   if (gap.gap_type === "prominence") return t("dashboard.gaps.scope.mentions");
   return t("dashboard.gaps.scope.other");
 }
 
-/** Key numbers of a gap as [label, value] pairs (details view). */
+/** Key numbers of a gap as [label, value] pairs (Analytical view). */
 export function gapNumberPairs(gap: Gap, t: TFunction, fmt: Formatter): [string, string][] {
   const d = gap.detail ?? {};
   const out: [string, string][] = [];
   const pct = (x: number) => fmt.percent(x, 1);
+  if (d.scope === "intent" && typeof d.intent_type === "string") {
+    out.push([t("dashboard.gaps.num.intent"), d.intent_type]);
+  }
   const coverage = num(d, "coverage");
   if (coverage !== undefined) out.push([t("dashboard.gaps.num.coverage"), pct(coverage)]);
   const meanRank = num(d, "mean_rank");
@@ -276,7 +292,7 @@ export interface MentionRow {
   first: number;
 }
 
-/** Mention-frequency rows for "Competitive landscape" (CompetitorBars), most-named first;
+/** Mention-frequency rows for "Who AI recommends instead" (CompetitorBars), most-named first;
  * null when there is nothing to compare (no summary, or fewer than two entities). */
 export function mentionRows(
   summary: MentionSummary | undefined,
@@ -302,22 +318,3 @@ export function mentionRows(
     );
   return rows.length < 2 ? null : rows;
 }
-
-/**
- * The leading brand's display name, for the "Competitive landscape" section's collapsed
- * summary — null when there is nothing to compare, no brand is strictly ahead of the rest, or
- * the brand itself leads (there is no competitor name to show in that case).
- */
-export function competitiveLeaderName(
-  summary: MentionSummary | undefined,
-  entities: Record<string, string> | undefined,
-  selfName: string,
-): string | null {
-  const rows = mentionRows(summary, entities, selfName);
-  if (!rows) return null;
-  const leader = rows[0];
-  const clearLeader = leader.mentioning > 0 && leader.mentioning > rows[1].mentioning;
-  if (!clearLeader || leader.isSelf) return null;
-  return leader.name;
-}
-

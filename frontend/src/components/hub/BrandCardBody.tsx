@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import type { Snapshot } from "../../api/types";
-import { RATING_KEY, ratingFromRange, scoreOutOf100, scoreRange } from "../../format";
+import { RATING_KEY } from "../../format";
+import { headlineRating, headlineValue } from "../dashboard/visibility";
 import { useFormat, useT } from "../../i18n";
-import { Details } from "../../settings/details";
+import { Details, useDetails } from "../../settings/details";
 import { MeasuredNote } from "../MeasuredNote";
 import { MetricStrip } from "../MetricStrip";
 import { ScoreRing } from "../ScoreRing";
@@ -39,10 +40,11 @@ export interface BrandCardBodyProps {
 }
 
 /**
- * The inside of a brand card — name, question count, score ring with its band colour, rating word,
- * "could be …", meta badges and (numbers view) the compact metric strip — as six fixed slots that
- * line up across a row of cards via subgrid. Shared by the brand list and the hub's centre card so
- * the two are identical and the View Transition morph between them is seamless.
+ * The inside of a brand card — name, score ring with its band colour, rating word and "updated"
+ * badges; the question count, "could be …", measured-on note and compact metric strip are Analytical
+ * view only — as six fixed slots that line up across a row of cards via subgrid. Shared by the
+ * brand list and the hub's centre card so the two are identical and the View Transition morph
+ * between them is seamless.
  */
 export function BrandCardBody({
   name,
@@ -56,6 +58,7 @@ export function BrandCardBody({
 }: BrandCardBodyProps) {
   const t = useT();
   const fmt = useFormat();
+  const { showDetails } = useDetails();
 
   // Six fixed slots, always rendered (empty when unused), so cards in a row line up via subgrid.
   let ring;
@@ -65,9 +68,9 @@ export function BrandCardBody({
   let extra: ReactNode = null;
   let label: string | undefined;
   if (snap) {
-    const score = scoreOutOf100(snap.analysis_result.composite_score);
+    const score = headlineValue(snap);
     // Rating word from the low end of the likely range, so a lucky point estimate can't overclaim.
-    const r = ratingFromRange(...scoreRange(snap.analysis_result));
+    const r = headlineRating(snap);
     const when = fmt.relativeTime(snap.collection_completed_at);
     label = t("pages.brands.scoreLabel", { score: fmt.number(score) });
     ring = <ScoreRing score={score} band={r.band} play={play} instant={instantRing} />;
@@ -75,10 +78,17 @@ export function BrandCardBody({
       <>
         <span className={`pg-rating pg-rating-${r.band}`}>{t(RATING_KEY[r.band])}</span>
         {/* On the list the card is a link, so the tip can't be a nested button there. */}
-        <MeasuredNote analysis={snap.analysis_result} className="pg-measured" interactive={corner === "live"} />
+        <Details>
+          <MeasuredNote analysis={snap.analysis_result} className="pg-measured" interactive={corner === "live"} />
+        </Details>
       </>
     );
-    if (r.upper) upper = <p className="pg-rating-upper">{t("pages.rating.couldBe", { rating: t(RATING_KEY[r.upper]) })}</p>;
+    if (r.upper)
+      upper = (
+        <Details>
+          <p className="pg-rating-upper">{t("pages.rating.couldBe", { rating: t(RATING_KEY[r.upper]) })}</p>
+        </Details>
+      );
     meta = (
       <>
         {when && <span className="muted small">{t("pages.brands.checked", { when })}</span>}
@@ -103,7 +113,11 @@ export function BrandCardBody({
       <div className="sample-card-top">
         <div className="sample-card-title">
           <h3>{name}</h3>
-          {typeof questionCount === "number" && <p className="sample-card-sub">{t.n("pages.brands.tracked", questionCount)}</p>}
+          {typeof questionCount === "number" && (
+            <p className="sample-card-sub">
+              {showDetails ? t.n("pages.brands.tracked", questionCount) : t("pages.brands.checksQuestions")}
+            </p>
+          )}
         </div>
         <span className={`sample-card-go${corner === "live" ? " is-live" : ""}`}>
           {corner === "live" ? <span className="hub-live-dot" /> : <ArrowIcon />}
@@ -119,7 +133,7 @@ export function BrandCardBody({
       <div className="sample-card-slot">
         {extra}
         {typeof questionCount === "number" && questionCount < THIN_QUESTIONS && (
-          <p className="pg-thin">{t.n("pages.brands.thin", questionCount)}</p>
+          <p className="pg-thin">{t("pages.brands.thin")}</p>
         )}
       </div>
     </>

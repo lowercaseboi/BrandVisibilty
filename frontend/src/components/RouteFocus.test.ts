@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isNewPage, pageLabel, shouldTakeFocus } from "./RouteFocus";
+import { isNewPage, pageLabel, shouldScrollToTop, shouldTakeFocus } from "./RouteFocus";
 import type { NodeLike } from "./RouteFocus";
 
 /** A tiny tree of fake nodes: `contains` follows parent links, like the DOM's. */
@@ -23,6 +23,21 @@ describe("isNewPage", () => {
   it("fires on a pathname change only", () => {
     expect(isNewPage("/app", "/brands/x")).toBe(true);
     expect(isNewPage("/brands/x", "/brands/x")).toBe(false);
+  });
+});
+
+describe("shouldScrollToTop", () => {
+  it("scrolls a pushed new page to the top", () => {
+    expect(shouldScrollToTop("/brands/x", "/brands/x/gaps", "PUSH", "")).toBe(true);
+  });
+  it("keeps the browser's restoration on back / forward", () => {
+    expect(shouldScrollToTop("/brands/x/gaps", "/brands/x", "POP", "")).toBe(false);
+  });
+  it("leaves replaces, hash targets, the first load and same-page changes alone", () => {
+    expect(shouldScrollToTop("/brands/x/questions", "/brands/x/details", "REPLACE", "")).toBe(false);
+    expect(shouldScrollToTop("/brands/x", "/brands/x/details", "PUSH", "#questions")).toBe(false);
+    expect(shouldScrollToTop(null, "/app", "PUSH", "")).toBe(false);
+    expect(shouldScrollToTop("/app", "/app", "PUSH", "")).toBe(false);
   });
 });
 

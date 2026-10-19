@@ -6,6 +6,7 @@ import { ProfilePanel } from "../../components/brandinfo/ProfilePanel";
 import { ModuleShell } from "../../components/module/ModuleShell";
 import { QuestionEditor } from "../../components/questions/QuestionEditor";
 import { useT } from "../../i18n";
+import { Details } from "../../settings/details";
 import { useReducedMotion } from "../../settings/motion";
 import { useBrandData } from "./BrandContext";
 
@@ -19,7 +20,7 @@ const SECTIONS: Record<string, string> = {
 
 /**
  * Details: the brand's connected accounts (where campaigns post), the saved profile (view + edit),
- * a question-coverage matrix, and the question set editor. Each section is deep-linkable by hash
+ * a question-coverage matrix (Analytical view only), and the question set editor. Each section is deep-linkable by hash
  * (`#accounts`, `#profile`, `#coverage`, `#questions`; the old /questions route redirects to
  * `#questions`). Once the module has loaded, the section is scrolled into view and its heading
  * focused, so keyboard and screen-reader users land in the same place.
@@ -61,18 +62,20 @@ export function DetailsModule() {
         <ProfilePanel />
       </section>
 
-      <section id="coverage" className="card bi-section bi-anchor" aria-labelledby="bi-coverage-title">
-        <div className="module-section-head">
-          <div>
-            <p className="eyebrow">{t("brandinfo.coverage.eyebrow")}</p>
-            <h2 id="bi-coverage-title" tabIndex={-1}>
-              {t("brandinfo.coverage.title")}
-            </h2>
-            <p>{t("brandinfo.coverage.sub")}</p>
+      <Details block>
+        <section id="coverage" className="card bi-section bi-anchor" aria-labelledby="bi-coverage-title">
+          <div className="module-section-head">
+            <div>
+              <p className="eyebrow">{t("brandinfo.coverage.eyebrow")}</p>
+              <h2 id="bi-coverage-title" tabIndex={-1}>
+                {t("brandinfo.coverage.title")}
+              </h2>
+              <p>{t("brandinfo.coverage.sub")}</p>
+            </div>
           </div>
-        </div>
-        <CoverageMatrix questions={questions?.questions ?? []} cities={profile?.cities ?? []} />
-      </section>
+          <CoverageMatrix questions={questions?.questions ?? []} cities={profile?.cities ?? []} />
+        </section>
+      </Details>
 
       <section id="questions" className="card bi-section bi-anchor bi-questions-section" aria-labelledby="bi-questions-title">
         <div className="module-section-head">

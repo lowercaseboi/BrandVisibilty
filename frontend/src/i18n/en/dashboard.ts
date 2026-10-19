@@ -1,16 +1,22 @@
-// English strings for the dashboard namespace — owned by agent D (dashboard).
+// English strings for the dashboard namespace (Analysis, Gaps and the AI answers behind them).
 // Flat keys, addressed as `dashboard.<key>`. Plural pairs use `_one` / `_other` suffixes.
 //
 // Notes for translators:
-// - Voice: professional and concise, like an analytics report. Plain words, no slang, no
-//   exclamation marks. "AI assistants" means apps like ChatGPT or Google Gemini.
-// - "Question" = a question a customer might ask; "response" = the AI's answer; "analysis" = one run.
+// - Voice: plain and calm, for a small-business owner. Round numbers into words ("about 1 in 10 of
+//   its answers"), no jargon. "AI assistants" means apps like ChatGPT or Google Gemini.
+// - Technical wording (confidence intervals, coverage, run IDs, API calls, model names) belongs only
+//   to the keys shown in the Analytical view: "details.", "metrics.", "admission.", "providers.",
+//   "run.math.", "run.tech.", "recs.", "trend.verdict.detail*", "gaps.num.", "strip.", and from metrics v2
+//   "v2.changeDetail", "v2.decomp", "v2.sor", "v2.mde", "v2.answerRate", "v2.legacy*", "v2.rescored",
+//   "v2.whoVi", "v2.table.", "v2.h2h.", "v2.config", "v2.bundle", "impact.detail", "impact.untargeted",
+//   "impact.drift", "impact.placebo", "impact.prediction", "impact.confoundedBy".
+// - "Visibility index" (VI) is the 0–100 score: how often AND how high in the AI's list the brand is named.
+// - "Question" = a question a customer might ask; "answer"/"response" = the AI's answer; "analysis" = one run.
 // - {placeholders} are filled in by the app; keep them exactly. **text** is shown in bold.
 // - {ai} / {ais} are AI product names such as "Google Gemini" or "Google Gemini and Groq" (already joined).
 // - {name} and {competitor} are brand names — never translate them.
+// - {freq} (why.*) is one of the why.share.* phrases and ends in "of its answers": it slots into the sentence.
 // - Keep Google, Justdial, IndiaMART, Zomato, Amazon, Instagram, WhatsApp, Quora, Reddit, YouTube in Latin script.
-// - Keys under "details.", "metrics.", "admission.", "providers.", "gaps.", "recs." are for the
-//   detailed-metrics view (examiners); technical words are expected there.
 export const dashboard = {
   // ================================================================ page header
   // Breadcrumb link back to the overview.
@@ -18,9 +24,10 @@ export const dashboard = {
   "loading": "Loading report…",
   "error.load": "This brand's report could not be loaded.",
   // Under the brand name. {when} is e.g. "2 days ago"; {ais} e.g. "Google Gemini and Groq".
-  "head.lastChecked": "Last analysed {when} · Sources: {ais}",
+  "head.lastChecked": "Last analysed {when}",
+  "head.sources": "Sources: {ais}",
   // Same, when the last analysis used simulated responses.
-  "head.lastCheckedPractice": "Last analysed {when} · Simulated data, no live AI queried",
+  "head.lastCheckedPractice": "Last analysed {when} · Practice data, not real AI answers",
   // Button: opens the question set.
   "head.questions": "Questions",
   // Button: opens every AI response.
@@ -28,34 +35,30 @@ export const dashboard = {
 
   // ================================================================ collapsible sections
   // Accessible label for the round toggle button when the section's title isn't plain text.
-  "collapsible.show": "Show this section",
-  "collapsible.hide": "Hide this section",
   // {title} is the section's own heading, e.g. "Show Score history" / "Hide Gaps".
-  "collapsible.showNamed": "Show {title}",
-  "collapsible.hideNamed": "Hide {title}",
 
   // ================================================================ data-quality banners
-  "banner.synthetic.title": "Simulated data — not a live measurement",
-  "banner.synthetic.body": "These responses are generated for demonstration. Connect an AI assistant for live results.",
-  "banner.replay.title": "Replayed responses",
-  "banner.replay.body": "Previously recorded AI responses, scored again. No AI was queried for this run.",
+  "banner.synthetic.title": "Practice data — not real AI answers",
+  "banner.synthetic.body": "These answers were generated for demonstration. Connect an AI to get real results.",
+  "banner.replay.title": "Old answers, scored again",
+  "banner.replay.body": "These AI answers were saved earlier and checked again. No AI was asked this time.",
   // {ais} = the AI names that did not respond, e.g. "Groq".
-  "banner.partial_one": "{ais} did not respond in this run; results are based on the remaining AIs.",
-  "banner.partial_other": "{ais} did not respond in this run; results are based on the remaining AIs.",
-  "banner.partialUnknown": "Some responses were missing, which reduces precision for this run.",
-  "banner.questionsChanged": "The question set has changed since this analysis. Run a new analysis to reflect it.",
-  "banner.thin_one": "Only {n} question is tracked for this brand, so precision is low.",
-  "banner.thin_other": "Only {n} questions are tracked for this brand, so precision is low.",
+  "banner.partial_one": "{ais} didn't answer this time, so the score uses the other AIs.",
+  "banner.partial_other": "{ais} didn't answer this time, so the score uses the other AIs.",
+  "banner.partialUnknown": "Some answers were missing this time, so the score is a little less reliable.",
+  "banner.questionsChanged": "Your questions have changed since this analysis. Run a new analysis to update the score.",
+  "banner.thin_one": "Only {n} question is being tracked.",
+  "banner.thin_other": "Only {n} questions are being tracked.",
   // Link after the sentence above.
-  "banner.thinLink": "Add more questions →",
+  "banner.thinLink": "Add more questions so the score is more reliable →",
 
   // ================================================================ score hero
   "hero.title": "AI visibility score",
   // Screen-reader text for the big number, e.g. "Visibility score: 43 out of 100".
   "hero.scoreAria": "Visibility score: {score} out of 100",
   // {m} = responses that mentioned the brand, {n} = all responses. Plural follows {n}.
-  "hero.mentioned_one": "Your brand appeared in **{m} of {n}** AI response.",
-  "hero.mentioned_other": "Your brand appeared in **{m} of {n}** AI responses.",
+  "hero.mentioned_one": "Your brand appeared in **{m} of {n}** AI answer.",
+  "hero.mentioned_other": "Your brand appeared in **{m} of {n}** AI answers.",
   // "Ranked first" = the brand was the first one the AI suggested in its response.
   "hero.first_one": "It was ranked first **once**.",
   "hero.first_other": "It was ranked first **{n} times**.",
@@ -77,6 +80,11 @@ export const dashboard = {
   "hero.peers": "Mention rate vs competitors",
   // {you} = your share like "7%", {ahead} = competitors mentioned more often, {n} = competitors shown.
   "hero.peersLegend": "Your brand: {you} of responses · {ahead} of {n} competitors mentioned more often",
+  "hero.peersAhead.none": "No competitor is mentioned more often than you.",
+  "hero.peersAhead.all_one": "Your competitor is mentioned more often than you.",
+  "hero.peersAhead.all_other": "All {n} competitors are mentioned more often than you.",
+  "hero.peersAhead.some_one": "{n} of {total} competitors is mentioned more often than you.",
+  "hero.peersAhead.some_other": "{n} of {total} competitors are mentioned more often than you.",
   "hero.change.same": "Unchanged since the last analysis",
 
   // ================================================================ recommended actions
@@ -165,23 +173,27 @@ export const dashboard = {
   "action.video.step3": "Publish at least weekly.",
 
   // ---------------------------------------------------------------- rationale (plain reason)
-  "why.presence.overallNone": "AI assistants did not mention the brand in any response to category-level questions.",
+  "why.share.oneIn": "about 1 in {n} of its answers",
+  "why.share.half": "about half of its answers",
+  "why.share.most": "most of its answers",
+  "why.presence.overallNone": "For general questions about your kind of business, AI never names you.",
   // {pct} is a percentage, e.g. "12%".
-  "why.presence.overall": "AI assistants mentioned the brand in only {pct} of responses to category-level questions.",
-  "why.presence.providerNone": "{ai} did not mention the brand in any response.",
-  "why.presence.provider": "{ai} mentioned the brand in only {pct} of its responses.",
+  "why.presence.overall": "For general questions about your kind of business, AI names you in {freq}.",
+  "why.presence.providerNone": "{ai} never names you.",
+  "why.presence.provider": "{ai} names you in {freq}.",
   // {example} is one of the "intent.*" examples below, e.g. “best … near me”.
-  "why.presence.intentNone": "For questions such as {example}, the brand is never mentioned.",
-  "why.presence.intent": "For questions such as {example}, the brand appears in only {pct} of responses.",
-  "why.presence.intentGeneric": "For one question type, the brand appears in only {pct} of responses.",
+  "why.presence.intentNone": "For questions like {example}, AI never names you.",
+  "why.presence.intent": "For questions like {example}, AI names you in {freq}.",
+  "why.presence.intentGeneric": "For one kind of question, AI names you in {freq}.",
   // {rank} is a number like 3.4.
-  "why.prominence": "The brand is mentioned but typically ranks low in the list (average position {rank}).",
-  "why.competitive": "When both are mentioned, {competitor} is ranked ahead in {pct} of responses.",
-  "why.representation": "For questions that name the brand, {pct} of responses describe it inaccurately.",
-  "why.representationMixed": "For questions that name the brand, AI assistants describe it inconsistently.",
-  "why.representationBoth": "For questions that name the brand, {pct} of responses describe it inaccurately, and AI assistants are inconsistent with each other.",
+  "why.prominence": "AI does name you, but usually as number {rank} or later in its list.",
+  "why.competitive": "When AI names both of you, {competitor} usually comes first.",
+  "why.competitiveSome": "When AI names both of you, {competitor} sometimes comes first.",
+  "why.representation": "When asked about you by name, AI gets your details wrong in {freq}.",
+  "why.representationMixed": "When asked about you by name, AI describes you inconsistently.",
+  "why.representationBoth": "When asked about you by name, AI gets your details wrong in {freq}, and the AIs don't agree with each other.",
   // {k} of {n} = counts of websites/videos.
-  "why.source": "{k} of the {n} most-cited websites and videos in the category do not mention the brand.",
+  "why.source": "{k} of the {n} websites and videos AI relies on most don't mention you.",
   "why.unknown": "A factor limiting the brand's visibility was detected.",
 
   // Short examples of the kinds of questions people make ("…" = words that change).
@@ -193,18 +205,18 @@ export const dashboard = {
   "intent.recommendation_seeking": "“where should I go for …”",
 
   // ================================================================ competitive landscape
-  "who.title": "Competitive landscape",
-  "who.intro_one": "Mention frequency across {n} AI response.",
-  "who.intro_other": "Mention frequency across {n} AI responses.",
+  "who.title": "Who AI recommends instead",
+  "who.intro_one": "Across {n} AI answer, how often each brand was named.",
+  "who.intro_other": "Across {n} AI answers, how often each brand was named.",
   // Your own brand in the chart, e.g. "Gajanan Vada Pav (you)".
   "who.you": "{name} (you)",
   // {m} of {n} responses; plural follows {n}.
-  "who.count_one": "{m} of {n} response",
-  "who.count_other": "{m} of {n} responses",
+  "who.count_one": "Mentioned in {m} of {n} answer",
+  "who.count_other": "Mentioned in {m} of {n} answers",
   "who.first_one": "Ranked first once",
   "who.first_other": "Ranked first {n} times",
-  "who.leader": "**{name}** leads on mention frequency.",
-  "who.youLead": "**Your brand** leads every listed competitor on mention frequency.",
+  "who.leader": "**{name}** is mentioned most often.",
+  "who.youLead": "**Your brand** is mentioned more often than any competitor you listed.",
   "who.empty": "No competitors have been listed for this brand yet.",
 
   // ================================================================ sample response
@@ -213,9 +225,7 @@ export const dashboard = {
   "sample.asked": "Question",
   "sample.answeredBy": "Response from {ai}",
   "sample.response": "Response",
-  "sample.caption": "A verbatim response from this analysis.",
-  "sample.readMore": "Expand",
-  "sample.readLess": "Collapse",
+  "sample.caption": "A real answer from this analysis, word for word.",
   "sample.seeAll": "View all responses →",
   // Legend for highlighted names.
   "sample.markSelf": "Your brand",
@@ -234,32 +244,29 @@ export const dashboard = {
   "trend.aria": "Score history: {first} on {firstDate}, now {last} on {lastDate}.",
   "trend.hint": "Select a point to view that analysis.",
   // Shown when a point is selected. {score}, {lo}, {hi} are out of 100.
-  "trend.point": "{date}: score **{score}** (range {lo}–{hi})",
+  "trend.point": "{date}: score **{score}**",
+  "trend.pointRange": "{date}: score **{score}** (range {lo}–{hi})",
   "trend.pointDetails": "{origin} · {ais}",
   "trend.legendScore": "Score",
   "trend.legendBand": "Likely range",
-  "trend.legendBreak": "Methodology change (question set or AI sources) — scores on either side are not comparable.",
+  "trend.legendBreak": "The questions or AIs changed here — scores before and after can't be compared.",
   // Trend verdict (AC-8), one line above the chart. Only analyses since the last methodology change
   // count. {delta}, {slope}, {lo}, {hi} are points out of 100; {slope}/{lo}/{hi} carry a sign ("+3.2").
-  "trend.verdict.insufficient":
-    "Not enough comparable analyses yet to judge a trend: at least 2 are needed since the last methodology change.",
-  "trend.verdict.noChange":
-    "No clear change between the last two analyses: their likely ranges overlap, so the difference may just be normal variation in AI answers.",
-  "trend.verdict.changeUp":
-    "**Change detected:** up {delta} points since the previous analysis (their likely ranges don't overlap).",
-  "trend.verdict.changeDown":
-    "**Change detected:** down {delta} points since the previous analysis (their likely ranges don't overlap).",
-  "trend.verdict.improvingWeek":
-    "**Score is improving:** about {slope} points/week (95% range {lo} to {hi}) across {n} comparable analyses.",
-  "trend.verdict.decliningWeek":
-    "**Score is declining:** about {slope} points/week (95% range {lo} to {hi}) across {n} comparable analyses.",
+  "trend.verdict.insufficient": "Run another analysis to see how your score is trending.",
+  "trend.verdict.noChange": "No real change since last time.",
+  "trend.verdict.changeUp": "**Your score went up** by about {delta} points since last time.",
+  "trend.verdict.changeDown": "**Your score went down** by about {delta} points since last time.",
+  "trend.verdict.improvingWeek": "**Your score is going up** (about +{slope} a week).",
+  "trend.verdict.decliningWeek": "**Your score is going down** (about −{slope} a week).",
   // Used when the analyses ran less than a day apart, so a per-week rate would be meaningless.
-  "trend.verdict.improvingRun":
-    "**Score is improving:** about {slope} points per analysis (95% range {lo} to {hi}) across {n} comparable analyses.",
-  "trend.verdict.decliningRun":
-    "**Score is declining:** about {slope} points per analysis (95% range {lo} to {hi}) across {n} comparable analyses.",
-  "trend.verdict.noTrend":
-    "No clear trend across {n} comparable analyses: the score's movement is within the normal variation of AI answers.",
+  "trend.verdict.improvingRun": "**Your score is going up** (about +{slope} per analysis).",
+  "trend.verdict.decliningRun": "**Your score is going down** (about −{slope} per analysis).",
+  "trend.verdict.noTrend": "No clear trend yet. Small ups and downs are normal.",
+  "trend.verdict.detail": "95% range {lo} to {hi}, across {n} comparable analyses.",
+  "trend.verdict.detailNoTrend": "Across {n} comparable analyses, the score's movement is within the normal variation of AI answers.",
+  "trend.verdict.detailChange": "Their likely ranges don't overlap.",
+  "trend.verdict.detailNoChange": "Their likely ranges overlap, so the difference may just be normal variation in AI answers.",
+  "trend.verdict.detailInsufficient": "At least 2 comparable analyses are needed since the last methodology change.",
   "trend.verdict.excluded_one": "({n} incomplete analysis left out.)",
   "trend.verdict.excluded_other": "({n} incomplete analyses left out.)",
   "origin.live": "Live AI responses",
@@ -269,12 +276,12 @@ export const dashboard = {
   // ================================================================ run panel
   "run.titleAgain": "Run a new analysis",
   "run.titleFirst": "Run the first analysis",
+  "run.options": "Options",
   // Big button.
   "run.buttonAgain": "Run analysis",
   "run.buttonFirst": "Run analysis",
   "run.starting": "Starting…",
   "run.planLoading": "Preparing…",
-  "run.sub": "Configure the next analysis. Totals update as you change the settings.",
   "run.models": "Models",
   "run.questionsLabel": "Questions",
   // Under each depth option: {x} = answers per question, {n} = API calls it would make.
@@ -291,16 +298,16 @@ export const dashboard = {
   "run.math.calls_other": "API calls",
   "run.math.unscored_one": "Includes {n} brand-named question: asked, but not scored.",
   "run.math.unscored_other": "Includes {n} brand-named questions: asked, but not scored.",
-  "run.math.practice": "Simulated run: calls go to the offline simulator, not a live AI.",
-  "run.time_one": "Estimated duration: {n} minute.",
-  "run.time_other": "Estimated duration: {n} minutes.",
-  "run.timeShort": "Estimated duration: under a minute.",
-  "run.which": "AI sources",
+  "run.math.practice": "This is a practice run: it uses made-up answers, not a real AI.",
+  "run.time_one": "Takes about {n} minute",
+  "run.time_other": "Takes about {n} minutes",
+  "run.timeShort": "Takes under a minute",
+  "run.which": "Which AIs to ask",
   "run.whichAuto": "All connected AIs ({ais})",
-  "run.whichAutoPractice": "Simulated data (no AI connected)",
+  "run.whichAutoPractice": "Practice data (no AI connected)",
   // An offline option in the list, e.g. "Synthetic demo data (offline) — simulated data".
   "run.whichPractice": "{ai} — simulated data",
-  "run.depth": "Sampling depth",
+  "run.depth": "How thorough",
   "run.depth.quick": "Quick",
   "run.depth.standard": "Standard",
   "run.depth.thorough": "Thorough",
@@ -312,10 +319,10 @@ export const dashboard = {
   "run.progressAria": "Analysis progress",
   // Per-AI state while an analysis runs.
   "run.state.queued": "Queued",
-  "run.state.running": "Querying…",
+  "run.state.running": "Asking…",
   // {s} = seconds, e.g. "Rate limited — retrying in 40s".
-  "run.state.waiting": "Rate limited — retrying in {s}s",
-  "run.state.waitingNoTime": "Rate limited — retrying",
+  "run.state.waiting": "Busy — trying again in {s}s",
+  "run.state.waitingNoTime": "Busy — trying again",
   "run.state.skipped": "Skipped",
   "run.state.autoSkipped": "Skipped — no response for 2 minutes",
   "run.state.done": "Complete",
@@ -404,32 +411,41 @@ export const dashboard = {
   "providers.empty": "No per-AI breakdown for this analysis.",
 
   // Main "Gaps" section on the brand page.
-  "gaps.title": "Gaps",
+  "gaps.title": "Biggest problems",
   // Collapsed summary for the section, e.g. "3 gaps".
   "gaps.count_one": "{n} gap",
   "gaps.count_other": "{n} gaps",
-  "gaps.intro": "Where the brand is losing visibility, detected by fixed rules over the responses.",
-  "gaps.type.presence": "Low presence",
-  "gaps.type.prominence": "Low prominence",
-  "gaps.type.competitive": "Competitor ahead",
-  "gaps.type.representation": "Misrepresentation",
-  "gaps.type.source": "Source gap",
-  "gaps.scope.overall": "All AIs and questions",
+  "gaps.intro": "The things that make AI skip or under-rank your brand will show up here.",
+  "gaps.hint": "Pick one to see the AI answers behind it.",
+  "gaps.type.presence": "Not mentioned enough",
+  "gaps.type.prominence": "Listed too low",
+  "gaps.type.competitive": "A competitor comes first",
+  "gaps.type.representation": "Described wrongly",
+  "gaps.type.source": "Missing from key websites",
+  "gaps.scope.overall": "Across everything we checked",
   "gaps.scope.provider": "On {ai}",
-  "gaps.scope.intent": "Question type: {intent}",
+  "gaps.scope.intent": "For questions like {intent}",
   "gaps.scope.competitor": "vs. {name}",
-  "gaps.scope.mentions": "Across all mentions",
-  "gaps.scope.other": "Overall",
+  "gaps.scope.mentions": "Wherever you're mentioned",
+  "gaps.scope.other": "In general",
   "gaps.inferred": "inferred",
-  "gaps.empty": "No gaps detected — the brand passes every rule.",
+  "gaps.empty": "Nothing is holding you back on the questions we checked.",
   "gaps.num.coverage": "Coverage",
   "gaps.num.meanRank": "Mean position",
   "gaps.num.co": "Co-mentions",
   "gaps.num.beat": "Competitor ahead",
   "gaps.num.disagree": "Inaccurate",
   "gaps.num.sources": "Sources missing brand",
-  "gaps.evidence_one": "{n} response →",
-  "gaps.evidence_other": "{n} responses →",
+  "gaps.num.intent": "Question type code",
+  "gaps.evidence_one": "See the AI answer ({n}) →",
+  "gaps.evidence_other": "See the AI answers ({n}) →",
+  "evidence.eyebrow": "Proof",
+  "evidence.title": "What the AIs said",
+  "evidence.lede": "Each answer word for word. Your brand and competitors are highlighted wherever they come up.",
+  "evidence.notCounted": "Not counted (asks about you by name)",
+  "evidence.filter": "Filter",
+  "evidence.spotlightOutranked": "A real answer where a competitor is named before you.",
+  "evidence.spotlightNamed": "A real answer that names your brand.",
 
   "recs.empty": "No recommendations for this analysis.",
   "recs.delta": "Expected change",
@@ -508,4 +524,80 @@ export const dashboard = {
   "recs.why.assumption.prominence": "If this moved it up to position {closure_rank} in the {changed_count} answers where it ranks lower, the visibility score would rise by about {delta} points (simulated).",
   "recs.why.assumption.competitive": "If it ranked ahead of {competitor} in the {changed_count} answers where it currently trails, the visibility score would rise by about {delta} points (simulated).",
   "recs.why.assumption.unscored": "This gap isn't measured by the visibility score (it comes from brand-named questions or from websites), so no score change is simulated; it is ranked on evidence alone.",
+  "recs.why.assumption.opportunity": "In these answers the typical competitor scores {target_vi} on the visibility index and {brand} scores {self_vi}; matching it would add up to {opportunity} points to {brand}'s overall index. Assuming this action closes about {uptake_pct}% of that gap, expect about +{expected_gain} points (an estimate, not a measurement).",
+  "recs.why.assumption.opportunity_vs": "{competitor} scores {target_vi} on the visibility index in these answers and {brand} scores {self_vi}; matching it would add up to {opportunity} points to {brand}'s overall index. Assuming this action closes about {uptake_pct}% of that gap, expect about +{expected_gain} points (an estimate, not a measurement).",
+  "recs.why.assumption.opportunity_small": "In these answers the typical competitor scores {target_vi} on the visibility index and {brand} scores {self_vi}. Assuming this action closes about {uptake_pct}% of the gap, expect about +{expected_gain} points: less than the {mde} points a follow-up check can reliably detect, so a later check may not confirm it even if it worked.",
+  "recs.why.assumption.opportunity_vs_small": "{competitor} scores {target_vi} on the visibility index in these answers and {brand} scores {self_vi}. Assuming this action closes about {uptake_pct}% of the gap, expect about +{expected_gain} points: less than the {mde} points a follow-up check can reliably detect, so a later check may not confirm it even if it worked.",
+  "recs.why.assumption.opportunity_none": "Competitors don't score higher than {brand} in these answers, so no gain is estimated; it is ranked on evidence alone.",
+
+  // ================================================================ metrics v2: visibility index
+  // Score card. {rank}/{of} are whole numbers: "#5 of 6".
+  "v2.position": "You're **#{rank} of {of}** among the places you track.",
+  "v2.positionRange": "You're around **#{low}–#{high} of {of}** among the places you track; the order isn't settled yet.",
+  // {named} of {of} questions; "reliably" = in at least half of the answers to that question.
+  "v2.reach": "You came up for **{named} of {of}** questions customers ask, and reliably for {reliable}.",
+  "v2.reachNever": "You came up for **{named} of {of}** questions customers ask, but never reliably.",
+  "v2.reachZero": "You didn't come up for any of the **{of}** questions customers ask.",
+  // {name} is a competitor; counts of answers.
+  "v2.leader": "{name} is named in {named} answers, you in {you}.",
+  "v2.lowInfo": "With this few mentions the score is a rough reading; it can move a lot between checks.",
+  // Change since the previous check, as a verdict that never claims a cause.
+  "v2.change.rose_after": "Up since the last check.",
+  "v2.change.leaning_up": "Probably up a little since the last check.",
+  "v2.change.no_detectable_change": "No clear change since the last check.",
+  "v2.change.leaning_down": "Probably down a little since the last check.",
+  "v2.change.fell_after": "Down since the last check.",
+  "v2.change.insufficient_data": "The last check asked too few of the same questions to compare.",
+  // Short labels for status pills (Did it work?).
+  "v2.verdict.rose_after": "Rose after",
+  "v2.verdict.leaning_up": "Probably rose a little",
+  "v2.verdict.no_detectable_change": "No clear change yet",
+  "v2.verdict.leaning_down": "Probably dipped a little",
+  "v2.verdict.fell_after": "Fell after",
+  "v2.verdict.insufficient_data": "Too little to compare",
+  // Analytical view.
+  "v2.changeDetail": "Change {delta} points (95% range {lo} to {hi}) over {q} matched questions, {overlap} of answers comparable; changes under {mde} points can't be told from noise.",
+  "v2.decomp": "Named in {presence} of answers × average list-position weight {weight} when named (1 = first place).",
+  "v2.sor": "Share of recommendations among tracked places: {sor} (95% range {lo}–{hi}).",
+  "v2.mde": "One more check can reliably detect changes of about {mde} points or more.",
+  "v2.answerRate": "{pct} of answers named options; the rest asked for a city or declined.",
+  "v2.rescored": "Recalculated from this check's stored answers with today's competitor list.",
+  "v2.legacy": "Old composite score (v1, kept for comparison): {score} (range {lo}–{hi}). It overstated small brands, see docs/METRICS_v2.md.",
+  "v2.legacyTitle": "Old composite score (v1)",
+  "v2.whoVi": "Visibility index {vi}",
+  "v2.table.title": "Visibility index by AI and by question type",
+  "v2.table.intro": "100 = named first in every answer. Answered = the AI gave options instead of asking for a city or declining.",
+  "v2.table.ai": "AI",
+  "v2.table.intent": "Question type",
+  "v2.table.vi": "Index",
+  "v2.table.named": "Named",
+  "v2.table.answered": "Answered",
+  "v2.table.questions": "Questions",
+  "v2.table.ofN": "{m} of {n}",
+  "v2.h2h.competitor": "Head to head",
+  "v2.h2h.vi": "Their index",
+  "v2.h2h.ahead": "You ahead",
+  "v2.h2h.behind": "They ahead",
+  "v2.config": "Method {version}, settings {hash}.",
+  "v2.bundle": "Download this check to re-verify every number",
+
+  // ================================================================ did it work? (impact ledger)
+  "impact.eyebrow": "Did it work?",
+  "impact.title": "What changed after the things you did",
+  "impact.intro": "Each finished action is compared with the checks before and after it, on the questions it was meant to help. A rise after an action is a good sign, not proof: other things change too.",
+  "impact.status.waiting": "Waiting for the next check",
+  "impact.status.no_baseline": "No check before it to compare with",
+  "impact.status.confounded": "Mixed with another action",
+  // {date} is when the card was marked done / the campaign first went out.
+  "impact.done": "Marked done {date}",
+  "impact.doneCampaign": "Published {date}",
+  "impact.reopened": "moved back out of Done",
+  "impact.basisOverall": "Too few of its questions to judge them alone, so your overall score is compared.",
+  "impact.detail": "Index {before} → {after} ({delta} points, 95% range {lo} to {hi}) over {q} matched questions; smallest detectable change {mde}.",
+  "impact.untargeted": "Your other questions moved {delta} points, so this action's questions moved {did} points more.",
+  "impact.drift": "Competitors moved {drift} points on average over the same answers.",
+  "impact.placebo": "Between earlier checks with nothing done, this test fired {fired} of {pairs} times.",
+  "impact.prediction": "Expected about +{expected} points overall; measured {measured}.",
+  "impact.confoundedBy_one": "Another finished action overlaps this one.",
+  "impact.confoundedBy_other": "{n} other finished actions overlap this one.",
 } as const;

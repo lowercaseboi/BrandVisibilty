@@ -2,6 +2,7 @@
 import { useCallback, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { useT } from "../../i18n";
+import { Details } from "../../settings/details";
 import { clearAdminToken, isTokenRejected, readAdminToken, saveAdminToken } from "../campaign/adminToken";
 import { AccountDialog } from "./AccountDialog";
 
@@ -64,6 +65,9 @@ function TokenDialog({ rejected, onClose }: { rejected: boolean; onClose: (token
           </p>
         )}
         <p className="muted small">{t("brandinfo.accounts.token.hint")}</p>
+        <Details>
+          <p className="muted small">{t("brandinfo.accounts.token.hintTech")}</p>
+        </Details>
         <label className="field">
           {t("brandinfo.accounts.token.label")}
           <input
@@ -75,7 +79,7 @@ function TokenDialog({ rejected, onClose }: { rejected: boolean; onClose: (token
             autoFocus
           />
         </label>
-        <div className="acc-dialog-actions">
+        <div className="sheet-actions">
           <button type="button" className="btn btn-ghost" onClick={() => onClose(null)}>
             {t("brandinfo.accounts.cancel")}
           </button>

@@ -1,6 +1,6 @@
 /* oxlint-disable react/only-export-components -- the pure focus rules live beside the component that applies them */
-import { useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLocation, useNavigationType } from "react-router-dom";
 import { viewTransitionFinished } from "./module/transition";
 
 /** Give a late page (lazy route, data still loading) this many frames to render its <h1>. */
@@ -32,6 +32,15 @@ export function isNewPage(prev: string | null, next: string): boolean {
   return prev !== null && prev !== next;
 }
 
+/**
+ * Start the new page at the top? Only for a link / navigate() to a new pathname (PUSH): browser
+ * back / forward (POP) keeps the browser's own scroll restoration, a REPLACE is a URL tidy-up of the
+ * page you're on, and a #hash target scrolls itself.
+ */
+export function shouldScrollToTop(prev: string | null, next: string, navType: string, hash: string): boolean {
+  return isNewPage(prev, next) && navType === "PUSH" && !hash;
+}
+
 /** The words announced for the new page: its heading, else the document title. */
 export function pageLabel(heading: string | null | undefined, title: string): string {
   const h = (heading ?? "").replace(/\s+/g, " ").trim();
@@ -45,14 +54,16 @@ function findHeading(): HTMLElement | null {
 }
 
 /**
- * Route-change focus management for keyboard and screen-reader users. When the pathname changes
+ * Route-change focus management for keyboard and screen-reader users (and scroll: a pushed page
+ * starts at the top, see shouldScrollToTop). When the pathname changes
  * (not on the first load, not for hash/query-only changes) it waits for any View Transition morph
  * to finish, then moves focus to the new page's <h1> (made focusable with tabIndex=-1 for the
  * moment) — or to <main> if there is none — without scrolling, and announces the page title in a
  * polite live region. It leaves focus alone when the new page already moved it somewhere itself.
  */
 export function RouteFocus() {
-  const { pathname } = useLocation();
+  const { pathname, hash } = useLocation();
+  const navType = useNavigationType();
   const [message, setMessage] = useState("");
   const prevPath = useRef<string | null>(null);
   const trigger = useRef<Element | null>(null);
@@ -73,6 +84,14 @@ export function RouteFocus() {
       document.removeEventListener("keydown", note, true);
     };
   }, []);
+
+  // A new page starts at the top (before paint — and, inside a View Transition, before the new
+  // snapshot — so it never jumps after the slide). prevPath still holds the old page here: the
+  // focus effect below moves it on.
+  useLayoutEffect(() => {
+    if (shouldScrollToTop(prevPath.current, pathname, navType, hash)) window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    // A hash / type change alone re-runs this harmlessly: prevPath already equals pathname by then.
+  }, [pathname, hash, navType]);
 
   useEffect(() => {
     const prev = prevPath.current;

@@ -1,0 +1,77 @@
+/* One product-wide scale. On desktop/tablet (wider than 900px) everything renders at 1.2x, so 100%
+   browser zoom looks like 120%. Phones and small tablets stay at 1x.
+
+   We scale tokens (not `zoom`): `zoom` would also scale vh/svh, which breaks the one-window
+   sections, the pinned workflow and the sticky offsets. --z is the multiplier; any px value that
+   has to grow with the type is written `calc(Npx * var(--z))`. Loaded last (main.tsx) so these
+   overrides beat the component rules they adjust. Widths here are the standard breakpoints. */
+
+:root {
+  --z: 1;
+}
+
+@media (min-width: 901px) {
+  :root {
+    --z: 1.2;
+    --fs-2xs: calc(10.5px * var(--z));
+    --fs-xs: calc(11.5px * var(--z));
+    --fs-sm: calc(12.5px * var(--z));
+    --fs-md: calc(14px * var(--z));
+    --fs-lg: calc(16.5px * var(--z));
+    --fs-xl: calc(21px * var(--z));
+    --fs-2xl: calc(30px * var(--z));
+    --fs-hero: calc(64px * var(--z));
+    --space-1: calc(4px * var(--z));
+    --space-2: calc(8px * var(--z));
+    --space-3: calc(12px * var(--z));
+    --space-4: calc(16px * var(--z));
+    --space-5: calc(24px * var(--z));
+    --space-6: calc(32px * var(--z));
+    --space-7: calc(48px * var(--z));
+    --card-pad-y: calc(16px * var(--z));
+    --card-pad-x: calc(18px * var(--z));
+    --card-gap: calc(14px * var(--z));
+    --header-bar: calc(78px * var(--z));
+    --maxw: calc(1080px * var(--z));
+  }
+
+  /* Devanagari reads small next to mono, so base.css nudges it to 15px; keep that, scaled. */
+  html:lang(hi),
+  html:lang(mr) {
+    font-size: calc(15px * var(--z));
+  }
+
+  /* Header (components.css). */
+  .app-header-inner {
+    padding-top: calc(20px * var(--z));
+    padding-bottom: calc(20px * var(--z));
+  }
+
+  .brand-mark-name {
+    font-size: calc(18px * var(--z));
+  }
+
+  .icon-btn {
+    width: calc(38px * var(--z));
+    height: calc(38px * var(--z));
+  }
+
+  /* Buttons. */
+  .btn,
+  .header-cta {
+    min-height: calc(38px * var(--z));
+  }
+
+  .btn {
+    padding: calc(9px * var(--z)) calc(18px * var(--z));
+  }
+
+  /* Modal widths. */
+  .sheet {
+    width: min(calc(460px * var(--z)), calc(100vw - 32px));
+  }
+
+  .sheet-wide {
+    width: min(calc(560px * var(--z)), calc(100vw - 32px));
+  }
+}

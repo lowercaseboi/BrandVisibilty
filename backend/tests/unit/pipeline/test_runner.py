@@ -61,7 +61,7 @@ def _install_fakes(monkeypatch, rounds=None, *, real_engine=False):
     retry.Skipped = Skipped
     retry.query_with_retry = lambda provider, prompt, params, **kwargs: provider.query(prompt, params)
     engine = types.ModuleType("app.recommendation.engine")
-    engine.recommend_detailed = lambda gaps, obs, self_id, comp_ids, *, entity_names=None, max_recommendations=10: (
+    engine.recommend_detailed = lambda gaps, obs, self_id, comp_ids, *, entity_names=None, max_recommendations=10, **_v2: (
         types.SimpleNamespace(
             passed=[_FakeRec(f"rec-{i}", f"gap-{i}", "do something") for i, _ in enumerate(gaps)], total=len(gaps)
         )

@@ -1,0 +1,16 @@
+{
+  "name": "BrandVisibility",
+  "short_name": "BrandVisibility",
+  "description": "How visible is your brand in AI answers, and what to do about it.",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#20201f",
+  "theme_color": "#20201f",
+  "icons": [
+    { "src": "/icon.svg", "type": "image/svg+xml", "sizes": "any" },
+    { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192" },
+    { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512" }
+  ]
+}

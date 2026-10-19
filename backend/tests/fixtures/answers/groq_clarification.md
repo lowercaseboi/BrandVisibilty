@@ -1,0 +1,1 @@
+Sure! I can help you find a Vada Pav outlet that serves quickly. Could you let me know which city—or even a specific area or neighbourhood—you’re looking in? That way I can point you to the nearest spot known for fast service.

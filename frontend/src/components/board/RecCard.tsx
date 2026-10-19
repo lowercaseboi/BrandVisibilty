@@ -1,9 +1,14 @@
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { BOARD_COLUMNS } from "../../api/types";
 import type { BoardColumn, Observation } from "../../api/types";
 import { T, useFormat, useT } from "../../i18n";
-import { Details } from "../../settings/details";
+import { Details, useDetails } from "../../settings/details";
+import { useIsPhone } from "../../settings/useMediaQuery";
 import { InfoTip } from "../InfoTip";
+import { Sheet } from "../Sheet";
+import { toast } from "../Toaster";
+import { Collapse } from "../ui/Collapse";
+import { DisclosureMark } from "../ui/DisclosureMark";
 import { actionCopy } from "../dashboard/actions";
 import { campaignHref, useCampaignIndex } from "../campaign/CampaignIndex";
 import { statusView } from "../campaign/campaignModel";
@@ -19,6 +24,7 @@ import {
   impactOf,
   isExportOnly,
   localizeReasoningParams,
+  plainFinding,
   plainWhy,
   reasoningMessages,
 } from "./recView";
@@ -41,15 +47,19 @@ export interface RecCardProps {
 /**
  * One recommendation, in plain language for a shop owner: What to do (the title), Why (one
  * sentence from the gap and a real customer question), What it could change, Effort in time,
- * Evidence (n of 10 responses) and one big next step (create / open its campaign). Steps and the
- * full reasoning fold away; IDs, the priority formula and the class sit behind "Show the numbers
- * behind this". Every card links to the responses and gap it traces to (PRD AC-7). A ghost card
+ * how many AI answers it was seen in and one big next step (create / open its campaign). The steps
+ * fold away; the reasoning maths, the evidence meter, IDs, the priority formula and the class
+ * appear only in the Analytical view. Every card links to the responses and gap it traces to
+ * (PRD AC-7). A ghost card
  * (no current recommendation) is shown faded as "resolved in latest run" and can be removed.
+ * The status is a compact select; on phones, a chip that opens a "Move to…" sheet.
  */
 export function RecCard(props: RecCardProps) {
   const { card, title, brandKey, runId, entities, labelOf, observations, campaignsReady, onStatus, onRemove } = props;
   const t = useT();
   const titleId = useId();
+  const phone = useIsPhone();
+  const [moving, setMoving] = useState(false);
 
   const s = card.suggestion;
   const rec = s?.lead ?? null;
@@ -62,23 +72,48 @@ export function RecCard(props: RecCardProps) {
         ) : (
           <span className="badge badge-ok">{t("board.card.resolved")}</span>
         )}
-        <span className="rec-status">
-          <span className="rec-status-dot" aria-hidden="true" />
-          <select
-            value={card.column}
-            aria-label={t("board.card.status", { title })}
-            onChange={(e) => onStatus(e.target.value as BoardColumn)}
+        {phone ? (
+          <button
+            type="button"
+            className="rec-status rec-move"
+            aria-haspopup="dialog"
+            aria-label={t("board.move.cta", { status: t(STATUS_LABEL[card.column]), title })}
+            onClick={() => setMoving(true)}
           >
-            {BOARD_COLUMNS.map((c) => (
-              <option key={c} value={c}>
-                {t(STATUS_LABEL[c])}
-              </option>
-            ))}
-          </select>
-        </span>
+            <span className="rec-status-dot" aria-hidden="true" />
+            <span className="rec-move-text">{t(STATUS_LABEL[card.column])}</span>
+            <span className="rec-move-caret" aria-hidden="true" />
+          </button>
+        ) : (
+          <span className="rec-status">
+            <span className="rec-status-dot" aria-hidden="true" />
+            <select
+              value={card.column}
+              aria-label={t("board.card.status", { title })}
+              onChange={(e) => onStatus(e.target.value as BoardColumn)}
+            >
+              {BOARD_COLUMNS.map((c) => (
+                <option key={c} value={c}>
+                  {t(STATUS_LABEL[c])}
+                </option>
+              ))}
+            </select>
+          </span>
+        )}
       </div>
+      {moving && (
+        <MoveSheet
+          title={title}
+          current={card.column}
+          onClose={() => setMoving(false)}
+          onMove={(to) => {
+            onStatus(to);
+            toast(t("board.move.done", { status: t(STATUS_LABEL[to]) }));
+          }}
+        />
+      )}
 
-      <h3 id={titleId} className="rec-card-title">
+      <h3 id={titleId} className="rec-card-title" title={title}>
         {title}
       </h3>
 
@@ -97,7 +132,7 @@ export function RecCard(props: RecCardProps) {
         <>
           <p className="rec-card-note">{t("board.card.resolvedNote")}</p>
           <div className="rec-card-foot">
-            <button type="button" className="btn-link rec-remove" aria-label={t("board.card.removeLabel", { title })} onClick={onRemove}>
+            <button type="button" className="link-quiet rec-remove" aria-label={t("board.card.removeLabel", { title })} onClick={onRemove}>
               {t("board.card.remove")}
             </button>
           </div>
@@ -107,11 +142,71 @@ export function RecCard(props: RecCardProps) {
   );
 }
 
+/**
+ * Phones: the statuses as full-width rows in a bottom sheet, the current one marked. The move
+ * happens once the sheet has slid away, so a card leaving its lane doesn't take the sheet with it.
+ */
+function MoveSheet({
+  title,
+  current,
+  onClose,
+  onMove,
+}: {
+  title: string;
+  current: BoardColumn;
+  onClose: () => void;
+  onMove: (to: BoardColumn) => void;
+}) {
+  const t = useT();
+  const forId = useId();
+  const chosen = useRef<BoardColumn | null>(null);
+
+  const finish = () => {
+    const to = chosen.current;
+    chosen.current = null;
+    onClose();
+    if (to && to !== current) onMove(to);
+  };
+
+  return (
+    <Sheet title={t("board.move.title")} describedBy={forId} className="rec-move-sheet" onClose={finish}>
+      {(close) => (
+        <>
+          <p id={forId} className="rec-move-for">
+            {title}
+          </p>
+          <ul className="sheet-list">
+            {BOARD_COLUMNS.map((c) => (
+              <li key={c}>
+                <button
+                  type="button"
+                  className="sheet-row rec-move-row"
+                  data-status={c}
+                  aria-pressed={c === current}
+                  onClick={() => {
+                    chosen.current = c;
+                    close();
+                  }}
+                >
+                  <span className="rec-move-dot" aria-hidden="true" />
+                  {t(STATUS_LABEL[c])}
+                  {c === current && <span className="sheet-row-value">{t("board.move.current")}</span>}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </Sheet>
+  );
+}
+
 type LiveProps = Omit<RecCardProps, "onStatus" | "onRemove">;
 
 function LiveCardBody({ card, title, brandKey, runId, entities, labelOf, observations, campaignsReady }: LiveProps) {
   const t = useT();
   const fmt = useFormat();
+  const { showDetails } = useDetails();
   const [open, setOpen] = useState(false);
   const moreId = useId();
 
@@ -124,15 +219,21 @@ function LiveCardBody({ card, title, brandKey, runId, entities, labelOf, observa
   const why = useMemo(
     () =>
       leadGap
-        ? (plainWhy(leadGap, observations, entities, labelOf) ?? gapFinding(leadGap, t, fmt, entities, labelOf))
-        : { key: "dashboard.why.unknown" as const },
-    [leadGap, observations, entities, labelOf, t, fmt],
+        ? (plainWhy(leadGap, observations, entities, labelOf) ?? plainFinding(leadGap, t, entities, labelOf))
+        : { key: "board.finding.unknown" as const },
+    [leadGap, observations, entities, labelOf, t],
   );
   const reason = useMemo(
     () => reasoningMessages(rec, (p) => localizeReasoningParams(p, t, fmt, labelOf)),
     [rec, t, fmt, labelOf],
   );
-  const impact = impactOf(rec.delta_composite, leadGap?.gap_type, rec.reasoning_params?.assumption_key);
+  const impact = impactOf(
+    rec.delta_composite,
+    leadGap?.gap_type,
+    rec.reasoning_params?.assumption_key,
+    rec.expected_gain_vi != null ? { gain: rec.expected_gain_vi, belowMde: rec.below_mde } : undefined,
+  );
+  const isV2 = rec.expected_gain_vi != null;
   const evidence = evidenceCount(rec);
   const evidenceHref =
     s.gaps.length > 1 || !leadGap
@@ -145,24 +246,38 @@ function LiveCardBody({ card, title, brandKey, runId, entities, labelOf, observa
   const creating = campaigns?.creating === card.key;
   const exportOnly = isExportOnly(card.action);
 
+  // The gain in words ("a lot"); the points and the tip explaining the estimate are Analytical-view only.
   let impactText: string;
-  let impactTip: { text: string; label: string } | null = null;
+  let impactTip: { text: string; label: string };
   if (impact.kind === "points") {
-    impactText = t.n("board.card.gain", impact.n, { n: fmt.number(impact.n) });
-    impactTip = { text: t("board.card.gainTip"), label: t("board.card.gainTipLabel") };
+    // v2 gains are Visibility Index points (the leader in a category sits around 30), so the plain
+    // words use smaller steps than the v1 composite did.
+    const [lot, some] = impact.v2 ? [5, 2] : [10, 3];
+    impactText = showDetails
+      ? impact.v2
+        ? t("board.card.gainVi", { n: fmt.number(impact.n, 1) })
+        : t.n("board.card.gain", impact.n, { n: fmt.number(impact.n) })
+      : t(impact.n >= lot ? "board.card.gainLot" : impact.n >= some ? "board.card.gainSome" : "board.card.gainLittle");
+    impactTip = { text: t(impact.v2 ? "board.card.gainTipVi" : "board.card.gainTip"), label: t("board.card.gainTipLabel") };
+  } else if (impact.kind === "belowMde") {
+    impactText = showDetails
+      ? t("board.card.gainBelowMdeDetail", { n: fmt.number(impact.n, 1), mde: fmt.number(rec.mde ?? 0, 1) })
+      : t("board.card.gainBelowMde");
+    impactTip = { text: t("board.card.gainBelowMdeTip"), label: t("board.card.gainTipLabel") };
   } else if (impact.kind === "small") {
-    impactText = t("board.card.gainSmall");
+    impactText = t(showDetails ? "board.card.gainSmall" : "board.card.gainLittle");
     impactTip = { text: t("board.card.gainTip"), label: t("board.card.gainTipLabel") };
   } else if (impact.kind === "flat") {
     impactText = t("board.card.flat");
     impactTip = { text: t("board.card.flatTip"), label: t("board.card.notScoredTipLabel") };
   } else {
-    impactText = t("board.card.notScored");
+    impactText = t(impact.reason === "source" ? "board.card.notScoredSource" : "board.card.notScored");
     impactTip = {
       text: t(impact.reason === "source" ? "board.card.notScoredSourceTip" : "board.card.notScoredTip"),
       label: t("board.card.notScoredTipLabel"),
     };
   }
+  const hasMore = !!copy || showDetails;
 
   return (
     <>
@@ -174,17 +289,16 @@ function LiveCardBody({ card, title, brandKey, runId, entities, labelOf, observa
           </dd>
         </div>
         <div className="rec-fact">
-          <dt className="eyebrow">{t("board.card.change")}</dt>
+          <dt className="sr-only">{t("board.card.change")}</dt>
           <dd className={`rec-gain is-${impact.kind}`}>
             {impactText}
-            {impactTip && <InfoTip text={impactTip.text} label={impactTip.label} />}
           </dd>
         </div>
       </dl>
 
-      <dl className="rec-facts rec-facts-pair">
-        <div className="rec-fact">
-          <dt className="eyebrow">{t("board.card.effort")}</dt>
+      <dl className="rec-meta">
+        <div>
+          <dt className="sr-only">{t("board.card.effort")}</dt>
           <dd>
             <span className={`effort-meter effort-${effortLevel(rec.effort)}`} aria-hidden="true">
               <i />
@@ -194,20 +308,10 @@ function LiveCardBody({ card, title, brandKey, runId, entities, labelOf, observa
             {t(effortWordKey(rec.effort))}
           </dd>
         </div>
-        <div className="rec-fact">
-          <dt className="eyebrow">{t("board.card.evidence")}</dt>
+        <div>
+          <dt className="sr-only">{t("board.card.evidence")}</dt>
           <dd>
-            <span className="evidence-meter" aria-hidden="true">
-              {Array.from({ length: FULL_EVIDENCE }, (_, i) => (
-                <i key={i} className={i < evidence ? "is-on" : undefined} />
-              ))}
-            </span>
-            <span className="rec-evidence-count">
-              {evidence >= FULL_EVIDENCE
-                ? t("board.card.evidenceFull", { n: fmt.number(evidence) })
-                : t("board.card.evidenceOf", { n: fmt.number(evidence) })}
-              <InfoTip text={t("board.card.evidenceTip")} label={t("board.card.evidenceTipLabel")} />
-            </span>
+            <span className="rec-evidence-count">{t.n("board.card.seenAnswers", evidence, { n: fmt.number(evidence) })}</span>
             <TransitionLink to={evidenceHref} className="rec-evidence">
               {t("board.card.seeEvidence")}
             </TransitionLink>
@@ -240,112 +344,158 @@ function LiveCardBody({ card, title, brandKey, runId, entities, labelOf, observa
         )
       )}
 
-      <div className="rec-more">
-        <button
-          type="button"
-          className="btn-link rec-more-toggle"
-          aria-expanded={open}
-          aria-controls={moreId}
-          onClick={() => setOpen((o) => !o)}
-        >
-          <span className="disclosure-caret" aria-hidden="true" />
-          {t("board.card.more")}
-        </button>
-        <div id={moreId} className="rec-more-body" hidden={!open}>
-          {copy && (
-            <>
-              <p className="eyebrow rec-more-label">{t("board.card.how")}</p>
-              <ol className="rec-steps">
-                {copy.steps.map((k) => (
-                  <li key={k}>{t(k, { competitor: card.competitor ?? "" })}</li>
-                ))}
-              </ol>
-            </>
-          )}
-          {(reason || rec.reasoning) && (
-            <>
-              <p className="eyebrow rec-more-label">{t("board.card.reasoning")}</p>
-              {reason ? (
-                <p className="rec-rationale">
-                  {reason.map((m, i) => (
-                    <span key={m.key}>
-                      {i > 0 && " "}
-                      <T k={m.key} vars={m.vars} />
-                    </span>
-                  ))}
-                </p>
-              ) : (
-                <p className="rec-rationale" lang="en">
-                  {rec.reasoning}
-                </p>
+      {hasMore && (
+        <div className="rec-more">
+          <button
+            type="button"
+            className="link-quiet rec-more-toggle"
+            aria-expanded={open}
+            aria-controls={moreId}
+            onClick={() => setOpen((o) => !o)}
+          >
+            <DisclosureMark open={open} />
+            {t(showDetails ? "board.card.more" : "board.card.steps")}
+          </button>
+          <Collapse open={open} id={moreId}>
+            <div className="rec-more-body">
+              {copy && (
+                <>
+                  {showDetails && <p className="eyebrow rec-more-label">{t("board.card.how")}</p>}
+                  <ol className="rec-steps">
+                    {copy.steps.map((k) => (
+                      <li key={k}>{t(k, { competitor: card.competitor ?? "" })}</li>
+                    ))}
+                  </ol>
+                </>
               )}
-            </>
-          )}
-          {otherGaps.map((g) => {
-            const f = gapFinding(g, t, fmt, entities, labelOf);
-            return (
-              <p key={g.gap_id} className="rec-rationale">
-                <T k={f.key} vars={f.vars} />
-              </p>
-            );
-          })}
-          <p className="rec-drafted">
-            {rec.drafted_by === "template" ? t("board.card.draftedTemplate") : t("board.card.draftedOther", { by: rec.drafted_by })}
-          </p>
-        </div>
-      </div>
-
-      <Details>
-        <div className="rec-tech">
-          <p className="eyebrow">{t("board.card.tech")}</p>
-          <div className="rec-tech-chips">
-            <span className="badge badge-accent">{classKey ? t(classKey) : humanizeId(rec.action_class)}</span>
-            {(s.gaps.length > 0 ? s.gaps : [null]).map((g) => {
-              const id = g?.gap_id ?? rec.gap_id;
-              return (
-                <TransitionLink
-                  key={id}
-                  to={gapsHref(brandKey, { gapId: id, runId: runId ?? undefined })}
-                  className="rec-trace"
-                  title={t("board.card.traceTitle", { id })}
-                >
-                  <span aria-hidden="true">↳ </span>
-                  {t("board.card.trace", { type: g ? gapTypeText(g.gap_type, t) : humanizeId(id) })}
-                </TransitionLink>
-              );
-            })}
-          </div>
-          <dl className="rec-tech-list">
-            <div>
-              <dt>{t("board.card.tech.rec")}</dt>
-              <dd>
-                <code>{rec.recommendation_id}</code>
-              </dd>
-            </div>
-            <div>
-              <dt>{t("board.card.tech.gap")}</dt>
-              <dd>
-                <code>{rec.gap_id}</code>
-              </dd>
-            </div>
-            <div>
-              <dt>{t("board.card.tech.priority")}</dt>
-              <dd>
-                {t("board.card.tech.formula", {
-                  p: fmt.number(rec.priority ?? 0, 3),
-                  delta: fmt.number(rec.delta_composite ?? 0, 2),
-                  conf: fmt.number(rec.confidence ?? 0, 2),
-                  effort: fmt.number(rec.effort ?? 0),
+              <Details>
+                {(reason || rec.reasoning) && (
+                  <>
+                    <p className="eyebrow rec-more-label">{t("board.card.reasoning")}</p>
+                    {reason ? (
+                      <p className="rec-rationale">
+                        {reason.map((m, i) => (
+                          <span key={m.key}>
+                            {i > 0 && " "}
+                            <T k={m.key} vars={m.vars} />
+                          </span>
+                        ))}
+                      </p>
+                    ) : (
+                      <p className="rec-rationale" lang="en">
+                        {rec.reasoning}
+                      </p>
+                    )}
+                  </>
+                )}
+                {otherGaps.map((g) => {
+                  const f = gapFinding(g, t, fmt, entities, labelOf);
+                  return (
+                    <p key={g.gap_id} className="rec-rationale">
+                      <T k={f.key} vars={f.vars} />
+                    </p>
+                  );
                 })}
-              </dd>
+                <p className="rec-drafted">
+                  {rec.drafted_by === "template" ? t("board.card.draftedTemplate") : t("board.card.draftedOther", { by: rec.drafted_by })}
+                </p>
+                <p className="eyebrow rec-more-label">{t("board.card.evidence")}</p>
+                <p className="rec-rationale rec-evidence-line">
+                  <span className="evidence-meter" aria-hidden="true">
+                    {Array.from({ length: FULL_EVIDENCE }, (_, i) => (
+                      <i key={i} className={i < evidence ? "is-on" : undefined} />
+                    ))}
+                  </span>
+                  {evidence >= FULL_EVIDENCE
+                    ? t("board.card.evidenceFull", { n: fmt.number(evidence) })
+                    : t("board.card.evidenceOf", { n: fmt.number(evidence) })}
+                  <InfoTip text={t("board.card.evidenceTip")} label={t("board.card.evidenceTipLabel")} />
+                </p>
+                <p className="rec-rationale">
+                  {impactText}
+                  <InfoTip text={impactTip.text} label={impactTip.label} />
+                </p>
+                <div className="rec-tech">
+                  <p className="eyebrow">{t("board.card.tech")}</p>
+                  <div className="rec-tech-chips">
+                    <span className="badge badge-accent">{classKey ? t(classKey) : humanizeId(rec.action_class)}</span>
+                    {(s.gaps.length > 0 ? s.gaps : [null]).map((g) => {
+                      const id = g?.gap_id ?? rec.gap_id;
+                      return (
+                        <TransitionLink
+                          key={id}
+                          to={gapsHref(brandKey, { gapId: id, runId: runId ?? undefined })}
+                          className="rec-trace"
+                          title={t("board.card.traceTitle", { id })}
+                        >
+                          <span aria-hidden="true">↳ </span>
+                          {t("board.card.trace", { type: g ? gapTypeText(g.gap_type, t) : humanizeId(id) })}
+                        </TransitionLink>
+                      );
+                    })}
+                  </div>
+                  <dl className="rec-tech-list">
+                    <div>
+                      <dt>{t("board.card.tech.rec")}</dt>
+                      <dd>
+                        <code>{rec.recommendation_id}</code>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{t("board.card.tech.gap")}</dt>
+                      <dd>
+                        <code>{rec.gap_id}</code>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{t("board.card.tech.priority")}</dt>
+                      <dd>
+                        {isV2
+                          ? t("board.card.tech.formulaVi", {
+                              p: fmt.number(rec.priority ?? 0, 3),
+                              gain: fmt.number(rec.expected_gain_vi ?? 0, 2),
+                              conf: fmt.number(rec.confidence ?? 0, 2),
+                              effort: fmt.number(rec.effort ?? 0),
+                            })
+                          : t("board.card.tech.formula", {
+                              p: fmt.number(rec.priority ?? 0, 3),
+                              delta: fmt.number(rec.delta_composite ?? 0, 2),
+                              conf: fmt.number(rec.confidence ?? 0, 2),
+                              effort: fmt.number(rec.effort ?? 0),
+                            })}
+                      </dd>
+                    </div>
+                    {isV2 && (
+                      <div>
+                        <dt>{t("board.card.tech.opportunity")}</dt>
+                        <dd>
+                          {t("board.card.tech.opportunityValue", {
+                            opp: fmt.number(rec.opportunity_vi ?? 0, 1),
+                            target: fmt.number(rec.target_vi ?? 0, 1),
+                            self: fmt.number(rec.self_vi_scope ?? 0, 1),
+                            uptake: fmt.percent(rec.uptake_prior ?? 0),
+                          })}
+                        </dd>
+                      </div>
+                    )}
+                    <div>
+                      <dt>{t(isV2 && rec.confidence_method === "bootstrap_gap_holds" ? "board.card.tech.confidenceVi" : "board.card.tech.confidence")}</dt>
+                      <dd>{fmt.percent(rec.confidence ?? 0)}</dd>
+                    </div>
+                    {isV2 && rec.mde != null && (
+                      <div>
+                        <dt>{t("board.card.tech.mde")}</dt>
+                        <dd>{t("board.card.tech.mdeValue", { mde: fmt.number(rec.mde, 1) })}</dd>
+                      </div>
+                    )}
+                  </dl>
+                </div>
+              </Details>
             </div>
-            <div>
-              <dt>{t("board.card.tech.confidence")}</dt>
-              <dd>{fmt.percent(rec.confidence ?? 0)}</dd>
-            </div>
-          </dl>
+          </Collapse>
         </div>
-      </Details>
+      )}
+
     </>
   );
 }

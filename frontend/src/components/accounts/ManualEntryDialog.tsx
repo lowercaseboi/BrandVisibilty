@@ -3,7 +3,10 @@ import type { FormEvent } from "react";
 import { saveAccount, testAccount } from "../../api/client";
 import type { AccountStatus, ChannelId } from "../../api/types";
 import { useT } from "../../i18n";
+import { useDetails } from "../../settings/details";
 import type { MessageKey } from "../../i18n";
+import { Collapse } from "../ui/Collapse";
+import { DisclosureMark } from "../ui/DisclosureMark";
 import { AccountDialog } from "./AccountDialog";
 import { accountErrorText } from "./accountErrors";
 import { collectFields, fieldMeta, isAccountChannel, platformKey } from "./accountsModel";
@@ -31,7 +34,9 @@ export function ManualEntryDialog({
   fallbackFocus: () => HTMLElement | null;
 }) {
   const t = useT();
+  const { showDetails } = useDetails();
   const uid = useId();
+  const [howOpen, setHowOpen] = useState(false);
   const channel: ChannelId = status.channel;
   const platform = t(platformKey(channel));
   const metas = useMemo(() => status.manual_fields.map(fieldMeta), [status.manual_fields]);
@@ -83,7 +88,7 @@ export function ManualEntryDialog({
       else setPhase(result.ok ? { kind: "ok" } : { kind: "testFailed", detail: result.detail });
     } catch (err) {
       setPhase({ kind: "edit" });
-      setError(accountErrorText(t, err));
+      setError(accountErrorText(t, err, showDetails));
     }
   };
 
@@ -94,7 +99,7 @@ export function ManualEntryDialog({
           <p className="alert alert-ok" role="status">
             {t("brandinfo.accounts.manual.savedOk")}
           </p>
-          <div className="acc-dialog-actions">
+          <div className="sheet-actions">
             {/* oxlint-disable-next-line jsx-a11y/no-autofocus -- moves focus to the only action after the form is replaced */}
             <button type="button" className="btn btn-primary" onClick={onClose} autoFocus>
               {t("brandinfo.accounts.done")}
@@ -106,14 +111,25 @@ export function ManualEntryDialog({
           <p className="muted small">{t("brandinfo.accounts.manual.intro", { platform })}</p>
 
           {howto.length > 0 && (
-            <details className="acc-howto">
-              <summary>{t("brandinfo.accounts.manual.howTitle")}</summary>
-              <ol>
-                {howto.map((step, i) => (
-                  <li key={i}>{step}</li>
-                ))}
-              </ol>
-            </details>
+            <div className="acc-howto">
+              <button
+                type="button"
+                className="acc-howto-toggle"
+                aria-expanded={howOpen}
+                aria-controls={`${uid}-howto`}
+                onClick={() => setHowOpen((v) => !v)}
+              >
+                <span>{t("brandinfo.accounts.manual.howTitle")}</span>
+                <DisclosureMark open={howOpen} />
+              </button>
+              <Collapse open={howOpen} id={`${uid}-howto`}>
+                <ol>
+                  {howto.map((step, i) => (
+                    <li key={i}>{step}</li>
+                  ))}
+                </ol>
+              </Collapse>
+            </div>
           )}
 
           {metas.length === 0 && <p className="muted">{t("brandinfo.accounts.manual.noFields")}</p>}
@@ -160,7 +176,7 @@ export function ManualEntryDialog({
             {phase.kind === "saving" ? t("brandinfo.accounts.manual.saving") : phase.kind === "testing" ? t("brandinfo.accounts.manual.testing") : ""}
           </p>
 
-          <div className="acc-dialog-actions">
+          <div className="sheet-actions">
             <button type="button" className="btn btn-ghost" onClick={onClose}>
               {phase.kind === "testFailed" ? t("brandinfo.accounts.close") : t("brandinfo.accounts.cancel")}
             </button>

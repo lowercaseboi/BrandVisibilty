@@ -9,6 +9,7 @@ import {
   impactOf,
   isExportOnly,
   localizeReasoningParams,
+  plainFinding,
   plainWhy,
   reasoningMessages,
 } from "./recView";
@@ -70,6 +71,20 @@ describe("capLine", () => {
     expect(capLine(null, 10)).toBeNull();
     expect(capLine(5, 0)).toBeNull();
     expect(capLine(Number.NaN, 4)).toBeNull();
+  });
+});
+
+describe("impactOf (metrics v2)", () => {
+  it("uses the measured expected gain in VI points, one decimal", () => {
+    expect(impactOf(44.4, "presence", "assumption.opportunity", { gain: 4.58, belowMde: false })).toEqual({ kind: "points", n: 4.6, v2: true });
+    expect(impactOf(44.4, "presence", "assumption.opportunity", { gain: 0.3 })).toEqual({ kind: "small", v2: true });
+  });
+  it("flags gains a follow-up check can't confirm", () => {
+    expect(impactOf(30, "presence", "assumption.opportunity_small", { gain: 2.02, belowMde: true })).toEqual({ kind: "belowMde", n: 2 });
+  });
+  it("falls back to v1 when there is no measured gain", () => {
+    expect(impactOf(4.4, "presence", undefined, { gain: null })).toEqual({ kind: "points", n: 4 });
+    expect(impactOf(0, "presence", "assumption.opportunity_none", { gain: 0 })).toEqual({ kind: "flat" });
   });
 });
 
@@ -173,7 +188,7 @@ describe("reasoningMessages", () => {
     );
     expect(vars.provider).toBe("Google Gemini");
     expect(vars.intent_example).toBe(en("dashboard.intent.problem_first"));
-    expect(vars.gap_type).toBe("Low presence");
+    expect(vars.gap_type).toBe(en("dashboard.gaps.type.presence"));
     expect(vars.coverage_pct).toBe("12");
     // An intent with no example (e.g. custom questions) quotes its label instead.
     expect(localizeReasoningParams({ intent: "custom", intent_label: "custom" }, en, fmt, labelOf).intent_example).toBe("“custom”");
@@ -278,5 +293,46 @@ describe("plainWhy", () => {
     expect(plainWhy(gap("presence", ["missing"]), answers, entities, labelOf)).toBeNull();
     expect(plainWhy(gap("representation", ["a"]), answers, entities, labelOf)).toBeNull();
     expect(plainWhy(gap("source", ["a"]), answers, entities, labelOf)).toBeNull();
+  });
+});
+
+describe("plainFinding", () => {
+  const gap = (gap_type: string, detail: Record<string, unknown>) => ({ gap_type, detail }) as unknown as Gap;
+  const ents = { acme: "Acme Vada Pav" };
+
+  it("turns rates into 'about 1 in N' and never shows a percentage", () => {
+    const m = plainFinding(gap("presence", { coverage: 0.1 }), en, ents, labelOf);
+    expect(m).toEqual({ key: "board.finding.presenceFew", vars: { n: 10 } });
+    expect(en(m.key, m.vars)).toBe("AI assistants mention you in only about 1 in 10 answers about your kind of business.");
+  });
+
+  it("says never / often for zero and near-half rates", () => {
+    expect(plainFinding(gap("presence", { coverage: 0 }), en, ents, labelOf).key).toBe("board.finding.presenceNone");
+    expect(plainFinding(gap("presence", { coverage: 0.6 }), en, ents, labelOf).key).toBe("board.finding.presenceSome");
+  });
+
+  it("names the AI and the question style for narrower presence gaps", () => {
+    const ai = plainFinding(gap("presence", { scope: "provider", provider_id: "gemini", coverage: 0 }), en, ents, labelOf);
+    expect(en(ai.key, ai.vars)).toBe("Google Gemini never mentions you.");
+    const intent = plainFinding(gap("presence", { scope: "intent", intent_type: "problem_first", coverage: 0.2 }), en, ents, labelOf);
+    expect(intent.key).toBe("board.finding.intentFew");
+    expect(intent.vars?.example).toBe(en("dashboard.intent.problem_first"));
+  });
+
+  it("rounds a position to a whole number", () => {
+    expect(plainFinding(gap("prominence", { mean_rank: 3.4 }), en, ents, labelOf)).toEqual({ key: "board.finding.prominence", vars: { rank: 3 } });
+    expect(plainFinding(gap("prominence", { mean_rank: 1.2 }), en, ents, labelOf).key).toBe("board.finding.prominenceLow");
+  });
+
+  it("covers competitive, representation, source and unknown gaps without numbers", () => {
+    expect(plainFinding(gap("competitive", { competitor_id: "acme", beat_rate: 0.8 }), en, ents, labelOf)).toEqual({
+      key: "board.finding.competitiveMost",
+      vars: { competitor: "Acme Vada Pav" },
+    });
+    expect(plainFinding(gap("representation", { disagreement_rate: 0.3, disagree_with_each_other: true }), en, ents, labelOf).key).toBe(
+      "board.finding.representationBoth",
+    );
+    expect(plainFinding(gap("source", { non_mentioning_count: 4, dominant_source_count: 5 }), en, ents, labelOf).key).toBe("board.finding.sourceMost");
+    expect(plainFinding(gap("mystery", {}), en, ents, labelOf).key).toBe("board.finding.unknown");
   });
 });

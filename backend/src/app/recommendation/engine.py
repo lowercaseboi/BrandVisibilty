@@ -13,6 +13,11 @@ Pipeline per gap:
      one recommendation per id, capped at `max_recommendations` — and the gate reports how
      many valid ones the cap cut, so the UI can say "top 10 of 14".
 
+Metrics v2 (when the run's `metrics_v2` is passed): step 2 is replaced by the *measured*
+opportunity of the gap and an assumed per-action uptake (`opportunity.py`), confidence by the
+bootstrap probability that the gap is real, and priority = expected gain x confidence / effort.
+The v1 simulated `delta_composite` is still computed and stored, labelled legacy.
+
 Reasoning is a plain-English template here (`drafted_by="template"`), also emitted as a
 translatable key + params (`reasoning.py`, `REASONING_KEYS.md`). An LLM drafter can
 optionally rewrite the prose later (see `drafter.py`) without changing what was found or
@@ -24,11 +29,13 @@ from __future__ import annotations
 import hashlib
 import math
 import random
+from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from typing import NamedTuple
 
 from app.analysis.scorer import score
-from app.analysis.types import EntityMention, Gap, Observation
+from app.analysis.types import DetectionConfig, EntityMention, Gap, Observation
+from app.recommendation import opportunity as opp
 from app.recommendation import reasoning
 
 # ---------------------------------------------------------------------------
@@ -155,6 +162,18 @@ class Recommendation:
     # the params for it plus `action_key` / `assumption_key` naming the other two sentences.
     reasoning_key: str = ""
     reasoning_params: dict[str, str | int | float] = field(default_factory=dict)
+    # Metrics v2 (None on v1-only recommendations): measured opportunity of the gap in VI points,
+    # the assumed share an action captures, the resulting expected gain, how confidence was
+    # computed, and whether the gain is below what a follow-up run can detect (MDE).
+    expected_gain_vi: float | None = None
+    opportunity_vi: float | None = None
+    target_vi: float | None = None
+    self_vi_scope: float | None = None
+    scope_share: float | None = None
+    uptake_prior: float | None = None
+    confidence_method: str = "evidence_count"
+    below_mde: bool | None = None
+    mde: float | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -282,8 +301,9 @@ def _rank_key(rec: Recommendation) -> tuple:
     # the evidence behind them and then the cheaper action, so "ranked on evidence alone"
     # holds for unscored gap types. The id makes the order deterministic; the last two keys
     # only order copies of one id (which the gate then collapses), independent of input order.
+    gain = rec.expected_gain_vi if rec.expected_gain_vi is not None else rec.delta_composite
     return (
-        -rec.priority, -rec.delta_composite, -rec.confidence, rec.effort, rec.recommendation_id,
+        -rec.priority, -gain, -rec.confidence, rec.effort, rec.recommendation_id,
         -rec.evidence_count, rec.reasoning,
     )
 
@@ -355,11 +375,22 @@ def recommend_detailed(
     *,
     entity_names: dict[str, str] | None = None,
     max_recommendations: int = 10,
+    metrics_v2: Mapping | None = None,
+    mde: float | None = None,
+    priors: Mapping[str, float] | None = None,
+    detection_config: DetectionConfig | None = None,
 ) -> GateResult:
-    """Turn detected gaps into ranked, validated recommendations, plus the gate's counts."""
+    """Turn detected gaps into ranked, validated recommendations, plus the gate's counts.
+
+    With `metrics_v2` (the run's visibility block, cells included) ranking uses the measured
+    opportunity (module docstring); `mde` (VI points) flags gains a follow-up can't detect;
+    `priors` overrides `opportunity.UPTAKE_PRIOR` (e.g. recalibrated from the impact ledger).
+    """
     names = dict(entity_names or {})
     brand = names.get(self_entity_id, self_entity_id)
     base = _composite(observations, self_entity_id, competitor_entity_ids)
+    cells = list(metrics_v2.get("cells") or []) if metrics_v2 else None
+    uptake = dict(opp.UPTAKE_PRIOR if priors is None else priors)
 
     candidates: list[Recommendation] = []
     for gap in gaps:
@@ -370,12 +401,31 @@ def recommend_detailed(
         delta = round(delta, 2)
         n_evidence = len(gap.evidence_refs)
         confidence = _confidence(n_evidence)
+        measured = probability = None
+        if cells is not None:
+            measured = opp.opportunity(cells, gap, self_entity_id, competitor_entity_ids)
+            probability = opp.gap_probability(cells, gap, self_entity_id, detection_config)
 
         for action in actions_for_gap(gap)[:2]:
             effort = ACTION_EFFORT[action]
+            v2: dict | None = None
+            rec_confidence, priority = confidence, round(delta * confidence / effort, 3)
+            if measured is not None:
+                prior = uptake.get(action, 0.0)
+                gain = round(measured["opportunity_vi"] * prior, 2)
+                rec_confidence = probability if probability is not None else confidence
+                priority = round(gain * rec_confidence / effort, 3)
+                v2 = {
+                    **measured,
+                    "uptake_prior": prior,
+                    "expected_gain_vi": gain,
+                    "confidence_method": "bootstrap_gap_holds" if probability is not None else "evidence_count",
+                    "below_mde": (gain < mde) if mde is not None else None,
+                    "mde": round(mde, 2) if mde is not None else None,
+                }
             text, key, params = reasoning.build(
                 action, gap, brand, names, n_evidence, n_changed, delta,
-                presence_rank=PRESENCE_CLOSURE_RANK, prominence_rank=PROMINENCE_CLOSURE_RANK,
+                presence_rank=PRESENCE_CLOSURE_RANK, prominence_rank=PROMINENCE_CLOSURE_RANK, v2=v2,
             )
             candidates.append(
                 Recommendation(
@@ -383,15 +433,16 @@ def recommend_detailed(
                     gap_id=gap.gap_id,
                     action=action,
                     action_class=ACTION_CLASS[action],
-                    priority=round(delta * confidence / effort, 3),
+                    priority=priority,
                     delta_composite=delta,
-                    confidence=confidence,
+                    confidence=rec_confidence,
                     effort=effort,
                     reasoning=text,
                     evidence_refs=tuple(gap.evidence_refs),
                     evidence_count=n_evidence,
                     reasoning_key=key,
                     reasoning_params=params,
+                    **(v2 or {}),
                 )
             )
 
@@ -406,10 +457,12 @@ def recommend(
     *,
     entity_names: dict[str, str] | None = None,
     max_recommendations: int = 10,
+    metrics_v2: Mapping | None = None,
+    mde: float | None = None,
 ) -> list[Recommendation]:
     """Turn detected gaps into ranked, validated recommendations (sorted by priority desc).
     `recommend_detailed` also returns how many the cap cut."""
     return recommend_detailed(
         gaps, observations, self_entity_id, competitor_entity_ids,
-        entity_names=entity_names, max_recommendations=max_recommendations,
+        entity_names=entity_names, max_recommendations=max_recommendations, metrics_v2=metrics_v2, mde=mde,
     ).passed

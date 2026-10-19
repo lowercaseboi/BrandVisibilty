@@ -15,12 +15,12 @@ import { brandHref } from "../../components/module/modules";
 import { TransitionLink } from "../../components/module/transition";
 import { T, useFormat, useT } from "../../i18n";
 import { Details } from "../../settings/details";
-import { prefersReducedMotion } from "../../settings/motion";
+import { scrollBehavior } from "../../settings/motion";
 import { useBrandData } from "./BrandContext";
 
 /**
- * Gaps & evidence: the detected gaps (left) connected to the verbatim AI responses behind them
- * (right). Selecting a gap narrows the evidence to its `evidence_refs`; nothing selected shows a
+ * What's holding you back: the top gaps (left, the rest behind "Show more") connected to the AI
+ * answers behind them (right). Selecting a gap narrows the evidence to its `evidence_refs`; nothing selected shows a
  * spotlight answer and every response. The URL is the state, so links deep-link straight in:
  *   ?run=<id>   which analysis (default: the latest; an older one shows a note)
  *   ?gap=<id>   a selected gap (scrolled into view on arrival)
@@ -115,7 +115,7 @@ export function GapsModule() {
     }
     if (handled.current === selectedId) return;
     handled.current = selectedId;
-    const behavior: ScrollBehavior = prefersReducedMotion() ? "auto" : "smooth";
+    const behavior: ScrollBehavior = scrollBehavior();
     if (pickedByUser.current) {
       pickedByUser.current = false;
       const el = evidenceRef.current;
@@ -175,11 +175,13 @@ export function GapsModule() {
         <div ref={listPaneRef} className="gaps-pane gaps-list-pane">
           <div className="module-section-head">
             <div>
-              <p className="eyebrow">{t("modules.gaps.eyebrow")}</p>
+              <Details>
+                <p className="eyebrow">{t("modules.gaps.eyebrow")}</p>
+              </Details>
               <h2>
                 {t("dashboard.gaps.title")} <span className="count">{fmt.number(gaps.length)}</span>
               </h2>
-              <p>{gaps.length > 0 ? t("modules.gaps.hint") : t("dashboard.gaps.intro")}</p>
+              <p>{gaps.length > 0 ? t("dashboard.gaps.hint") : t("dashboard.gaps.intro")}</p>
             </div>
           </div>
           <GapList
@@ -204,9 +206,9 @@ export function GapsModule() {
         >
           <div className="module-section-head">
             <div>
-              <p className="eyebrow">{t("modules.evidence.eyebrow")}</p>
-              <h2 id={`${evidenceId}-title`}>{t("pages.answers.title")}</h2>
-              <p>{t("pages.answers.lede")}</p>
+              <p className="eyebrow">{t("dashboard.evidence.eyebrow")}</p>
+              <h2 id={`${evidenceId}-title`}>{t("dashboard.evidence.title")}</h2>
+              <p>{t("dashboard.evidence.lede")}</p>
               <Details>
                 <p className="small muted pg-tech">
                   {t("pages.answers.runLabel")} <code>{runId}</code>
@@ -241,12 +243,15 @@ export function GapsModule() {
                     vars={{ n: fmt.number(n) }}
                   />
                   {obsData && found !== n && found > 0 && (
-                    <> {t("modules.evidence.found", { found: fmt.number(found) })}</>
+                    <Details>
+                      {" "}
+                      {t("modules.evidence.found", { found: fmt.number(found) })}
+                    </Details>
                   )}
                 </span>
                 <button
                   type="button"
-                  className="btn btn-secondary btn-small evidence-clear"
+                  className="link-quiet evidence-clear"
                   onClick={clear}
                   aria-label={t("modules.evidence.clearAria")}
                 >
@@ -276,15 +281,14 @@ export function GapsModule() {
 
           {obsData && !selecting && sample && (
             <div className="evidence-spotlight">
-              <p className="eyebrow evidence-spotlight-label">{t("modules.evidence.spotlight")}</p>
               <SampleAnswer
                 obs={sample}
                 runId={runId}
                 labelOf={labelOf}
                 caption={
                   sampleReason(sample) === "outranked"
-                    ? t("modules.evidence.spotlightOutranked")
-                    : t("modules.evidence.spotlightNamed")
+                    ? t("dashboard.evidence.spotlightOutranked")
+                    : t("dashboard.evidence.spotlightNamed")
                 }
               />
             </div>

@@ -1,10 +1,14 @@
 import { Link, Navigate, Outlet, useLocation, useParams } from "react-router-dom";
 import { EmptyState } from "../../components/EmptyState";
+import { MobileTabBar } from "../../components/MobileTabBar";
 import { brandHref, gapsHref } from "../../components/module/modules";
 import { useT } from "../../i18n";
 import { BrandDataProvider, useBrandData } from "./BrandContext";
 
-/** The hub or a module, unless the brand doesn't exist: then one clear "not found" state. */
+/**
+ * The hub or a module, unless the brand doesn't exist: then one clear "not found" state. On phones
+ * the brand's pages also get the bottom tab bar (MobileTabBar; it hides itself where it doesn't belong).
+ */
 function BrandOutlet() {
   const t = useT();
   const { status, brandKey } = useBrandData();
@@ -23,7 +27,12 @@ function BrandOutlet() {
       />
     );
   }
-  return <Outlet />;
+  return (
+    <>
+      <Outlet />
+      <MobileTabBar brandKey={brandKey} />
+    </>
+  );
 }
 
 /** `/brands/:brandKey/*` — loads the brand once and renders the hub or a module inside it. */

@@ -1,8 +1,10 @@
 import type { BrandProfile, QuestionSet, Snapshot, TrendVerdict } from "../../api/types";
-import { humanize, ratingFromRange, scoreBandClass, scoreOutOf100, scoreRange } from "../../format";
+import { humanize, scoreBandClass } from "../../format";
+import { headline, headlineRating, headlineValue, previewTrend, viDigits } from "../dashboard/visibility";
 import { useFormat, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n";
 import { useBrandData } from "../../pages/brand/BrandContext";
+import { Details } from "../../settings/details";
 import { POSTING_CHANNELS, countConnected } from "../accounts/accountsModel";
 import { useAccounts } from "../accounts/useAccounts";
 import { countGapTypes, sparkPoints } from "./previewMath";
@@ -82,7 +84,7 @@ const SPARK_W = 112;
 const SPARK_H = 34;
 const SPARK_MAX = 12;
 
-/** Composite score over the last analyses, oldest → newest, with the newest point marked. */
+/** Headline score (Visibility Index, or v1 composite) over the last analyses, oldest → newest, newest marked. */
 export function Sparkline({ values, band }: { values: number[]; band: "low" | "mid" | "high" }) {
   const t = useT();
   const fmt = useFormat();
@@ -100,8 +102,8 @@ export function Sparkline({ values, band }: { values: number[]; band: "low" | "m
       role="img"
       aria-label={t("hub.preview.analysis.trendAria", {
         n: values.length,
-        first: fmt.number(scoreOutOf100(values[0])),
-        last: fmt.number(scoreOutOf100(values[values.length - 1])),
+        first: fmt.number(values[0], viDigits(values[0])),
+        last: fmt.number(values[values.length - 1], viDigits(values[values.length - 1])),
       })}
     >
       <polygon className="hub-spark-area" points={area} />
@@ -117,11 +119,11 @@ export function AnalysisPreview({ latest, history }: { latest: Snapshot | null; 
   const fmt = useFormat();
   if (!latest) return <p className="hub-pv-empty">{t("hub.preview.analysis.none")}</p>;
 
-  const score = scoreOutOf100(latest.analysis_result.composite_score);
-  const band = scoreBandClass(ratingFromRange(...scoreRange(latest.analysis_result)).band);
-  const series = history.slice(-SPARK_MAX).map((s) => s.analysis_result.composite_score);
-  const verdict = trendKey(latest.trend_verdict);
-  const tone = trendTone(latest.trend_verdict);
+  const score = headlineValue(latest);
+  const band = scoreBandClass(headlineRating(latest).band);
+  const series = history.slice(-SPARK_MAX).map((s) => headline(s).value);
+  const verdict = trendKey(previewTrend(latest));
+  const tone = trendTone(previewTrend(latest));
 
   return (
     <div className="hub-pv-analysis">
@@ -138,18 +140,19 @@ export function AnalysisPreview({ latest, history }: { latest: Snapshot | null; 
             <span aria-hidden="true">{tone === "up" ? "↗" : tone === "down" ? "↘" : "→"}</span> {t(verdict)}
           </span>
         )}
-        {history.length > 0 && <span className="muted">{t.n("hub.preview.analysis.runs", history.length)}</span>}
+        <Details>{history.length > 0 && <span className="muted">{t.n("hub.preview.analysis.runs", history.length)}</span>}</Details>
       </p>
     </div>
   );
 }
 
+// Plain names for the preview badges (the gaps page has its own wording).
 const GAP_TYPE_KEY: Record<string, MessageKey> = {
-  presence: "dashboard.gaps.type.presence",
-  prominence: "dashboard.gaps.type.prominence",
-  competitive: "dashboard.gaps.type.competitive",
-  representation: "dashboard.gaps.type.representation",
-  source: "dashboard.gaps.type.source",
+  presence: "hub.gapType.presence",
+  prominence: "hub.gapType.prominence",
+  competitive: "hub.gapType.competitive",
+  representation: "hub.gapType.representation",
+  source: "hub.gapType.source",
 };
 
 /** Gaps & evidence: how many gaps, with a small badge per gap type. */
@@ -166,7 +169,7 @@ export function GapsPreview({ latest }: { latest: Snapshot | null }) {
         {countGapTypes(gaps).map(([type, n]) => (
           <li key={type} className={`hub-pv-badge hub-pv-badge-${type}`}>
             {GAP_TYPE_KEY[type] ? t(GAP_TYPE_KEY[type]) : humanize(type)}
-            {n > 1 && <b>×{fmt.number(n)}</b>}
+            <Details>{n > 1 && <b>×{fmt.number(n)}</b>}</Details>
           </li>
         ))}
       </ul>

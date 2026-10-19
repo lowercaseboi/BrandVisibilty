@@ -12,6 +12,7 @@ import type {
   BrandProfile,
   BrandSummary,
   CreateBrandRequest,
+  ImpactResponse,
   Job,
   Observation,
   ObservationsResponse,
@@ -23,6 +24,10 @@ import type {
   TrendVerdict,
   UpdateBrandRequest,
 } from "./types";
+
+import { toast } from "../components/Toaster";
+import { getT } from "../i18n";
+import type { Lang } from "../i18n";
 
 // Default "/api": the Vite dev proxy (vite.config.ts) or nginx strips the
 // prefix and forwards to the FastAPI backend (docs/CONTRACT.md §7).
@@ -58,12 +63,31 @@ function describeDetail(body: unknown): string | null {
   return null;
 }
 
+// Free-tier hosting (Render) puts the backend to sleep when idle, and the first request then takes
+// ~30s to wake it. If nothing has answered yet and a request is this slow, say so once.
+const WAKE_NOTICE_MS = 4000;
+let serverAnswered = false;
+let wakeNoticeShown = false;
+
+function showWakeNotice() {
+  if (serverAnswered || wakeNoticeShown) return;
+  wakeNoticeShown = true;
+  const lang = typeof document !== "undefined" ? document.documentElement.lang : "en";
+  const t = getT((lang === "hi" || lang === "mr" ? lang : "en") as Lang);
+  toast(t("common.serverWaking"));
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
+  // Plain setTimeout (not window.*): the client also runs under node in the unit tests.
+  const wake = serverAnswered ? undefined : setTimeout(showWakeNotice, WAKE_NOTICE_MS);
   try {
     res = await fetch(`${API_BASE}${path}`, init);
+    serverAnswered = true;
   } catch {
     throw new ApiError(0, "Cannot reach the API server. Is the backend running on :8000?");
+  } finally {
+    clearTimeout(wake);
   }
   if (!res.ok) {
     let message = `${res.status} ${res.statusText}`;
@@ -166,6 +190,16 @@ export function getSnapshots(brandKey: string): Promise<Snapshot[]> {
  * already carries the same object as `trend_verdict`. */
 export function getTrend(brandKey: string): Promise<TrendVerdict> {
   return getJson(`/brands/${b(brandKey)}/trend`);
+}
+
+/** Metrics v2 impact ledger: each completed action and the measured change after it. */
+export function getImpact(brandKey: string): Promise<ImpactResponse> {
+  return getJson<ImpactResponse>(`/brands/${b(brandKey)}/impact`);
+}
+
+/** Download URL of a run's verifiable bundle (zip; scripts/verify_bundle.py re-checks it). */
+export function bundleUrl(brandKey: string, runId: string): string {
+  return `${API_BASE}/brands/${b(brandKey)}/snapshots/${b(runId)}/bundle`;
 }
 
 export async function getObservations(brandKey: string, runId: string): Promise<ObservationsResponse> {

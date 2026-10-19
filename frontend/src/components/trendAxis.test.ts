@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { estimateWidth, pickAxisLabels } from "./trendAxis";
+import { estimateWidth, nearestIndex, pickAxisLabels } from "./trendAxis";
 import type { AxisLabel } from "./trendAxis";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -126,5 +126,39 @@ describe("pickAxisLabels", () => {
   it("handles a single check and no checks", () => {
     expect(pickAxisLabels(input([T0], 390)).map((l) => l.text)).toEqual(["1 Jul"]);
     expect(pickAxisLabels(input([], 390))).toEqual([]);
+  });
+});
+
+describe("nearestIndex", () => {
+  const xs = [40, 100, 160, 220];
+
+  it("picks the closest point", () => {
+    expect(nearestIndex(42, xs)).toBe(0);
+    expect(nearestIndex(129, xs)).toBe(1);
+    expect(nearestIndex(131, xs)).toBe(2);
+    expect(nearestIndex(220, xs)).toBe(3);
+  });
+
+  it("clamps to the ends outside the plot", () => {
+    expect(nearestIndex(-500, xs)).toBe(0);
+    expect(nearestIndex(9999, xs)).toBe(3);
+  });
+
+  it("breaks a tie towards the earlier point", () => {
+    expect(nearestIndex(130, xs)).toBe(1);
+  });
+
+  it("handles one point and no points", () => {
+    expect(nearestIndex(10, [50])).toBe(0);
+    expect(nearestIndex(10, [])).toBe(-1);
+  });
+
+  it("matches a linear scan on uneven spacing", () => {
+    const uneven = [0, 3, 4, 20, 21, 50, 90];
+    for (let x = -5; x <= 95; x += 0.5) {
+      let best = 0;
+      for (let i = 1; i < uneven.length; i++) if (Math.abs(uneven[i] - x) < Math.abs(uneven[best] - x)) best = i;
+      expect(nearestIndex(x, uneven)).toBe(best);
+    }
   });
 });

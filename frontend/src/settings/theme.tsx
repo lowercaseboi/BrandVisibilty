@@ -38,6 +38,23 @@ function subscribeSystem(onChange: () => void) {
   return () => m?.removeEventListener("change", onChange);
 }
 
+/** The page background as a hex colour: `--bg` is oklch, which theme-color meta tags don't all parse. */
+function pageBackground(): string {
+  const fallback = "#20201f";
+  try {
+    const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+    const ctx = document.createElement("canvas").getContext("2d");
+    if (!bg || !ctx) return fallback;
+    ctx.canvas.width = ctx.canvas.height = 1;
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, 1, 1);
+    const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+    return `#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+  } catch {
+    return fallback;
+  }
+}
+
 const systemIsDark = () => media()?.matches ?? false;
 
 const ThemeContext = createContext<ThemeCtx>({
@@ -54,6 +71,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useLayoutEffect(() => {
     document.documentElement.dataset.theme = resolved;
+    // Phone status bar / browser chrome matches the page behind the (transparent) header.
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", pageBackground());
   }, [resolved]);
 
   const setPref = useCallback((p: ThemePref) => {

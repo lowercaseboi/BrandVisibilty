@@ -5,6 +5,9 @@
 /** Longest we ever hold a navigation for the lift (hub.css `card-pick` runs 200ms). */
 export const PICK_WAIT_MAX = 260;
 
+/** Phones: how long the card stays pressed in before the page slides on (pages.css `.is-pressed`). */
+export const PRESS_MS = 120;
+
 const clamp = (v: number) => Math.max(-1, Math.min(1, v));
 
 export interface PickPose {
@@ -69,5 +72,23 @@ export function pickCard(card: HTMLElement): Promise<void> {
     };
     card.addEventListener("animationend", onEnd);
     timer = window.setTimeout(finish, PICK_WAIT_MAX);
+  });
+}
+
+/**
+ * The phone version: no 3D lift across a deck (one card per row, and a slide follows anyway), just
+ * a quick press — the card dips (pages.css `.is-pressed`) and the caller navigates PRESS_MS later.
+ * Resolves false if this card is already pressed (a double tap), so it only navigates once.
+ */
+export function pressCard(card: HTMLElement): Promise<boolean> {
+  if (card.classList.contains("is-pressed")) return Promise.resolve(false);
+  card.classList.add("is-pressed");
+  return new Promise((resolve) => {
+    window.setTimeout(() => {
+      resolve(true);
+      // Still pressed as the transition snapshots it; if the list is somehow still here a moment
+      // later, let the card spring back.
+      window.setTimeout(() => card.classList.remove("is-pressed"), 400);
+    }, PRESS_MS);
   });
 }

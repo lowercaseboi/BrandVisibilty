@@ -1,7 +1,8 @@
 """Recommendation reasoning as translatable templates — pure, no I/O.
 
 Each recommendation's English `reasoning` is three sentences: a finding (what the data
-shows), the recommended action, and the simulated impact. Each sentence is a fixed template
+shows), the recommended action, and the impact (metrics v2: the measured opportunity times an
+assumed uptake; older snapshots: the v1 simulation). Each sentence is a fixed template
 from `TEMPLATES`, rendered with one shared params dict. The engine stores the finding's key
 as `reasoning_key` and the params (which also name the other two sentences, `action_key` and
 `assumption_key`) as `reasoning_params`, so a UI can render the same text in another
@@ -131,6 +132,35 @@ TEMPLATES: dict[str, str] = {
     "assumption.unscored": (
         "This gap isn't measured by the visibility score (it comes from brand-named questions or the "
         "web layer), so no score change is simulated; it is ranked on evidence alone."
+    ),
+    # --- metrics v2 impact sentences: measured opportunity x an assumed uptake ---
+    "assumption.opportunity": (
+        "In these answers the typical competitor scores {target_vi} on the visibility index and {brand} "
+        "scores {self_vi}; matching it would add up to {opportunity} points to {brand}'s overall index. "
+        "Assuming this action captures about {uptake_pct}% of that, expect about +{expected_gain} points "
+        "(an estimate, not a measurement)."
+    ),
+    "assumption.opportunity_vs": (
+        "{competitor} scores {target_vi} on the visibility index in these answers and {brand} scores "
+        "{self_vi}; matching it would add up to {opportunity} points to {brand}'s overall index. "
+        "Assuming this action captures about {uptake_pct}% of that, expect about +{expected_gain} points "
+        "(an estimate, not a measurement)."
+    ),
+    "assumption.opportunity_small": (
+        "In these answers the typical competitor scores {target_vi} on the visibility index and {brand} "
+        "scores {self_vi}. Assuming this action captures about {uptake_pct}% of the gap, expect about "
+        "+{expected_gain} points: less than the {mde} points a follow-up run can reliably detect, so a later "
+        "check may not confirm it even if it worked."
+    ),
+    "assumption.opportunity_vs_small": (
+        "{competitor} scores {target_vi} on the visibility index in these answers and {brand} scores "
+        "{self_vi}. Assuming this action captures about {uptake_pct}% of the gap, expect about "
+        "+{expected_gain} points: less than the {mde} points a follow-up run can reliably detect, so a later "
+        "check may not confirm it even if it worked."
+    ),
+    "assumption.opportunity_none": (
+        "Competitors don't score higher than {brand} in these answers, so no gain is estimated; "
+        "it is ranked on evidence alone."
     ),
 }
 
@@ -272,6 +302,34 @@ def assumption(
     return f"assumption.{gap.gap_type}", params
 
 
+def assumption_v2(gap: Gap, names: dict[str, str], v2: dict) -> tuple[str, Params]:
+    """(impact-sentence key, params) from the measured opportunity (metrics v2).
+
+    `v2`: opportunity_vi, target_vi, self_vi_scope, uptake_prior, expected_gain_vi, below_mde, mde.
+    """
+    if gap.gap_type not in ("presence", "prominence", "competitive"):
+        return "assumption.unscored", {}
+    if not v2.get("opportunity_vi") or v2.get("target_vi") is None:
+        return "assumption.opportunity_none", {}
+    params: Params = {
+        "target_vi": f"{v2['target_vi']:.1f}",
+        "self_vi": f"{(v2.get('self_vi_scope') or 0.0):.1f}",
+        "opportunity": f"{v2['opportunity_vi']:.1f}",
+        "uptake_pct": _pct(v2.get("uptake_prior") or 0.0),
+        "expected_gain": f"{v2['expected_gain_vi']:.1f}",
+    }
+    key = "assumption.opportunity"
+    if gap.gap_type == "competitive":
+        comp_id = gap.detail.get("competitor_id", "")
+        params["competitor_id"] = comp_id
+        params["competitor"] = names.get(comp_id, comp_id)
+        key += "_vs"
+    if v2.get("below_mde") and v2.get("mde") is not None:
+        params["mde"] = f"{v2['mde']:.1f}"
+        key += "_small"
+    return key, params
+
+
 def build(
     action: str,
     gap: Gap,
@@ -283,13 +341,18 @@ def build(
     *,
     presence_rank: int,
     prominence_rank: int,
+    v2: dict | None = None,
 ) -> tuple[str, str, Params]:
-    """(English reasoning, reasoning_key, reasoning_params) for one recommendation."""
+    """(English reasoning, reasoning_key, reasoning_params) for one recommendation. With `v2`
+    (metrics v2 opportunity), the impact sentence is the measured one, not the simulation."""
     finding_key, params = finding(gap, brand, names, n_evidence)
     action_key, action_params = action_sentence(action, gap, brand, names)
-    assumption_key, assumption_params = assumption(
-        gap, n_changed, delta, names, presence_rank=presence_rank, prominence_rank=prominence_rank
-    )
+    if v2 is not None:
+        assumption_key, assumption_params = assumption_v2(gap, names, v2)
+    else:
+        assumption_key, assumption_params = assumption(
+            gap, n_changed, delta, names, presence_rank=presence_rank, prominence_rank=prominence_rank
+        )
     merged: Params = {**params, **action_params, **assumption_params}
     merged["action_key"] = action_key
     merged["assumption_key"] = assumption_key

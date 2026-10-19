@@ -5,6 +5,7 @@ import type { Gap, Observation, Recommendation } from "../../api/types";
 import { dashboard as enDashboard } from "../../i18n/en/dashboard";
 import type { Formatter, MessageKey, TFunction, Vars } from "../../i18n";
 import { gapTypeText, humanizeId } from "../dashboard/helpers";
+import { oneIn, wholeRank } from "../ui/plain";
 
 export interface Msg {
   key: MessageKey;
@@ -42,23 +43,33 @@ export function capLine(total: number | null | undefined, shown: number): { n: n
 }
 
 export type Impact =
-  | { kind: "points"; n: number }
-  | { kind: "small" }
+  | { kind: "points"; n: number; v2?: true }
+  | { kind: "small"; v2?: true }
+  /** Metrics v2: a real but small expected gain, below what a follow-up run can confirm. */
+  | { kind: "belowMde"; n: number }
   /** A scored gap whose simulated fix barely moves the score. */
   | { kind: "flat" }
   /** A gap the visibility score doesn't measure (how the brand is described / which sites AI reads). */
   | { kind: "notScored"; reason: "representation" | "source" };
 
 /**
- * What a recommendation could change, from its simulated score gain, the engine's impact sentence
- * (`assumption.unscored` = the gap type isn't in the score model) and, for older snapshots without
- * it, the gap's type.
+ * What a recommendation could change: metrics v2's expected gain in Visibility Index points when the
+ * snapshot has it (`below_mde` = too small for a follow-up run to confirm), else v1's simulated
+ * composite gain; plus the engine's impact sentence (`assumption.unscored` = the gap type isn't in the
+ * score model) and, for older snapshots without it, the gap's type.
  */
 export function impactOf(
   delta: number | null | undefined,
   gapType: string | null | undefined,
   assumptionKey?: unknown,
+  v2?: { gain: number | null | undefined; belowMde?: boolean | null },
 ): Impact {
+  if (v2 !== undefined && typeof v2.gain === "number" && Number.isFinite(v2.gain) && v2.gain > 0) {
+    // Visibility Index points: one decimal matters (a category leader sits around 30).
+    const n = Math.round(v2.gain * 10) / 10;
+    if (v2.belowMde) return { kind: "belowMde", n };
+    return n >= 0.5 ? { kind: "points", n, v2: true } : { kind: "small", v2: true };
+  }
   const d = typeof delta === "number" && Number.isFinite(delta) ? delta : 0;
   if (d > 0) {
     const n = Math.round(d);
@@ -85,6 +96,9 @@ export function isExportOnly(action: string): boolean {
 // `dashboard.recs.why.<key>` from the same params.
 // ---------------------------------------------------------------------------------------------
 
+// The English dictionary doubles as the schema for the reasoning keys: a server-sent
+// `reasoning_key` is only rendered when it exists here (otherwise the English reasoning string is
+// shown). So the keys listed above must exist, spelled identically, in i18n/en/dashboard.ts.
 const DASHBOARD_KEYS: Record<string, string> = enDashboard;
 
 type Params = Record<string, string | number>;
@@ -275,5 +289,71 @@ export function plainWhy(
     }
     default:
       return null;
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The gap in plain words, for the card's "Why" when no real question is available (rates become
+// "about 1 in N", positions whole numbers). The numeric wording stays in the Analytical view.
+// ---------------------------------------------------------------------------------------------
+
+function numberOf(d: Record<string, unknown>, key: string): number | undefined {
+  const v = d[key];
+  return typeof v === "number" && Number.isFinite(v) ? v : undefined;
+}
+
+/** "none" / "about 1 in N" / "often" wording of a share that is below half. */
+function shareKey(share: number, keys: { none: MessageKey; few: MessageKey; some: MessageKey }): Msg {
+  if (share <= 0) return { key: keys.none };
+  const n = oneIn(share);
+  return n ? { key: keys.few, vars: { n } } : { key: keys.some };
+}
+
+export function plainFinding(
+  gap: Gap,
+  t: TFunction,
+  entities: Record<string, string> | undefined,
+  labelOf: (providerId: string) => string,
+): Msg {
+  const d = gap.detail ?? {};
+  switch (gap.gap_type) {
+    case "presence": {
+      const cov = numberOf(d, "coverage") ?? 0;
+      if (d.scope === "provider") {
+        const ai = labelOf(String(d.provider_id ?? ""));
+        const m = shareKey(cov, { none: "board.finding.providerNone", few: "board.finding.providerFew", some: "board.finding.providerSome" });
+        return { key: m.key, vars: { ...m.vars, ai } };
+      }
+      if (d.scope === "intent") {
+        const exampleKey = `intent.${String(d.intent_type ?? "")}`;
+        if (typeof DASHBOARD_KEYS[exampleKey] !== "string")
+          return shareKey(cov, { none: "board.finding.intentGenericNone", few: "board.finding.intentGenericFew", some: "board.finding.intentGenericSome" });
+        const m = shareKey(cov, { none: "board.finding.intentNone", few: "board.finding.intentFew", some: "board.finding.intentSome" });
+        return { key: m.key, vars: { ...m.vars, example: t(`dashboard.${exampleKey}` as MessageKey) } };
+      }
+      return shareKey(cov, { none: "board.finding.presenceNone", few: "board.finding.presenceFew", some: "board.finding.presenceSome" });
+    }
+    case "prominence": {
+      const rank = wholeRank(numberOf(d, "mean_rank") ?? 1);
+      return rank > 1 ? { key: "board.finding.prominence", vars: { rank } } : { key: "board.finding.prominenceLow" };
+    }
+    case "competitive": {
+      const id = String(d.competitor_id ?? "");
+      const competitor = entities?.[id] ?? humanizeId(id);
+      return { key: (numberOf(d, "beat_rate") ?? 0) >= 0.75 ? "board.finding.competitiveMost" : "board.finding.competitiveOften", vars: { competitor } };
+    }
+    case "representation": {
+      const rate = numberOf(d, "disagreement_rate") ?? 0;
+      const mixed = d.disagree_with_each_other === true;
+      if (rate > 0 && mixed) return { key: "board.finding.representationBoth" };
+      return { key: rate > 0 ? "board.finding.representation" : "board.finding.representationMixed" };
+    }
+    case "source": {
+      const k = numberOf(d, "non_mentioning_count") ?? 0;
+      const n = numberOf(d, "dominant_source_count") ?? 0;
+      return { key: n > 0 && k / n < 0.5 ? "board.finding.sourceSome" : "board.finding.sourceMost" };
+    }
+    default:
+      return { key: "board.finding.unknown" };
   }
 }

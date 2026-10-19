@@ -1,5 +1,6 @@
 import type { ChannelId, ChannelStatus, DistributionEvent } from "../../api/types";
 import { useFormat, useT } from "../../i18n";
+import { Details } from "../../settings/details";
 import { OUTCOME_LABEL, OUTCOME_TONE, channelName, eventsNewestFirst, latestEventByChannel } from "./campaignModel";
 
 /**
@@ -47,7 +48,11 @@ export function PublishLog({
                       {e.channel === "whatsapp" ? t("board.campaign.log.openWa") : t("board.campaign.log.open")}
                     </a>
                   )}
-                  {e.error && <span className="cs-log-error">{e.error}</span>}
+                  {e.error && (
+                    <Details>
+                      <span className="cs-log-error">{e.error}</span>
+                    </Details>
+                  )}
                   {retry && canRetry && (
                     <button type="button" className="btn btn-secondary btn-small" disabled={busy} onClick={() => onRetry(e.channel)}>
                       {t("board.campaign.log.retry")}
