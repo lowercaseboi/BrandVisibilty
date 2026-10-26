@@ -29,8 +29,13 @@ if TYPE_CHECKING:  # pragma: no cover
 
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+MISTRAL_BASE_URL = "https://api.mistral.ai/v1"
+GITHUB_MODELS_BASE_URL = "https://models.github.ai/inference"
+CLOUDFLARE_AI_BASE_URL = "https://api.cloudflare.com/client/v4/accounts/{account}/ai/v1"
 
-LIVE_PROVIDER_IDS: tuple[str, ...] = ("gemini", "openai", "groq", "openrouter", "anthropic", "ollama", "custom")
+LIVE_PROVIDER_IDS: tuple[str, ...] = (
+    "gemini", "openai", "groq", "qwen", "openrouter", "mistral", "github", "cloudflare", "anthropic", "ollama", "custom",
+)
 OFFLINE_PROVIDER_IDS: tuple[str, ...] = ("synthetic", "replay")
 ALL_PROVIDER_IDS: tuple[str, ...] = LIVE_PROVIDER_IDS + OFFLINE_PROVIDER_IDS
 
@@ -38,6 +43,10 @@ _LABELS = {
     "gemini": "Google Gemini",
     "openai": "OpenAI",
     "groq": "Groq",
+    "qwen": "Qwen (via Groq)",
+    "mistral": "Mistral",
+    "github": "GitHub Models",
+    "cloudflare": "Cloudflare Workers AI",
     "openrouter": "OpenRouter",
     "anthropic": "Anthropic Claude",
     "ollama": "Ollama (local)",
@@ -79,6 +88,10 @@ def _configured(provider_id: str, s: Settings) -> bool:
         "gemini": bool(s.gemini_api_key),
         "openai": bool(s.openai_api_key),
         "groq": bool(s.groq_api_key),
+        "qwen": bool(s.groq_api_key and s.qwen_model and s.qwen_model.strip().lower() != "off"),
+        "mistral": bool(s.mistral_api_key),
+        "github": bool(s.github_models_token),
+        "cloudflare": bool(s.cloudflare_account_id and s.cloudflare_api_token and s.cloudflare_text_model),
         "openrouter": bool(s.openrouter_api_key),
         "anthropic": bool(s.anthropic_api_key),
         # Ollama needs no key; it counts as configured (and joins "auto") only when the
@@ -95,6 +108,10 @@ def _model(provider_id: str, s: Settings) -> str | None:
         "gemini": s.gemini_model,
         "openai": s.openai_model,
         "groq": s.groq_model,
+        "qwen": s.qwen_model,
+        "mistral": s.mistral_model,
+        "github": s.github_models_model,
+        "cloudflare": s.cloudflare_text_model,
         "openrouter": s.openrouter_model,
         "anthropic": s.anthropic_model,
         "ollama": s.ollama_model,
@@ -171,6 +188,19 @@ def build_provider(provider_id: str, *, brand: BrandConfig | Any | None = None, 
             "groq", GROQ_BASE_URL, s.groq_api_key, s.groq_model,
             max_tokens=s.groq_max_tokens or None, extra_body=extra, rpm=s.groq_rpm or None,
         )
+    if provider_id == "qwen":
+        # Max output stays under Groq's free 1,000 output-tokens/minute cap for Qwen (a request
+        # asking for more is refused outright), and requests are spaced a minute apart.
+        return OpenAICompatibleAdapter(
+            "qwen", GROQ_BASE_URL, s.groq_api_key, s.qwen_model, max_tokens=min(s.groq_max_tokens or 1000, 1000), rpm=1,
+        )
+    if provider_id == "mistral":
+        return OpenAICompatibleAdapter("mistral", MISTRAL_BASE_URL, s.mistral_api_key, s.mistral_model, rpm=50)
+    if provider_id == "github":
+        return OpenAICompatibleAdapter("github", GITHUB_MODELS_BASE_URL, s.github_models_token, s.github_models_model, rpm=15)
+    if provider_id == "cloudflare":
+        base = CLOUDFLARE_AI_BASE_URL.format(account=s.cloudflare_account_id)
+        return OpenAICompatibleAdapter("cloudflare", base, s.cloudflare_api_token, s.cloudflare_text_model)
     if provider_id == "openrouter":
         return OpenAICompatibleAdapter(
             "openrouter",

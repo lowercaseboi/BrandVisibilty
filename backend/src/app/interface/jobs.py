@@ -127,7 +127,10 @@ class JobManager:
         self._skip_all: set[str] = set()
         self._last_persist: dict[str, float] = {}
 
-    def submit(self, brand_key: str, *, providers: str, samples: int, round: int | None = None) -> dict[str, Any]:
+    def submit(
+        self, brand_key: str, *, providers: str, samples: int, round: int | None = None, live: bool = False
+    ) -> dict[str, Any]:
+        """`live`: the run asks a real AI (the demo lock gates cancel/skip on it)."""
         job_id = uuid.uuid4().hex
         job = {
             "job_id": job_id,
@@ -141,6 +144,7 @@ class JobManager:
             "providers": [],
             "created_at": time.time(),
             "kind": "analysis",
+            "live": live,
         }
         with self._lock:
             self._jobs[job_id] = job

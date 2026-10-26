@@ -20,6 +20,7 @@ from app.querysets.templates import BrandParams
 _KEY_VARS = (
     "GEMINI_API_KEY", "OPENAI_API_KEY", "GROQ_API_KEY", "OPENROUTER_API_KEY",
     "ANTHROPIC_API_KEY", "OLLAMA_BASE_URL", "CUSTOM_LLM_BASE_URL", "CUSTOM_LLM_MODEL",
+    "MISTRAL_API_KEY", "GITHUB_MODELS_TOKEN", "CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN",
 )
 
 
@@ -66,8 +67,26 @@ def test_auto_resolves_to_synthetic_without_keys(monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "gsk-test-secret")
     assert registry.resolve_provider_ids("auto") == ["groq"]
     infos = {p.provider_id: p for p in registry.available_providers()}
-    assert infos["groq"].configured and infos["synthetic"].configured
+    assert infos["groq"].configured and infos["synthetic"].configured and not infos["qwen"].configured
     assert "gsk-test-secret" not in repr(infos)
+
+    # Qwen rides on the Groq key but is opt-in (its free output-token cap makes runs slow).
+    monkeypatch.setenv("QWEN_MODEL", "qwen/qwen3.8-27b")
+    assert registry.resolve_provider_ids("auto") == ["groq", "qwen"]
+    assert registry.build_provider("qwen")._max_tokens == 1000
+
+
+def test_free_tier_presets_build_openai_compatible_adapters(monkeypatch):
+    _clear_keys(monkeypatch)
+    monkeypatch.setenv("MISTRAL_API_KEY", "m-test")
+    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "ghp-test")
+    monkeypatch.setenv("CLOUDFLARE_ACCOUNT_ID", "acct123")
+    monkeypatch.setenv("CLOUDFLARE_API_TOKEN", "cf-test")
+    assert registry.resolve_provider_ids("auto") == ["mistral", "github", "cloudflare"]
+    cf = registry.build_provider("cloudflare")
+    assert cf._base_url == "https://api.cloudflare.com/client/v4/accounts/acct123/ai/v1"
+    assert registry.build_provider("mistral")._base_url == registry.MISTRAL_BASE_URL
+    assert registry.build_provider("github").model == "openai/gpt-4.1-mini"
 
 
 def test_openai_compat_adapter_parses_response(monkeypatch):

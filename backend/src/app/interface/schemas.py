@@ -254,6 +254,31 @@ class SkipRequest(BaseModel):
 
 class HealthResponse(BaseModel):
     status: Literal["ok"] = "ok"
+    admin_locked: bool = False
+
+
+class FreeTierOut(BaseModel):
+    requests_per_day: int | None
+    tokens_per_day: int | None
+    note: str
+
+
+class ProviderUsageOut(BaseModel):
+    provider_id: str
+    label: str
+    runs: int
+    calls: int
+    failed: int
+    truncated: int = Field(default=0, description="Answers cut off at the length cap (max_tokens)")
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+    tokens_known_runs: int = Field(description="Runs whose token counts were recorded (older runs only have call counts)")
+    calls_today: int
+    tokens_today: int
+    avg_latency_ms: int | None
+    last_used_at: str | None
+    free_tier: FreeTierOut | None
 
 
 class ProviderInfoOut(BaseModel):

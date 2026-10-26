@@ -36,6 +36,7 @@ from app.interface.schemas import (
     CreateCampaignResponse,
     DeliverablePatch,
     HealthResponse,
+    ProviderUsageOut,
     ImpactResponse,
     Job,
     ManualAccountRequest,
@@ -225,12 +226,64 @@ def _warn_legacy_snapshot_layout() -> None:
 _warn_legacy_snapshot_layout()
 
 
+ADMIN_HEADER_DOC = "Must equal the server's ADMIN_TOKEN (when one is set)"
+
+
 # --------------------------------------------------------------------------- meta
 
 
 @app.get("/health", tags=["meta"], response_model=HealthResponse)
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+def health() -> dict[str, Any]:
+    """`admin_locked`: an ADMIN_TOKEN is set, so actions that cost money or destroy data need the
+    X-Admin-Token header (the UI asks for it up front instead of after a 401)."""
+    return {"status": "ok", "admin_locked": _admin_token() is not None}
+
+
+@app.get("/providers/usage", tags=["providers"], response_model=list[ProviderUsageOut])
+def provider_usage() -> list[dict[str, Any]]:
+    """Calls, failures, tokens and today's use per AI provider over every stored run (AC-11), with
+    each provider's published free-tier cap. Providers expose no live "remaining" balance, so
+    `calls_today` vs the cap is an estimate. Campaign drafting calls are not included."""
+    from datetime import UTC, datetime
+
+    from app.collection.usage import summarize
+
+    snaps = (snap for key in sorted(store.brand_keys_with_data()) for snap in store.load_snapshots(key))
+    rows = summarize(snaps, today=datetime.now(UTC).date())
+    return [{**row, "label": provider_registry.provider_label(pid)} for pid, row in sorted(rows.items())]
+
+
+# --------------------------------------------------------------------------- demo lock
+#
+# With ADMIN_TOKEN set (the public demo), anyone can browse and run practice checks, but the
+# actions below need the token: they spend API credit or destroy data shared by every visitor.
+# Without ADMIN_TOKEN (a local single-user install) they stay open, as before.
+
+
+def _admin_if(needed: bool, header: str | None) -> None:
+    if needed:
+        _require_admin(header)
+
+
+def _uses_live_ai(spec: str) -> bool:
+    """True when the resolved providers include a real (paid or quota-limited) model."""
+    from app.tracking.snapshot import OFFLINE_PROVIDERS
+
+    return any(pid not in OFFLINE_PROVIDERS for pid in provider_registry.resolve_provider_ids(spec))
+
+
+def _campaigns_use_hosted_ai() -> bool:
+    """Campaign drafting calls Gemini/Groq for copy and Gemini/Cloudflare for images when keyed."""
+    from app.config.settings import Settings
+    from app.distribution.copywriter import resolve_copy_provider
+
+    s = Settings()
+    if resolve_copy_provider(s):
+        return True
+    chain = {n.strip().lower() for n in (s.image_providers or "").split(",")}
+    return ("gemini" in chain and bool(s.gemini_api_key)) or (
+        "cloudflare" in chain and bool(s.cloudflare_account_id and s.cloudflare_api_token)
+    )
 
 
 # --------------------------------------------------------------------------- providers
@@ -269,9 +322,13 @@ def create_brand(body: CreateBrandRequest) -> BrandSummary:
 
 
 @app.delete("/brands/{brand_key}", tags=["brands"], response_model=BrandDeleteResponse)
-def delete_brand(brand_key: str) -> dict[str, Any]:
+def delete_brand(
+    brand_key: str, x_admin_token: str | None = Header(default=None, description=ADMIN_HEADER_DOC)
+) -> dict[str, Any]:
     """Delete a user-created brand and all its stored runs/snapshots (and any saved custom
-    question list). The built-in sample brands can't be deleted (403)."""
+    question list). The built-in sample brands can't be deleted (403). Needs the admin token
+    when one is set."""
+    _require_admin(x_admin_token)
     try:
         brands_registry.delete_brand(brand_key)
     except brands_registry.PilotBrandDeleteError as exc:
@@ -354,10 +411,16 @@ def get_questions(brand_key: str) -> dict[str, Any]:
 
 
 @app.put("/brands/{brand_key}/questions", tags=["questions"], response_model=QuestionSet)
-def save_questions(brand_key: str, body: SaveQuestionsRequest) -> dict[str, Any]:
+def save_questions(
+    brand_key: str,
+    body: SaveQuestionsRequest,
+    x_admin_token: str | None = Header(default=None, description=ADMIN_HEADER_DOC),
+) -> dict[str, Any]:
     """Replace the brand's question list. 422 with a plain-English reason if it is invalid.
-    Changing the questions starts a new comparability baseline for the trend chart."""
+    Changing the questions starts a new comparability baseline for the trend chart. A sample
+    brand's questions are shared by every visitor, so editing them needs the admin token when set."""
     brand = _brand_or_404(brand_key)
+    _admin_if(bool(brand.is_pilot), x_admin_token)
     try:
         return _question_sets().save_questions(brand, [q.model_dump() for q in body.questions])
     except ValueError as exc:
@@ -365,9 +428,13 @@ def save_questions(brand_key: str, body: SaveQuestionsRequest) -> dict[str, Any]
 
 
 @app.delete("/brands/{brand_key}/questions", tags=["questions"], response_model=QuestionSet)
-def reset_questions(brand_key: str) -> dict[str, Any]:
-    """Go back to the suggested template questions."""
-    return _question_sets().reset_questions(_brand_or_404(brand_key))
+def reset_questions(
+    brand_key: str, x_admin_token: str | None = Header(default=None, description=ADMIN_HEADER_DOC)
+) -> dict[str, Any]:
+    """Go back to the suggested template questions (admin token for sample brands, when set)."""
+    brand = _brand_or_404(brand_key)
+    _admin_if(bool(brand.is_pilot), x_admin_token)
+    return _question_sets().reset_questions(brand)
 
 
 # --------------------------------------------------------------------------- snapshots
@@ -528,16 +595,23 @@ def get_impact(brand_key: str) -> dict[str, Any]:
 
 
 @app.post("/brands/{brand_key}/runs", tags=["runs"], response_model=Job, status_code=status.HTTP_202_ACCEPTED)
-def start_run(brand_key: str, body: RunRequest | None = None) -> dict[str, Any]:
-    """Queue a tracking run. Poll `GET /jobs/{job_id}` for progress; runs execute one at a time."""
+def start_run(
+    brand_key: str,
+    body: RunRequest | None = None,
+    x_admin_token: str | None = Header(default=None, description=ADMIN_HEADER_DOC),
+) -> dict[str, Any]:
+    """Queue a tracking run. Poll `GET /jobs/{job_id}` for progress; runs execute one at a time.
+    A run that asks a real AI spends its quota, so it needs the admin token when one is set;
+    practice runs (synthetic / replay) are always open."""
     body = body or RunRequest()
     _brand_or_404(brand_key)
     try:
-        provider_registry.resolve_provider_ids(body.providers)
+        live = _uses_live_ai(body.providers)
     except ValueError as exc:
         # Registry messages name the missing env var, never its value.
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return jobs.submit(brand_key, providers=body.providers, samples=body.samples, round=body.round)
+    _admin_if(live, x_admin_token)
+    return jobs.submit(brand_key, providers=body.providers, samples=body.samples, round=body.round, live=live)
 
 
 @app.get("/jobs/{job_id}", tags=["runs"], response_model=Job)
@@ -549,8 +623,12 @@ def get_job(job_id: str) -> dict[str, Any]:
 
 
 @app.post("/jobs/{job_id}/cancel", tags=["runs"], response_model=Job)
-def cancel_job(job_id: str) -> dict[str, Any]:
-    """Drop a queued job, or stop a running one at its next provider call (nothing is saved)."""
+def cancel_job(
+    job_id: str, x_admin_token: str | None = Header(default=None, description=ADMIN_HEADER_DOC)
+) -> dict[str, Any]:
+    """Drop a queued job, or stop a running one at its next provider call (nothing is saved).
+    Stopping a real-AI run needs the admin token when one is set."""
+    _admin_if(bool((jobs.get(job_id) or {}).get("live")), x_admin_token)
     job = jobs.cancel(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail=f"Unknown job '{job_id}'")
@@ -560,12 +638,17 @@ def cancel_job(job_id: str) -> dict[str, Any]:
 
 
 @app.post("/jobs/{job_id}/skip", tags=["runs"], response_model=Job)
-def skip_job(job_id: str, body: SkipRequest | None = None) -> dict[str, Any]:
+def skip_job(
+    job_id: str,
+    body: SkipRequest | None = None,
+    x_admin_token: str | None = Header(default=None, description=ADMIN_HEADER_DOC),
+) -> dict[str, Any]:
     """Stop waiting on one AI provider (`provider_id`), or on all of them (`null`), and finish the
     run with the answers collected so far. A provider stuck on a rate limit is interrupted
     mid-wait. 409 unless the job is running (cancel a queued job instead); 422 if the job
     doesn't use that provider."""
     body = body or SkipRequest()
+    _admin_if(bool((jobs.get(job_id) or {}).get("live")), x_admin_token)
     try:
         job = jobs.skip(job_id, body.provider_id)
     except JobNotRunning as exc:
@@ -663,7 +746,6 @@ def _admin_token() -> str | None:
     return token.strip() if token and token.strip() else None
 
 
-ADMIN_HEADER_DOC = "Must equal the server's ADMIN_TOKEN (when one is set)"
 
 
 def _check_admin(header: str | None) -> tuple[bool, str | None]:
@@ -907,10 +989,16 @@ def list_campaigns(brand_key: str) -> list[dict[str, Any]]:
     response_model=CreateCampaignResponse,
     status_code=status.HTTP_202_ACCEPTED,
 )
-def create_campaign(brand_key: str, body: CreateCampaignRequest) -> dict[str, Any]:
+def create_campaign(
+    brand_key: str,
+    body: CreateCampaignRequest,
+    x_admin_token: str | None = Header(default=None, description=ADMIN_HEADER_DOC),
+) -> dict[str, Any]:
     """Start a campaign for a stored recommendation (it keeps the recommendation's gap_id, AC-7). The
     campaign comes back "generating" with its job (kind "campaign"): poll `GET /jobs/{job_id}`, then
-    refetch the campaign. The recommendation's board card moves to "in progress"."""
+    refetch the campaign. The recommendation's board card moves to "in progress". Drafting with a
+    hosted model spends API credit, so it needs the admin token when one is set."""
+    _admin_if(_campaigns_use_hosted_ai(), x_admin_token)
     with _campaign_errors():
         campaign, job = _campaigns().create_campaign(brand_key, body.recommendation_id, jobs=jobs)
     return {"campaign": asdict(campaign), "job": job}
@@ -943,10 +1031,16 @@ def update_deliverable(brand_key: str, campaign_id: str, index: int, body: Deliv
 
 
 @app.post("/brands/{brand_key}/campaigns/{campaign_id}/regenerate-image", tags=["campaigns"], response_model=CampaignOut)
-def regenerate_image(brand_key: str, campaign_id: str, body: RegenerateImageRequest) -> dict[str, Any]:
+def regenerate_image(
+    brand_key: str,
+    campaign_id: str,
+    body: RegenerateImageRequest,
+    x_admin_token: str | None = Header(default=None, description=ADMIN_HEADER_DOC),
+) -> dict[str, Any]:
     """Generate a new image for one format (synchronous, ~5-40s with a hosted model) and switch the
     channels using that format to it. Older images stay available. Revokes approval if it changes
-    an approved variant."""
+    an approved variant. Needs the admin token when one is set and a hosted image model is keyed."""
+    _admin_if(_campaigns_use_hosted_ai(), x_admin_token)
     with _campaign_errors():
         return asdict(
             _campaigns().regenerate_image(

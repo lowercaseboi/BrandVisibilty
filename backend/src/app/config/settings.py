@@ -71,10 +71,29 @@ class Settings(BaseSettings):
     groq_max_tokens: int = 1024
     groq_reasoning_effort: str | None = "low"
     groq_rpm: int = 30
+    # Qwen on Groq ("qwen" provider): same GROQ_API_KEY, a second model family on its own per-model
+    # quota. Opt-in (set QWEN_MODEL=qwen/qwen3.8-27b): Groq's free tier caps Qwen at 1,000 *output*
+    # tokens per minute, about one answer a minute, so a standard run takes close to an hour.
+    qwen_model: str | None = None
 
     # OpenRouter (OpenAI-compatible, fixed base URL)
     openrouter_api_key: str | None = None
-    openrouter_model: str = "meta-llama/llama-3.3-70b-instruct:free"
+    # The ":free" list changes often (llama-3.3-70b-instruct:free was withdrawn in 2026); check
+    # https://openrouter.ai/models?q=:free. Free models: 20 requests/min, 50/day without credit.
+    openrouter_model: str = "google/gemma-4-31b-it:free"
+
+    # Mistral (OpenAI-compatible). Free "Experiment" plan, phone verification, ~1 request/second.
+    mistral_api_key: str | None = None
+    mistral_model: str = "mistral-small-latest"
+
+    # GitHub Models (OpenAI-compatible; a GitHub personal access token with the models:read
+    # scope). Free, rate-limited per model (gpt-4.1-mini: about 150 requests/day).
+    github_models_token: str | None = None
+    github_models_model: str = "openai/gpt-4.1-mini"
+
+    # Cloudflare Workers AI text models ("cloudflare" provider) reuse CLOUDFLARE_ACCOUNT_ID +
+    # CLOUDFLARE_API_TOKEN below (the image keys). Free: 10,000 neurons/day, roughly a few hundred answers.
+    cloudflare_text_model: str = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
 
     # Anthropic Claude (Messages API)
     anthropic_api_key: str | None = None

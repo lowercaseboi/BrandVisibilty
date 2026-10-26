@@ -28,6 +28,16 @@ services:
       # Optional: regex for Vercel preview-deploy origins, e.g. https://.*\.vercel\.app
       - key: CORS_ORIGIN_REGEX
         sync: false
+      # Demo lock: with ADMIN_TOKEN set, visitors can browse and run practice checks, but real-AI
+      # runs, campaign drafting with hosted models, publishing, account connections and edits to the
+      # sample brands' questions need it (the app asks for it once per browser session). Render
+      # generates a random value; read it under Environment in the dashboard.
+      - key: ADMIN_TOKEN
+        generateValue: true
+      # Encrypts stored platform tokens and signs OAuth state. Generated once; changing it makes
+      # connected accounts unreadable.
+      - key: SECRET_KEY
+        generateValue: true
       # Provider API keys (.env.example) — optional. Leave unset to run the fully
       # offline synthetic demo; set any one to enable that provider for real runs.
       - key: GEMINI_API_KEY
@@ -35,6 +45,14 @@ services:
       - key: OPENAI_API_KEY
         sync: false
       - key: GROQ_API_KEY
+        sync: false
+      - key: MISTRAL_API_KEY
+        sync: false
+      - key: GITHUB_MODELS_TOKEN
+        sync: false
+      - key: CLOUDFLARE_ACCOUNT_ID
+        sync: false
+      - key: CLOUDFLARE_API_TOKEN
         sync: false
       - key: OPENROUTER_API_KEY
         sync: false
