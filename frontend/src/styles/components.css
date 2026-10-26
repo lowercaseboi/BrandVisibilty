@@ -1890,7 +1890,25 @@ a.card:active {
   .q-actions .btn {
     flex: 1 1 auto;
   }
-}
+}  .q-actions .btn {
+    flex: 1 1 auto;
+  }
+
+  /* Analytical view adds a fixed-width hit bar; give it its own line instead of squeezing the text. */
+  .q-row {
+    flex-wrap: wrap;
+  }
+
+  .q-row .q-hit {
+    order: 10;
+    flex-basis: 100%;
+  }
+
+  /* 32px info buttons are hard to hit with a thumb. */
+  .info-tip-btn::before {
+    inset: -13px;
+  }
+
 
 /* =========================================================
    Metric strip (numbers view): coverage · prominence · share of voice · range

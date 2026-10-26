@@ -102,6 +102,15 @@
     background: var(--accent-soft);
   }
 
+  /* Keyboard focus and scrollIntoView stop clear of the sticky header and the tab bar. */
+  :root {
+    scroll-padding-top: var(--header-h, 64px);
+  }
+
+  :root[data-tabbar] {
+    scroll-padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+  }
+
   /* Leave room under the page for the bar (and the home indicator below it). */
   :root[data-tabbar] .app-footer {
     padding-bottom: calc(var(--space-4) + var(--tabbar-h) + env(safe-area-inset-bottom));

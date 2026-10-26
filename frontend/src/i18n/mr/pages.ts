@@ -220,6 +220,21 @@ export const pages: Record<keyof typeof enPages, string> = {
   "ais.offlineSynthetic": "सिम्युलेटेड डेटा: प्रात्यक्षिकासाठी तयार केलेले प्रतिसाद. प्रत्यक्ष मोजमाप नाही.",
   "ais.offlineReplay": "रीप्ले केलेले प्रतिसाद: आधी नोंदवलेले प्रत्यक्ष AI प्रतिसाद, पुन्हा स्कोर केलेले.",
   "ais.autoNote": "“auto” प्रत्येक कनेक्टेड लाइव्ह AI वापरते, किंवा कोणताही कनेक्टेड नसल्यास सिम्युलेटेड डेटा.",
+  "ais.usage.title": "वापर आणि फ्री कोटा",
+  "ais.usage.lede": "प्रत्येक तपासणीच्या या ॲपच्या स्वतःच्या नोंदींवरून मोजले आहे. AI प्रोव्हायडर शिल्लक मर्यादा सांगत नाहीत, म्हणून आजच्या वापराची तुलना प्रत्येकाच्या प्रकाशित फ्री मर्यादेशी केली जाते.",
+  "ais.usage.loadError": "वापराची माहिती लोड होऊ शकली नाही.",
+  "ais.usage.empty": "अजून खऱ्या AI सोबत एकही तपासणी झालेली नाही.",
+  "ais.usage.today": "आज: सुमारे {cap} फ्री विनंत्यांपैकी {calls}",
+  "ais.usage.todayNoCap": "आज: {calls} विनंत्या",
+  "ais.usage.tokensToday": "आजचे टोकन: {cap} पैकी {tokens}",
+  "ais.usage.total": "एकूण विनंत्या: {calls} · तपासण्या: {runs}",
+  "ais.usage.failed": "अयशस्वी विनंत्या: {n}",
+  "ais.usage.truncated": "{of} पैकी {n} उत्तरे लांबीच्या मर्यादेवर कापली गेली, त्यामुळे त्यांच्या यादीचा शेवटचा भाग नाही.",
+  "ais.usage.tokens": "टोकन: {tokens} (प्रश्न {prompt}, उत्तर {answer})",
+  "ais.usage.tokensPartial": "{runs} पैकी {known} तपासण्यांसाठी नोंदवले; जुन्या तपासण्यांमध्ये फक्त विनंत्यांची संख्या आहे.",
+  "ais.usage.latency": "उत्तराचा सरासरी वेळ: {s} सेकंद",
+  "ais.usage.lastUsed": "शेवटचा वापर: {when}",
+  "ais.usage.campaignNote": "मोहिमेचा मसुदा तयार करतानाही Gemini किंवा Groq वापरले जाते; त्या विनंत्या येथे मोजल्या जात नाहीत.",
 
   // ---------------------------------------------------------------- Landing page (public marketing site at "/")
   // "BrandVisibility", brand names (Ashok Vada Pav, Aaram Vada Pav, Gajanan Vada Pav) and AI product
@@ -295,8 +310,6 @@ export const pages: Record<keyof typeof enPages, string> = {
   "landing.features.f6.title": "प्रत्येक रीरनमधील बदल ट्रॅक करा",
   "landing.features.f6.body": "तोच प्रश्न संच पुन्हा चालवा आणि दृश्यता खरंच बदलली का ते पाहा.",
 
-  // English placeholders — translation pending.
-  "landing.sample.simulatedTag": "Simulated data",
-  // English placeholders — translation pending.
-  "landing.ctaShort": "Try it →",
+  "landing.sample.simulatedTag": "सिम्युलेटेड डेटा",
+  "landing.ctaShort": "वापरून पाहा →",
 };

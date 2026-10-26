@@ -52,9 +52,13 @@ export const common: Record<keyof typeof enCommon, string> = {
   "off": "बंद",
   "showMore": "और दिखाएँ",
   "showLess": "कम दिखाएँ",
+  "offline": "सर्वर से कनेक्ट नहीं हो पा रहा। अपना कनेक्शन जाँचें और फिर से कोशिश करें।",
+  "lock.title": "एडमिन पासवर्ड",
+  "lock.hint": "यह एक पब्लिक डेमो है। असली AI से जाँच, होस्टेड AI से ड्राफ़्ट और उदाहरण ब्रांड में बदलाव के लिए एडमिन पासवर्ड चाहिए। ब्राउज़ करना और सिम्युलेटेड डेटा वाली जाँच सभी के लिए खुली है।",
+  "lock.hintDetail": "सर्वर का ADMIN_TOKEN, जो X-Admin-Token के रूप में भेजा जाता है और सिर्फ़ इस ब्राउज़र टैब में रहता है।",
+  "lock.cancelled": "इसके लिए एडमिन पासवर्ड चाहिए। सिम्युलेटेड डेटा वाली जाँच इसके बिना भी चलती है।",
   "serverWaking": "सर्वर को सक्रिय किया जा रहा है। फ्री होस्टिंग पर पहली बार लोड में लगभग 30 सेकंड लग सकते हैं।",
   "none": "कोई नहीं",
 
-  // English placeholders — translation pending.
-  "nav.app": "Open the BrandVisibility app",
+  "nav.app": "BrandVisibility ऐप खोलें",
 };

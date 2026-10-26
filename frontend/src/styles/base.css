@@ -52,6 +52,14 @@ html:lang(mr) * {
   letter-spacing: 0 !important;
 }
 
+/* Form controls don't inherit word-spacing (the browser resets it to normal), so their Devanagari
+   labels kept full mono-width gaps ("कॉपी  करने  के  लिए"). Low specificity: the display-font
+   rules that set word-spacing: normal still win. */
+html:lang(hi) :where(button, input, select, textarea),
+html:lang(mr) :where(button, input, select, textarea) {
+  word-spacing: inherit;
+}
+
 /* Page backdrop: a faint dot grid, fixed and static (no scroll cost), fading toward the edges. The
    grid pitch scales with --z (scale.css). `html` paints --bg; these sit above it, behind content. */
 body::before {
@@ -393,6 +401,12 @@ textarea:disabled {
   margin: 0 auto;
   padding: var(--space-5) var(--gutter) 64px;
   flex: 1;
+}
+
+/* Hidden info tips keep their box (opacity 0) and may sit past the right edge on a phone; clip
+   that instead of letting the page pan sideways. `clip` (unlike hidden) is no scroll container. */
+.app {
+  overflow-x: clip;
 }
 
 .app:focus {

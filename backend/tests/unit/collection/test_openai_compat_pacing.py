@@ -121,7 +121,8 @@ def test_groq_defaults_cap_answers_and_use_low_reasoning(monkeypatch):
     adapter = registry.build_provider("groq")
     adapter.query("q", SamplingParams())
     assert bodies[0]["model"] == "openai/gpt-oss-120b"
-    assert bodies[0]["max_tokens"] == 1024 and bodies[0]["reasoning_effort"] == "low"
+    # 4096: full answers are up to ~3K tokens; a lower cap cut lists off (pacing meets the TPM limit).
+    assert bodies[0]["max_tokens"] == 4096 and bodies[0]["reasoning_effort"] == "low"
 
 
 def test_groq_non_gpt_oss_model_gets_no_reasoning_effort(monkeypatch):

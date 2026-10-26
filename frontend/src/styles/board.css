@@ -232,6 +232,15 @@
   overflow: hidden;
 }
 
+/* No hover on touch screens to reveal the full title, so show all of it. */
+@media (max-width: 640px) {
+  .rec-card-title {
+    display: block;
+    -webkit-line-clamp: unset;
+    line-clamp: none;
+  }
+}
+
 .rec-card-note {
   margin: 0;
   font-size: var(--fs-xs);

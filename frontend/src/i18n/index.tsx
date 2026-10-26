@@ -8,11 +8,19 @@ import { dashboard as enDashboard } from "./en/dashboard";
 import { hub as enHub } from "./en/hub";
 import { modules as enModules } from "./en/modules";
 import { pages as enPages } from "./en/pages";
+import { board as hiBoard } from "./hi/board";
+import { brandinfo as hiBrandinfo } from "./hi/brandinfo";
 import { common as hiCommon } from "./hi/common";
 import { dashboard as hiDashboard } from "./hi/dashboard";
+import { hub as hiHub } from "./hi/hub";
+import { modules as hiModules } from "./hi/modules";
 import { pages as hiPages } from "./hi/pages";
+import { board as mrBoard } from "./mr/board";
+import { brandinfo as mrBrandinfo } from "./mr/brandinfo";
 import { common as mrCommon } from "./mr/common";
 import { dashboard as mrDashboard } from "./mr/dashboard";
+import { hub as mrHub } from "./mr/hub";
+import { modules as mrModules } from "./mr/modules";
 import { pages as mrPages } from "./mr/pages";
 
 // ---------------------------------------------------------------------------
@@ -66,7 +74,8 @@ function merge(parts: Record<string, Flat>): Map<string, string> {
 }
 
 const DICTS: Record<Lang, Map<string, string>> = {
-  // hub/brandinfo/modules/board are English-only for now; lookup() falls back to English.
+  // Every namespace is translated (scripts/check-i18n.mjs keeps hi/mr in step with en); lookup()
+  // still falls back to English for safety.
   en: merge({
     common: enCommon,
     dashboard: enDashboard,
@@ -76,8 +85,24 @@ const DICTS: Record<Lang, Map<string, string>> = {
     modules: enModules,
     board: enBoard,
   }),
-  hi: merge({ common: hiCommon, dashboard: hiDashboard, pages: hiPages }),
-  mr: merge({ common: mrCommon, dashboard: mrDashboard, pages: mrPages }),
+  hi: merge({
+    common: hiCommon,
+    dashboard: hiDashboard,
+    pages: hiPages,
+    hub: hiHub,
+    brandinfo: hiBrandinfo,
+    modules: hiModules,
+    board: hiBoard,
+  }),
+  mr: merge({
+    common: mrCommon,
+    dashboard: mrDashboard,
+    pages: mrPages,
+    hub: mrHub,
+    brandinfo: mrBrandinfo,
+    modules: mrModules,
+    board: mrBoard,
+  }),
 };
 
 const LOCALES: Record<Lang, string> = { en: "en-IN", hi: "hi-IN", mr: "mr-IN" };

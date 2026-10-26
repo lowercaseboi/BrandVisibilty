@@ -643,7 +643,7 @@
   .cs-chip button { position: relative; width: 28px; height: 28px; }
   .cs-chip button::before { content: ""; position: absolute; inset: -6px; }
   .cs-toggle { min-height: 44px; }
-  .pv-toggle button { min-height: 36px; }
+  .pv-toggle button { min-height: 40px; }
   .cs-step-head h2 { font-size: var(--fs-lg); }
   .cs-gen { grid-template-columns: minmax(0, 1fr); }
   .cs-gen-art { display: none; }

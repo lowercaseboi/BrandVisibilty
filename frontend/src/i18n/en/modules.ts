@@ -1,5 +1,5 @@
-// Analysis + Gaps & evidence modules. English only for now — hi/mr fall back to English at runtime
-// (i18n/index.tsx lookup). Components moved in from the old dashboard keep their dashboard.* /
+// Analysis + Gaps & evidence modules. Translated in hi/ and mr/.
+// Components moved in from the old dashboard keep their dashboard.* /
 // pages.* keys; only text new to these modules lives here.
 export const modules = {
   // ---- Analysis

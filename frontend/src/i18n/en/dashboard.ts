@@ -235,6 +235,8 @@ export const dashboard = {
   "sample.empty": "No AI response is available to sample yet.",
 
   // ================================================================ trend
+  // The newest run was incomplete (inadmissible), so the trend verdict below is about the runs before it.
+  "trend.latestExcluded": "The newest check was incomplete, so it's left out: the verdict below compares the two checks before it.",
   "trend.title": "Score history",
   // Collapsed summary for the section, e.g. "3 analyses".
   "trend.count_one": "{n} analysis",

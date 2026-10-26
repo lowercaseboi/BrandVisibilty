@@ -229,8 +229,8 @@
 
   /* Full CTA text no longer fits without crowding the wordmark and icon buttons. Keep the button
      itself and swap to a compact label: the real text collapses to zero size (still the link's
-     accessible name) while a short ::after — mirrors pages.landing.ctaShort — carries the visible
-     label. */
+     accessible name) while a short ::after — pages.landing.ctaShort, from data-short — carries the
+     visible label. */
   .app-header-landing .header-cta {
     margin-left: 4px;
     padding: 8px 12px;
@@ -238,7 +238,7 @@
   }
 
   .app-header-landing .header-cta::after {
-    content: "Try it →";
+    content: attr(data-short);
     font-size: 13px;
     font-weight: 600;
   }
@@ -400,6 +400,17 @@
 
 .lp-hero-example.is-visible .lp-hero-prompt-type {
   animation: lp-type 1.1s steps(32, end) 0.35s backwards;
+}
+
+@media (max-width: 480px) {
+  /* The example question doesn't fit one line on a phone: wrap it (no typing effect). */
+  .lp-hero-prompt-type {
+    white-space: normal;
+  }
+
+  .lp-hero-example.is-visible .lp-hero-prompt-type {
+    animation: none;
+  }
 }
 
 .lp-hero-answer {

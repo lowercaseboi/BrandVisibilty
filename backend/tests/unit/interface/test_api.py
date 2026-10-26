@@ -197,7 +197,7 @@ def client(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_health_and_providers(client: TestClient) -> None:
-    assert client.get("/health").json() == {"status": "ok"}
+    assert client.get("/health").json() == {"status": "ok", "admin_locked": False}
     assert client.get("/providers").json()[0]["provider_id"] == "synthetic"
     assert client.get("/openapi.json").status_code == 200
 

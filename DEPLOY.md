@@ -72,11 +72,18 @@ Render set:
 Three more settings matter once someone actually approves and publishes a campaign from the deployed app, on top
 of the provider keys from step 1 (all documented in `.env.example` and [docs/CHANNEL_SETUP.md](docs/CHANNEL_SETUP.md)):
 
-- `ADMIN_TOKEN` — required to approve/publish/delete campaigns (header `X-Admin-Token`). Leaving it unset doesn't
-  break anything; it just limits publishing to the sandbox, export-pack and WhatsApp-share channels, which never
-  call an external API.
-- `SECRET_KEY` — a Fernet key encrypting any stored platform tokens. Generate one with
-  `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.
+- `ADMIN_TOKEN` — the **demo lock** (header `X-Admin-Token`). `render.yaml` generates one, so a public deploy is
+  locked by default: visitors can browse and run practice (synthetic) checks, but these need the token, which the
+  app asks for once per browser tab:
+  - checks with a real AI (they spend your free quota), and stopping or skipping one;
+  - campaign drafting and image regeneration when a hosted model (Gemini/Groq/Cloudflare) is keyed;
+  - deleting a brand, and editing or resetting the sample brands' questions;
+  - approving, publishing or deleting campaigns, and connecting accounts.
+
+  Read the generated value under *Environment* in the Render dashboard. Unset (local single-user installs), nothing
+  is locked and publishing is limited to the sandbox, export-pack and WhatsApp-share channels.
+- `SECRET_KEY` — any long random string (`render.yaml` generates one); it encrypts stored platform tokens and
+  signs OAuth state. Changing it makes already-connected accounts unreadable.
 - `PUBLIC_BASE_URL` — the public origin serving `GET /media/<campaign_id>/<file>` (generated campaign images).
   Instagram fetches that URL itself, so it has to be reachable from Meta's servers. On Render this is simply your
   Render service's own URL, e.g. `PUBLIC_BASE_URL=https://brand-visibility-backend.onrender.com`.

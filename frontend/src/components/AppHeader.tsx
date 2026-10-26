@@ -183,7 +183,7 @@ export function AppHeader({ variant = "app" }: { variant?: "app" | "landing" }) 
             </button>
           )}
           {landing && (
-            <Link to="/app" className="btn btn-primary header-cta">
+            <Link to="/app" className="btn btn-primary header-cta" data-short={t("pages.landing.ctaShort")}>
               {t("pages.landing.cta")}
             </Link>
           )}

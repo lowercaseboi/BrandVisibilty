@@ -24,7 +24,7 @@ export const common: Record<keyof typeof enCommon, string> = {
   "theme.current": "थीम: {theme}",
 
   "details.label": "विश्लेषणात्मक व्यू",
-  "details.hint": "प्रत्येक निकालामागील स्कोअर, रेंज आणि तक्ते दाखवा",
+  "details.hint": "प्रत्येक निकालामागील स्कोर, श्रेणी आणि तक्ते दाखवा",
   "details.on": "विश्लेषणात्मक व्यू सुरू",
   "details.off": "विश्लेषणात्मक व्यू बंद",
   "details.analyst": "विश्लेषणात्मक व्यू",
@@ -52,9 +52,13 @@ export const common: Record<keyof typeof enCommon, string> = {
   "off": "बंद",
   "showMore": "अधिक दाखवा",
   "showLess": "कमी दाखवा",
+  "offline": "सर्व्हरशी संपर्क होत नाही. तुमचे कनेक्शन तपासा आणि पुन्हा प्रयत्न करा.",
+  "lock.title": "ॲडमिन पासवर्ड",
+  "lock.hint": "हा सार्वजनिक डेमो आहे. खऱ्या AI सोबत तपासणी, होस्टेड AI ने मसुदा आणि उदाहरण ब्रँडमधील बदल यांसाठी ॲडमिन पासवर्ड लागतो. ब्राउझिंग आणि सिम्युलेटेड डेटावरील तपासणी सर्वांसाठी खुली आहे.",
+  "lock.hintDetail": "सर्व्हरचा ADMIN_TOKEN, जो X-Admin-Token म्हणून पाठवला जातो आणि फक्त या ब्राउझर टॅबमध्ये राहतो.",
+  "lock.cancelled": "यासाठी ॲडमिन पासवर्ड लागतो. सिम्युलेटेड डेटावरील तपासणी त्याशिवायही चालते.",
   "serverWaking": "सर्व्हरला सक्रिय केले जात आहे. फ्री होस्टिंगवर पहिल्यांदा लोड होण्यास सुमारे 30 सेकंद लागू शकतात.",
   "none": "काहीही नाही",
 
-  // English placeholders — translation pending.
-  "nav.app": "Open the BrandVisibility app",
+  "nav.app": "BrandVisibility ॲप उघडा",
 };

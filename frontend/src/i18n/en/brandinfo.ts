@@ -1,6 +1,5 @@
-// Details module (connected accounts + profile + coverage matrix + questions section head). English only for
-// now — hi/mr fall back to English at runtime (i18n/index.tsx lookup) until a translation round
-// adds them. The questions editor itself keeps its existing pages.q.* / pages.add.* keys —
+// Details module (connected accounts + profile + coverage matrix + questions section head). Translated in
+// hi/brandinfo.ts and mr/brandinfo.ts. The questions editor itself keeps its existing pages.q.* / pages.add.* keys —
 // they're reused here rather than duplicated.
 export const brandinfo = {
   // ---- Connected accounts (first section of Details)

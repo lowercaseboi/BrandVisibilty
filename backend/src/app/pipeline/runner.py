@@ -31,6 +31,7 @@ from app.analysis.summary import mention_summary
 from app.analysis.types import DetectionConfig, Observation
 from app.brands.registry import SELF_ENTITY_ID, BrandConfig, get_brand
 from app.collection.types import QuotaExhausted, SamplingParams
+from app.collection.usage import normalize_usage, tally_answers, was_truncated
 from app.querysets import custom as question_sets
 from app.querysets.generator import Query
 from app.tracking import store
@@ -232,13 +233,16 @@ def _collect_provider(
     progress: _Progress,
     should_skip: SkipFn | None = None,
     skipped_on_request: set[str] | None = None,
+    status_out: dict[str, dict] | None = None,
 ) -> list[tuple[dict, Observation]]:
     """All samples for one provider, sequentially (keeps per-provider rate limits sane).
     Scored queries get ids q<i>, unscored (brand-named) ones p<i>.
     Returns (raw-observation dict, Observation) per successful call; failures are skipped (AC-9).
     Stops early — keeping what it has — when should_skip(provider_id) turns True, after
     GIVE_UP_AFTER_CONSECUTIVE_FAILURES failed calls in a row, or after AUTO_SKIP_AFTER_SECONDS
-    without a successful answer. Providers skipped on request are added to `skipped_on_request`."""
+    without a successful answer. Providers skipped on request are added to `skipped_on_request`.
+    The provider's final progress status (planned / succeeded / failed / skip reason) is left in
+    `status_out[provider_id]`, for the run's usage tally (AC-11)."""
     from app.collection.registry import build_provider
     from app.collection.retry import Skipped, query_with_retry
 
@@ -249,6 +253,8 @@ def _collect_provider(
 
     planned = (len(queries) + len(unscored_queries)) * samples
     run = _ProviderRun(provider_id, label, planned, progress, should_skip)
+    if status_out is not None:
+        status_out[provider_id] = run.status  # the same dict, so it ends up holding the final state
     try:
         provider = build_provider(provider_id, brand=brand, round=round)
     except Exception as exc:  # noqa: BLE001 - one unusable provider must not kill the run
@@ -346,6 +352,9 @@ def _collect_provider(
                     "response_text": result.payload,
                     "mentions": [asdict(m) for m in mentions],
                     "scored": scored,
+                    "latency_ms": result.latency_ms,
+                    "usage": normalize_usage(result.token_usage),
+                    "truncated": was_truncated(result.raw_meta),
                 }
                 observation = Observation(
                     observation_id=observation_id,
@@ -460,6 +469,7 @@ def run_pipeline(
     # 3-4. Collect: providers in parallel, each provider's calls sequential.
     started_at = datetime.now(UTC)
     skipped_on_request: set[str] = set()
+    provider_status: dict[str, dict] = {}
     with ThreadPoolExecutor(max_workers=len(provider_ids)) as pool:
         futures = [
             pool.submit(
@@ -475,6 +485,7 @@ def run_pipeline(
                 progress=progress,
                 should_skip=should_skip,
                 skipped_on_request=skipped_on_request,
+                status_out=provider_status,
             )
             for pid in provider_ids
         ]
@@ -554,6 +565,11 @@ def run_pipeline(
     )
     snapshot["raw_observations"] = [*snapshot["raw_observations"], *unscored_raws]
     snapshot["unscored_observation_count"] = len(unscored_raws)
+    # Calls, failures and tokens per provider for this run — the Providers page's usage view (AC-11).
+    snapshot["provider_usage"] = {
+        pid: tally_answers((raw for raw, _ in records), provider_status.get(pid, {}))
+        for pid, records in zip(provider_ids, per_provider, strict=True)
+    }
     # Inputs of the recommendation ranking that come from history, kept so the run's
     # recommendations can be recomputed from this record alone (scripts/verify_bundle.py).
     snapshot["mde_reference"] = mde_reference

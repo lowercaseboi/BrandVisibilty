@@ -63,6 +63,16 @@ function PeerStrip({ snapshot }: { snapshot: Snapshot }) {
         <span className="peer-tick peer-you" style={{ left: `${you * 100}%` }} title={pct(you)} />
       </div>
       <p className="peer-legend">{t("dashboard.hero.peersLegend", vars)}</p>
+      {/* Which tick is which, readable on touch screens too (the ticks' titles need a hover). */}
+      <ul className="peer-names">
+        {[...others]
+          .sort((x, y) => y.rate - x.rate)
+          .map((o) => (
+            <li key={o.id}>
+              {o.name} <span className="muted">{pct(o.rate)}</span>
+            </li>
+          ))}
+      </ul>
     </div>
   );
 }
@@ -126,7 +136,10 @@ function ScoreHeroV2({ snapshot, m }: { snapshot: Snapshot; m: MetricsV2 }) {
   const digits = viDigits(h.value);
   const rating = ratingFromVi(h.lo, h.hi);
   const show = (v: number) => fmt.number(v, viDigits(v));
-  const comparison = snapshot.trend_verdict_v2?.comparison ?? null;
+  // Only when the comparison is about this run: an incomplete newest run is left out of the trend,
+  // and the verdict then describes the two runs before it.
+  const v2 = snapshot.trend_verdict_v2;
+  const comparison = v2?.comparison && (v2.latest_run_id ?? snapshot.run_id) === snapshot.run_id ? v2.comparison : null;
   const v1 = snapshot.analysis_result;
   const [v1lo, v1hi] = scoreRange(v1);
 
@@ -153,21 +166,6 @@ function ScoreHeroV2({ snapshot, m }: { snapshot: Snapshot; m: MetricsV2 }) {
           {comparison && (
             <p className={`score-change is-${verdictTone(comparison.verdict)}`}>
               <T k={CHANGE_KEY[comparison.verdict]} />
-              <Details>
-                {comparison.delta != null && comparison.ci95 && (
-                  <span className="muted small">
-                    {" "}
-                    {t("dashboard.v2.changeDetail", {
-                      delta: fmt.number(comparison.delta, 1),
-                      lo: fmt.number(comparison.ci95[0], 1),
-                      hi: fmt.number(comparison.ci95[1], 1),
-                      q: comparison.questions,
-                      overlap: fmt.percent(comparison.overlap),
-                      mde: fmt.number(comparison.mde ?? 0, 1),
-                    })}
-                  </span>
-                )}
-              </Details>
             </p>
           )}
         </div>
@@ -188,7 +186,8 @@ function ScoreHeroV2({ snapshot, m }: { snapshot: Snapshot; m: MetricsV2 }) {
               )}
             </p>
           )}
-          <PositionLine m={m} />
+          {/* Never named: a rank would only reflect a tie at zero ("#2 of 6"), so the reach line speaks for it. */}
+          {own && own.named > 0 && <PositionLine m={m} />}
           <ReachLine m={m} />
           <LeaderLine m={m} entities={snapshot.entities} />
           {m.low_information && <p className="score-range-hint">{t("dashboard.v2.lowInfo")}</p>}
@@ -211,6 +210,20 @@ function ScoreHeroV2({ snapshot, m }: { snapshot: Snapshot; m: MetricsV2 }) {
                 </span>
               </div>
               <ul className="score-v2-facts">
+                {/* The change's numbers live here, in the wide column: under the score they
+                    stretched the narrow one. */}
+                {comparison && comparison.delta != null && comparison.ci95 && (
+                  <li>
+                    {t("dashboard.v2.changeDetail", {
+                      delta: fmt.number(comparison.delta, 1),
+                      lo: fmt.number(comparison.ci95[0], 1),
+                      hi: fmt.number(comparison.ci95[1], 1),
+                      q: fmt.number(comparison.questions),
+                      overlap: fmt.percent(comparison.overlap),
+                      mde: fmt.number(comparison.mde ?? 0, 1),
+                    })}
+                  </li>
+                )}
                 {own && own.mean_weight_named != null && (
                   <li>
                     {t("dashboard.v2.decomp", {
