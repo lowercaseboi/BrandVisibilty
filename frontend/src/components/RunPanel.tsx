@@ -14,8 +14,12 @@ import { DisclosureMark } from "./ui/DisclosureMark";
 const TERMINAL = new Set<JobStatus>(["completed", "partial", "failed", "cancelled", "interrupted"]);
 const SKIPPABLE = new Set(["queued", "running", "waiting"]);
 const SKIP_ALL = "__all__";
-// Rough time per AI call; AIs run in parallel, so the estimate doesn't grow with the number of AIs.
+// Rough time per AI call. AIs run in parallel, so a run takes as long as its slowest AI. Groq's free
+// tier allows 8,000 tokens a minute and an uncut answer is ~2,000, so it is paced to ~4 answers a
+// minute; Qwen on Groq is capped at 1,000 output tokens a minute (about one answer).
 const SECONDS_PER_CALL = 3;
+const SECONDS_PER_CALL_BY_PROVIDER: Record<string, number> = { groq: 15, qwen: 60 };
+const secondsPerCall = (ids: string[]) => Math.max(SECONDS_PER_CALL, ...ids.map((id) => SECONDS_PER_CALL_BY_PROVIDER[id] ?? 0));
 
 const DEPTHS: { samples: number; label: MessageKey }[] = [
   { samples: 1, label: "dashboard.run.depth.quick" },
@@ -192,7 +196,8 @@ export function RunPanel({
   const providerCount = provider === "auto" ? Math.max(1, liveConfigured.length) : 1;
   const nQuestions = (questions?.scored_count ?? 0) + (questions?.unscored_count ?? 0);
   const unscored = questions?.unscored_count ?? 0;
-  const seconds = nQuestions * samples * SECONDS_PER_CALL;
+  const runIds = provider === "auto" ? liveConfigured.map((p) => p.provider_id) : [provider];
+  const seconds = nQuestions * samples * (practice ? SECONDS_PER_CALL : secondsPerCall(runIds));
   const sources = practice ? 1 : providerCount;
   const calls = runCalls(nQuestions, samples, sources);
   // Model names are technical: only the Analytical view shows them.
