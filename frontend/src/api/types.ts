@@ -31,6 +31,27 @@ export interface CreateBrandRequest {
 
 export type ProviderKind = "live" | "offline";
 
+/** GET /providers/usage row (AC-11). `free_tier` is the provider's published cap, not a live balance. */
+export interface ProviderUsage {
+  provider_id: string;
+  label: string;
+  runs: number;
+  calls: number;
+  failed: number;
+  /** Answers cut off at the provider's length cap (max_tokens): their tail is missing. */
+  truncated: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  /** Runs whose tokens were recorded; older runs only have call counts. */
+  tokens_known_runs: number;
+  calls_today: number;
+  tokens_today: number;
+  avg_latency_ms: number | null;
+  last_used_at: string | null;
+  free_tier: { requests_per_day: number | null; tokens_per_day: number | null; note: string } | null;
+}
+
 export interface ProviderInfo {
   provider_id: string;
   label: string;
@@ -363,6 +384,9 @@ export interface TrendVerdictV2 {
   n_points: number;
   segment_run_ids: string[];
   comparison: MatchedComparison | null;
+  /** The two runs `comparison` is about (only admissible runs count, so the newest may be skipped). */
+  previous_run_id?: string;
+  latest_run_id?: string;
   slope: { x_unit: "day" | "run" | null; value: number | null; ci_low: number | null; ci_high: number | null; per_week: number | null } | null;
 }
 

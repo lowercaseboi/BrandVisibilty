@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 
 const I18N = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "i18n");
 const SRC = join(I18N, "..");
-const NAMESPACES = ["common", "dashboard", "pages"];
+const NAMESPACES = ["common", "dashboard", "pages", "hub", "brandinfo", "modules", "board"];
 const ALL_NAMESPACES = ["common", "dashboard", "pages", "hub", "brandinfo", "modules", "board"];
 const TRANSLATIONS = ["hi", "mr"];
 

@@ -68,7 +68,7 @@ export function AccountCard({
         {view.showDetail && status.detail && (
           <div className="acc-card-sub acc-tech">
             <strong>{t("brandinfo.accounts.techDetail")}</strong>
-            <p>{status.detail}</p>
+            <p lang="en">{status.detail}</p>
           </div>
         )}
         {view.docs && (

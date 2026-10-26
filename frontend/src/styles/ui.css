@@ -189,3 +189,16 @@
     display: none;
   }
 }
+
+/* Phones: the quiet text toggles are the only way into their sections, so give each a thumb-sized
+   hit area (44px) without changing how they look. */
+@media (max-width: 640px) {
+  .link-quiet.run-options-toggle,
+  .link-quiet.evidence-filter-toggle,
+  .link-quiet.rec-more-toggle,
+  .link-quiet.rec-how-toggle,
+  .link-quiet.cs-code-toggle,
+  .link-quiet.cs-log-toggle {
+    min-height: 44px;
+  }
+}

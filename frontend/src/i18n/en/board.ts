@@ -1,5 +1,4 @@
-// Recommendation list. English only for now — hi/mr fall back to English at runtime
-// (i18n/index.tsx lookup). Action titles, steps, effort words and gap findings reuse the
+// Recommendation list. Translated in hi/board.ts and mr/board.ts. Action titles, steps, effort words and gap findings reuse the
 // translated `dashboard.*` keys.
 // - {title} is a card's action title, {status} a status name.
 export const board = {

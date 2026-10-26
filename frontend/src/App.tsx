@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Link, Route, Routes, useLocation } from "react-router-dom";
+import { AdminLockPrompt } from "./components/AdminLockPrompt";
 import { AppHeader } from "./components/AppHeader";
 import { EmptyState } from "./components/EmptyState";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -77,6 +78,7 @@ export default function App() {
         {t("common.app.skipToContent")}
       </a>
       <AppHeader />
+      <AdminLockPrompt />
       <ScrollProgress />
       <main className="app" id="main" tabIndex={-1}>
         {/* Keyed per section so each page plays its entrance once (a brand's hub + modules share one). */}

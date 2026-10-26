@@ -41,13 +41,16 @@
   padding: calc(var(--card-pad-y) + 4px) calc(var(--card-pad-x) + 2px);
 }
 
-.score-hero .eyebrow {
+/* Only the card's own title: the metric strip's labels are .eyebrow too and keep their 3px gap. */
+.score-hero > .eyebrow {
   margin: 0 0 var(--space-4);
 }
 
 .score-hero-grid {
   display: grid;
-  grid-template-columns: minmax(calc(180px * var(--z)), auto) 1fr;
+  /* A bounded score column: an `auto` one grew to fit any long line under the number and
+     squeezed the text column to a word per line. */
+  grid-template-columns: minmax(calc(180px * var(--z)), calc(260px * var(--z))) minmax(0, 1fr);
   gap: var(--space-4) var(--space-6);
   align-items: start;
 }
@@ -199,6 +202,21 @@
   background: var(--rule) top center / var(--rule-w) 1px no-repeat;
 }
 
+.peer-names {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px var(--space-4);
+  font-size: var(--fs-xs);
+  color: var(--text);
+}
+
+.peer-names li {
+  overflow-wrap: anywhere;
+}
+
 /* Mention rate vs competitors: faint ticks for competitors, an accent bar for you. */
 .peer-strip {
   margin-top: var(--space-4);
@@ -302,7 +320,7 @@
 
 @media (max-width: 640px) {
   .score-hero-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-3);
   }
 
@@ -356,6 +374,7 @@
 
 .who-count {
   flex: none;
+  text-align: right;
   font-size: var(--fs-sm);
   color: var(--text);
   font-variant-numeric: tabular-nums;
@@ -597,6 +616,33 @@
   padding: 6px 8px;
   text-align: center;
   white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Three columns only fit once the depth buttons have room for "Standard" / "Thorough". */
+@media (max-width: 900px) {
+  .run-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .run-field .segmented button,
+  .link-quiet.run-options-toggle {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Long names keep their line; the count moves under them instead of splitting the name. */
+  .who-row-top {
+    flex-wrap: wrap;
+    gap: 2px var(--space-3);
+  }
+
+  .who-count {
+    flex: 1 1 auto;
+  }
 }
 
 /* Analytical view: questions × samples × AIs = API calls. */
@@ -923,6 +969,10 @@
 
 .collapsible-body > .section-note {
   margin-bottom: var(--space-5);
+}
+
+.collapsible-body > .card + .card {
+  margin-top: var(--space-3);
 }
 
 /* "Did it work?" — the impact ledger (metrics v2). */

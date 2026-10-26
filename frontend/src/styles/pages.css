@@ -676,6 +676,55 @@
   color: var(--text);
 }
 
+/* Usage and free quota (AC-11): today's requests against the published cap. */
+.pg-usage-section {
+  margin-top: var(--space-6);
+}
+
+.pg-usage h3 {
+  margin: 0;
+}
+
+.pg-usage-today {
+  margin: var(--space-2) 0 var(--space-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.pg-usage-meter {
+  height: calc(8px * var(--z));
+  border-radius: 2px;
+  background: var(--surface-3);
+  overflow: hidden;
+  margin-bottom: var(--space-2);
+}
+
+.pg-usage-fill {
+  width: 100%;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left center;
+}
+
+.pg-usage-meter.is-high .pg-usage-fill {
+  background: var(--warn, var(--accent));
+}
+
+.pg-usage p {
+  margin: var(--space-1) 0 0;
+}
+
+.pg-usage-warn {
+  color: var(--warn);
+}
+
+.pg-usage-detail {
+  margin-top: var(--space-2);
+}
+
+.pg-usage-note {
+  margin-top: var(--space-3);
+}
+
 .pg-tech-notes {
   margin: var(--space-3) 0 0;
   padding-left: 18px;

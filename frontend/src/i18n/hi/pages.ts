@@ -207,7 +207,7 @@ export const pages: Record<keyof typeof enPages, string> = {
   "ais.notSetUp": "सेट अप नहीं",
   "ais.model": "मॉडल: {model}",
   "ais.askToSetUp": "अभी सेट अप नहीं है — इसे चलाने वाले से कहें।",
-  "ais.noneConnected": "कोई AI असिस्टेंट कनेक्टेड नहीं है, इसलिए सैंपल डेटा दिखेगा। इसे चलाने वाले से कहें।",
+  "ais.noneConnected": "कोई AI असिस्टेंट कनेक्टेड नहीं है, इसलिए सिम्युलेटेड डेटा दिखेगा। इसे चलाने वाले से संपर्क करें।",
   "ais.connectedCount": "{total} में से {on} कनेक्टेड",
   "ais.detailsTitle": "तकनीकी कॉन्फ़िगरेशन",
   "ais.detailsKeys":
@@ -220,6 +220,21 @@ export const pages: Record<keyof typeof enPages, string> = {
   "ais.offlineSynthetic": "सिम्युलेटेड डेटा: प्रदर्शन के लिए बनाए गए जवाब। वास्तविक मापन नहीं।",
   "ais.offlineReplay": "रीप्ले किए गए जवाब: पहले रिकॉर्ड किए गए वास्तविक AI जवाब, फिर से स्कोर किए गए।",
   "ais.autoNote": "“auto” हर कनेक्टेड लाइव AI का उपयोग करता है, या कोई कनेक्टेड न हो तो सिम्युलेटेड डेटा।",
+  "ais.usage.title": "उपयोग और फ्री कोटा",
+  "ais.usage.lede": "हर जाँच के इस ऐप के अपने रिकॉर्ड से गिना गया। AI प्रोवाइडर बची हुई लिमिट नहीं बताते, इसलिए आज के उपयोग की तुलना हर एक की प्रकाशित फ्री लिमिट से की जाती है।",
+  "ais.usage.loadError": "उपयोग की जानकारी लोड नहीं हो सकी।",
+  "ais.usage.empty": "अभी तक असली AI से कोई जाँच नहीं हुई।",
+  "ais.usage.today": "आज: लगभग {cap} फ्री अनुरोधों में से {calls}",
+  "ais.usage.todayNoCap": "आज: {calls} अनुरोध",
+  "ais.usage.tokensToday": "आज के टोकन: {cap} में से {tokens}",
+  "ais.usage.total": "कुल अनुरोध: {calls} · जाँचें: {runs}",
+  "ais.usage.failed": "विफल अनुरोध: {n}",
+  "ais.usage.truncated": "{of} में से {n} जवाब लंबाई की सीमा पर कट गए, इसलिए उनकी सूचियों का आख़िरी हिस्सा नहीं है।",
+  "ais.usage.tokens": "टोकन: {tokens} (प्रश्न {prompt}, जवाब {answer})",
+  "ais.usage.tokensPartial": "{runs} में से {known} जाँचों के लिए दर्ज; पुरानी जाँचों में सिर्फ़ अनुरोधों की गिनती है।",
+  "ais.usage.latency": "जवाब का औसत समय: {s} सेकंड",
+  "ais.usage.lastUsed": "पिछली बार उपयोग: {when}",
+  "ais.usage.campaignNote": "कैंपेन ड्राफ़्ट करने में भी Gemini या Groq का उपयोग होता है; वे अनुरोध यहाँ नहीं गिने जाते।",
 
   // ---------------------------------------------------------------- Landing page (public marketing site at "/")
   // "BrandVisibility", brand names (Ashok Vada Pav, Aaram Vada Pav, Gajanan Vada Pav) and AI product
@@ -271,7 +286,7 @@ export const pages: Record<keyof typeof enPages, string> = {
 
   "landing.sample.eyebrow": "पायलट ब्रांड",
   "landing.sample.title": "सैंपल विश्लेषण",
-  "landing.sample.note": "यह हमारे पायलट ब्रांड्स का सिम्युलेटेड सैंपल डेटा दिखाता है।",
+  "landing.sample.note": "यह हमारे पायलट ब्रांड्स का सिम्युलेटेड डेटा दिखाता है।",
   "landing.sample.liveCta": "लाइव परिणामों के लिए, इसे आज़माएँ →",
   "landing.sample.pickBrand": "एक पायलट ब्रांड चुनें",
   "landing.sample.loading": "सैंपल लोड हो रहा है…",
@@ -295,8 +310,6 @@ export const pages: Record<keyof typeof enPages, string> = {
   "landing.features.f6.title": "हर रीरन में बदलाव ट्रैक करें",
   "landing.features.f6.body": "वही प्रश्न सेट फिर से चलाएँ और देखें कि विज़िबिलिटी वास्तव में बदली या नहीं।",
 
-  // English placeholders — translation pending.
-  "landing.sample.simulatedTag": "Simulated data",
-  // English placeholders — translation pending.
-  "landing.ctaShort": "Try it →",
+  "landing.sample.simulatedTag": "सिम्युलेटेड डेटा",
+  "landing.ctaShort": "आज़माएँ →",
 };

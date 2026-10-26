@@ -73,8 +73,26 @@ export function useAdminGate(): {
   return { runAdmin, dialog: ask ? <TokenDialog rejected={ask.rejected} onClose={close} /> : null };
 }
 
-function TokenDialog({ rejected, onClose }: { rejected: boolean; onClose: (token: string | null) => void }) {
+export interface TokenDialogText {
+  title: string;
+  hint: string;
+  hintDetail: string;
+}
+
+/** The password sheet. Campaign posting uses its own wording; the demo lock passes `text`. */
+export function TokenDialog({
+  rejected,
+  onClose,
+  text,
+}: {
+  rejected: boolean;
+  onClose: (token: string | null) => void;
+  text?: TokenDialogText;
+}) {
   const t = useT();
+  const title = text?.title ?? t("board.campaign.token.title");
+  const hint = text?.hint ?? t("board.campaign.token.hint");
+  const hintDetail = text?.hintDetail ?? t("board.campaign.token.hintDetail");
   const [value, setValue] = useState("");
   const hintId = useId();
 
@@ -84,7 +102,7 @@ function TokenDialog({ rejected, onClose }: { rejected: boolean; onClose: (token
   };
 
   return (
-    <Sheet title={t("board.campaign.token.title")} describedBy={hintId} onClose={() => onClose(null)}>
+    <Sheet title={title} describedBy={hintId} onClose={() => onClose(null)}>
       {(dismiss) => (
         <form onSubmit={submit} className="sheet-form">
           {rejected && (
@@ -93,9 +111,9 @@ function TokenDialog({ rejected, onClose }: { rejected: boolean; onClose: (token
             </p>
           )}
           <p id={hintId} className="muted small">
-            {t("board.campaign.token.hint")}
+            {hint}
             <Details>
-              <span className="cs-tech-note"> {t("board.campaign.token.hintDetail")}</span>
+              <span className="cs-tech-note"> {hintDetail}</span>
             </Details>
           </p>
           <label className="field">

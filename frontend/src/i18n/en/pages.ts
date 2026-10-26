@@ -251,6 +251,22 @@ export const pages = {
   "ais.offlineSynthetic": "Simulated data: generated responses for demonstration. Not a real measurement.",
   "ais.offlineReplay": "Replayed responses: real AI responses recorded earlier and scored again.",
   "ais.autoNote": "“auto” uses every connected live AI, or simulated data when none is connected.",
+  // Usage and free-tier quota per AI (PRD AC-11), counted from the app's own run records.
+  "ais.usage.title": "Usage and free quota",
+  "ais.usage.lede": "Counted from this app's own records of each check. AI providers don't report a remaining balance, so today's use is compared with each one's published free limit.",
+  "ais.usage.loadError": "Usage could not be loaded.",
+  "ais.usage.empty": "No checks with a real AI yet.",
+  "ais.usage.today": "Today: {calls} of about {cap} free requests",
+  "ais.usage.todayNoCap": "Today: {calls} requests",
+  "ais.usage.tokensToday": "Tokens today: {tokens} of {cap}",
+  "ais.usage.total": "Requests in total: {calls} · checks: {runs}",
+  "ais.usage.failed": "Failed requests: {n}",
+  "ais.usage.truncated": "{n} of {of} answers were cut off at the length limit, so the end of their lists is missing.",
+  "ais.usage.tokens": "Tokens: {tokens} (prompt {prompt}, answer {answer})",
+  "ais.usage.tokensPartial": "Recorded for {known} of {runs} checks; older checks only kept request counts.",
+  "ais.usage.latency": "Average answer time: {s} s",
+  "ais.usage.lastUsed": "Last used {when}",
+  "ais.usage.campaignNote": "Campaign drafting also calls Gemini or Groq; those requests aren't counted here.",
 
   // ---------------------------------------------------------------- Landing page (public marketing site at "/")
   // Recreates the team's live demo site for BrandVisibility. "BrandVisibility", brand names (Ashok

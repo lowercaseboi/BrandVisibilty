@@ -1,5 +1,4 @@
-// Brand hub + the shared module frame (ModuleShell). English only for now — hi/mr fall back to
-// English at runtime (i18n/index.tsx lookup) until a translation round adds them.
+// Brand hub + the shared module frame (ModuleShell). Translated in hi/hub.ts and mr/hub.ts.
 export const hub = {
   "back.brands": "All brands",
   "back.hub": "Brand hub",
@@ -11,7 +10,7 @@ export const hub = {
   "tab.gaps": "Gaps",
   "tab.board": "Board",
   // Phone app header: the "⋯" button and the sheet it opens (theme, language, Analytical view,
-  // connections). Here rather than in common.* until a translation round covers them.
+  // connections).
   "menu.more": "More options",
   "menu.title": "Settings",
   "menu.theme": "Theme",

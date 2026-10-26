@@ -366,6 +366,9 @@ export function TrendChart({
 
   return (
     <div className="trend" ref={measureRef}>
+      {verdictV2?.latest_run_id && verdictV2.latest_run_id !== last.run_id && (
+        <p className="muted small trend-excluded">{t("dashboard.trend.latestExcluded")}</p>
+      )}
       {verdictV2 ? <TrendVerdictLineV2 verdict={verdictV2} /> : verdict && <TrendVerdictLine verdict={verdict} />}
       <svg
         viewBox={`0 0 ${W} ${H}`}

@@ -62,6 +62,13 @@ export const common = {
   "showMore": "Show more",
   "showLess": "Show less",
   // Shown once when the hosted backend is waking from sleep (free tier) and the first request is slow.
+  // Network failure (the server is down, asleep past the timeout, or the phone is offline).
+  "offline": "Can't reach the server. Check your connection and try again.",
+  // Demo lock: the public demo needs the admin password for actions that cost money or change shared data.
+  "lock.title": "Admin password",
+  "lock.hint": "This is a public demo. Checks with real AI, drafting with hosted AI and edits to the sample brands need the admin password. Browsing and practice checks are open to everyone.",
+  "lock.hintDetail": "The server's ADMIN_TOKEN, sent as X-Admin-Token and kept only for this browser tab.",
+  "lock.cancelled": "That needs the admin password. Practice checks with simulated data work without it.",
   "serverWaking": "Waking the server up. The first load can take about 30 seconds on free hosting.",
   "none": "None",
 

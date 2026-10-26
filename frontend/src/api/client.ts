@@ -1,4 +1,5 @@
 import type {
+  ProviderUsage,
   AccountStatus,
   BoardState,
   Campaign,
@@ -69,12 +70,16 @@ const WAKE_NOTICE_MS = 4000;
 let serverAnswered = false;
 let wakeNoticeShown = false;
 
+/** The active UI language's t(), for messages built outside React (from <html lang>). */
+function pageT() {
+  const lang = typeof document !== "undefined" ? document.documentElement.lang : "en";
+  return getT((lang === "hi" || lang === "mr" ? lang : "en") as Lang);
+}
+
 function showWakeNotice() {
   if (serverAnswered || wakeNoticeShown) return;
   wakeNoticeShown = true;
-  const lang = typeof document !== "undefined" ? document.documentElement.lang : "en";
-  const t = getT((lang === "hi" || lang === "mr" ? lang : "en") as Lang);
-  toast(t("common.serverWaking"));
+  toast(pageT()("common.serverWaking"));
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -85,7 +90,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     res = await fetch(`${API_BASE}${path}`, init);
     serverAnswered = true;
   } catch {
-    throw new ApiError(0, "Cannot reach the API server. Is the backend running on :8000?");
+    // The dev hint names the local port; a visitor on the hosted app just gets the plain sentence.
+    const hint = import.meta.env.DEV ? " (Is the backend running on :8000?)" : "";
+    throw new ApiError(0, pageT()("common.offline") + hint);
   } finally {
     clearTimeout(wake);
   }
@@ -122,9 +129,6 @@ function putJson<T>(path: string, body: unknown): Promise<T> {
   });
 }
 
-function deleteJson<T>(path: string): Promise<T> {
-  return request<T>(path, { method: "DELETE" });
-}
 
 const b = encodeURIComponent;
 
@@ -140,7 +144,7 @@ export function createBrand(spec: CreateBrandRequest): Promise<BrandSummary> {
  * (the backend returns 403). */
 export function deleteBrand(brandKey: string): Promise<BrandDeleteResponse> {
   latestCache.delete(brandKey);
-  return deleteJson(`/brands/${b(brandKey)}`);
+  return lockable("DELETE", `/brands/${b(brandKey)}`);
 }
 
 /** Full saved profile (category, cities, competitors, aliases…). */
@@ -165,6 +169,11 @@ export function saveBoard(brandKey: string, board: BoardState): Promise<BoardSta
 
 export function listProviders(): Promise<ProviderInfo[]> {
   return getJson("/providers");
+}
+
+/** Calls, failures and tokens per AI over every stored run, with each one's published free-tier cap (AC-11). */
+export function getProviderUsage(): Promise<ProviderUsage[]> {
+  return getJson("/providers/usage");
 }
 
 // Last latest-snapshot seen per brand, so the brand hub can draw the centre card on the very first
@@ -213,7 +222,7 @@ export async function getObservations(brandKey: string, runId: string): Promise<
 }
 
 export function startRun(brandKey: string, body: StartRunRequest): Promise<Job> {
-  return postJson(`/brands/${b(brandKey)}/runs`, body);
+  return lockable("POST", `/brands/${b(brandKey)}/runs`, body);
 }
 
 export function getJob(jobId: string): Promise<Job> {
@@ -225,12 +234,12 @@ export function listJobs(brandKey: string): Promise<Job[]> {
 }
 
 export function cancelJob(jobId: string): Promise<Job> {
-  return postJson(`/jobs/${b(jobId)}/cancel`, {});
+  return lockable("POST", `/jobs/${b(jobId)}/cancel`, {});
 }
 
 /** Skip one provider's remaining calls, or (null) every remaining call and score what was collected. */
 export function skipJob(jobId: string, providerId: string | null): Promise<Job> {
-  return postJson(`/jobs/${b(jobId)}/skip`, { provider_id: providerId });
+  return lockable("POST", `/jobs/${b(jobId)}/skip`, { provider_id: providerId });
 }
 
 export function getQuestions(brandKey: string): Promise<QuestionSet> {
@@ -238,11 +247,11 @@ export function getQuestions(brandKey: string): Promise<QuestionSet> {
 }
 
 export function saveQuestions(brandKey: string, questions: QuestionInput[]): Promise<QuestionSet> {
-  return putJson(`/brands/${b(brandKey)}/questions`, { questions });
+  return lockable("PUT", `/brands/${b(brandKey)}/questions`, { questions });
 }
 
 export function resetQuestions(brandKey: string): Promise<QuestionSet> {
-  return deleteJson(`/brands/${b(brandKey)}/questions`);
+  return lockable("DELETE", `/brands/${b(brandKey)}/questions`);
 }
 
 // ---------------------------------------------------------------------------
@@ -260,6 +269,39 @@ function adminJson<T>(method: string, path: string, token: string, body?: unknow
   return request<T>(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
 }
 
+/**
+ * The demo lock (backend: ADMIN_TOKEN set). Costly or destructive routes — real-AI runs, hosted
+ * campaign drafting, brand deletion, the sample brands' questions — answer 401 without the token.
+ * The app registers a handler (AdminLockPrompt) that holds the tab's token and asks for it.
+ */
+export interface AdminLockHandler {
+  /** The token stored for this tab, if any. */
+  token(): string | null;
+  /** Ask the user; resolves to the token, or null when they cancel. `rejected`: one was sent and refused. */
+  ask(rejected: boolean): Promise<string | null>;
+}
+
+let lockHandler: AdminLockHandler | null = null;
+
+export function setAdminLockHandler(handler: AdminLockHandler | null): void {
+  lockHandler = handler;
+}
+
+/** A request the demo lock may gate: sends the stored token, and on a 401 asks for it and retries. */
+async function lockable<T>(method: string, path: string, body?: unknown): Promise<T> {
+  let token = lockHandler?.token() ?? "";
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await adminJson<T>(method, path, token, body);
+    } catch (err) {
+      if (!(err instanceof ApiError) || err.status !== 401 || !lockHandler || attempt >= 3) throw err;
+      const answer = await lockHandler.ask(token !== "");
+      if (answer === null) throw new ApiError(401, pageT()("common.lock.cancelled"));
+      token = answer;
+    }
+  }
+}
+
 const campaignPath = (brandKey: string, campaignId: string) => `/brands/${b(brandKey)}/campaigns/${b(campaignId)}`;
 
 /** Every channel adapter: connected / export only / disabled, with detail and quota. */
@@ -274,7 +316,7 @@ export function listCampaigns(brandKey: string): Promise<Campaign[]> {
 /** Starts drafting a campaign for one recommendation (202): the campaign comes back "generating"
  * with its job; poll getJob until terminal, then getCampaign. */
 export function createCampaign(brandKey: string, recommendationId: string): Promise<CreateCampaignResponse> {
-  return postJson(`/brands/${b(brandKey)}/campaigns`, { recommendation_id: recommendationId });
+  return lockable("POST", `/brands/${b(brandKey)}/campaigns`, { recommendation_id: recommendationId });
 }
 
 export function getCampaign(brandKey: string, campaignId: string): Promise<Campaign> {
@@ -300,7 +342,7 @@ export function updateDeliverable(
 }
 
 export function regenerateImage(brandKey: string, campaignId: string, body: RegenerateImageRequest): Promise<Campaign> {
-  return postJson(`${campaignPath(brandKey, campaignId)}/regenerate-image`, body);
+  return lockable("POST", `${campaignPath(brandKey, campaignId)}/regenerate-image`, body);
 }
 
 export function approveCampaign(brandKey: string, campaignId: string, token: string): Promise<Campaign> {
